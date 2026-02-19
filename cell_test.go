@@ -10,43 +10,31 @@ func TestDecodeCell_Golden(t *testing.T) {
 	}{
 		{
 			name: "mixed",
-			in:   0xA123BCDE,
+			in:   0xA123BC00,
 			want: Cell{
-				Cell:   cellType(0xA),
-				Life:   0x123,
-				SpeedX: 0xBC,
-				SpeedY: 0xDE,
+				Cell:  cellType(0xA1),
+				Life:  0x23B,
+				Extra: 0xC00,
 			},
 		},
 		{
 			name: "all max",
-			in:   0xFFFFFFFF,
+			in:   0xFFFFFF00,
 			want: Cell{
-				Cell:   0xF,
-				Life:   0xFFF,
-				SpeedX: 0xFF,
-				SpeedY: 0xFF,
+				Cell:  0xFF,
+				Life:  0xFFF,
+				Extra: 0xF00,
 			},
 		},
 		{
 			name: "only cell",
 			in:   0xF0000000,
-			want: Cell{Cell: 0xF},
+			want: Cell{Cell: 0xF0},
 		},
 		{
 			name: "only life",
 			in:   0x0ABC0000,
-			want: Cell{Life: 0xABC},
-		},
-		{
-			name: "only speedX",
-			in:   0x0000AB00,
-			want: Cell{SpeedX: 0xAB},
-		},
-		{
-			name: "only speedY",
-			in:   0x000000CD,
-			want: Cell{SpeedY: 0xCD},
+			want: Cell{Cell: 0x0A, Life: 0xBC0},
 		},
 	}
 
@@ -59,12 +47,6 @@ func TestDecodeCell_Golden(t *testing.T) {
 			}
 			if out.Life != tt.want.Life {
 				t.Fatalf("life = %X want %X", out.Life, tt.want.Life)
-			}
-			if out.SpeedX != tt.want.SpeedX {
-				t.Fatalf("speedX = %X want %X", out.SpeedX, tt.want.SpeedX)
-			}
-			if out.SpeedY != tt.want.SpeedY {
-				t.Fatalf("speedY = %X want %X", out.SpeedY, tt.want.SpeedY)
 			}
 			if en := uint32(EncodeCell(out)); en != tt.in {
 				t.Fatalf("encode = %x should be %X", en, tt.in)

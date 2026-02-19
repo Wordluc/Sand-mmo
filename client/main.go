@@ -2,10 +2,11 @@ package main
 
 import (
 	"net"
-	commandengine "sand-mmo/commandEngine"
+	sandmmo "sand-mmo"
 	"sand-mmo/common"
+	chain "sand-mmo/responsibilityChain"
 
-	"github.com/gen2brain/raylib-go/raylib"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const W_WINDOWS = 100
@@ -13,6 +14,7 @@ const H_WINDOWS = 100
 
 func main() {
 	rl.InitWindow(W_WINDOWS, H_WINDOWS, "")
+	w := sandmmo.NewWorld(W_WINDOWS, H_WINDOWS)
 	socket, err := net.Dial("tcp", ":8000")
 	if err != nil {
 		panic(err)
@@ -22,9 +24,13 @@ func main() {
 		Y uint16
 	}
 
-	p := common.Encode(commandengine.GetInitCommand())
-	common.SendToSocket(p, socket)
+	p := common.Encode(chain.GetInitCommand())
+	if err != nil {
+		panic(err)
+	}
 
+	common.SendToTcpSocket(p, socket)
+	go UpdateWorld(&w)
 	for {
 		if rl.WindowShouldClose() {
 			return
@@ -34,14 +40,25 @@ func main() {
 			mousePosition.X = uint16(vec.X)
 			mousePosition.Y = uint16(vec.Y)
 
-			x := uint8(mousePosition.X)
-			y := uint8(mousePosition.Y)
-			p := common.Encode(commandengine.GetDrawCommand(0, x, y))
-			common.SendToSocket(p, socket)
+			p := common.Encode(chain.GetDrawCommand(0, mousePosition.X, mousePosition.Y))
+			common.SendToTcpSocket(p, socket)
 
 		}
 		rl.BeginDrawing()
 		rl.EndDrawing()
 	}
 
+}
+
+func UpdateWorld(world *sandmmo.World) {
+	udpConn, err := net.ListenPacket("udp", "127.0.0.1:8001")
+	if err != nil {
+		panic(err)
+	}
+	defer udpConn.Close()
+	for {
+		//4->32bit
+		var bytes [4*sandmmo.SizeChunk ^ 2]byte
+		udpConn.ReadFrom(bytes[:])
+	}
 }

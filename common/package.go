@@ -1,6 +1,6 @@
 package common
 
-type command = uint8
+type command = uint16
 
 const (
 	INIT command = iota
@@ -15,31 +15,31 @@ const (
 )
 
 type Package struct {
-	Code           uint32
-	Command        command
-	Arg            uint8
-	BrushPackage   //command = 0xxx
-	CommandPackage //command = 1xxx
+	Code    uint64
+	Command uint16
+	BrushPackage
+	CommandPackage
 }
 
-// 8bit command | 8bit Arg | 16 bit Indet
+// 16bit command | 16bit ident | 32bit args
 type CommandPackage struct {
 	Ident uint16
+	Arg   uint32
 }
 
-// 8bit command | 8bit Arg | 8bit x coordinate | 8bit y coordinate
-// X < 255 Y < 255
-// Can use Arg to specify the chunk to draw in
+// 16bit command | 12b x | 12b y | 8b typeBrush | 8b typeMaterial | 8b extra
 type BrushPackage struct {
-	X uint8
-	Y uint8
+	X            uint16
+	Y            uint16
+	TypeBrush    uint8
+	TypeMaterial uint8
+	Extra        uint8
 }
 
-func Decode(input uint32) Package {
+func Decode(input uint64) Package {
 	c := Package{}
 	c.Code = input
-	c.Command = uint8((input & 0xFF000000) >> (4 * 6))
-	c.Arg = uint8((input & 0x00FF0000) >> (4 * 4))
+	c.Command = uint16((input & 0xFFFF000000000000) >> (4 * 12))
 	if c.Command < 16 {
 		return decodeBrush(input, c)
 	} else {
@@ -47,10 +47,8 @@ func Decode(input uint32) Package {
 	}
 }
 
-func Encode(c Package) uint32 {
-
-	output := uint32(c.Command) << (4 * 6)
-	output = output | (uint32(c.Arg))<<(4*4)
+func Encode(c Package) uint64 {
+	output := uint64(c.Command) << 48
 	if c.Command < 16 {
 		return encodeBrush(c, output)
 	} else {
@@ -58,25 +56,32 @@ func Encode(c Package) uint32 {
 	}
 }
 
-func decodeCommand(input uint32, p Package) Package {
-	p.Ident = uint16((input & 0x0000FFFF))
+func decodeCommand(input uint64, p Package) Package {
+	p.Ident = uint16((input & 0x0000FFFF00000000) >> 32)
+	p.Arg = uint32((input & 0x00000000FFFFFFFF) >> 0)
 	return p
 }
 
-func encodeCommand(c Package, output uint32) uint32 {
-	output = output | (uint32(c.Ident))
+func encodeCommand(c Package, output uint64) uint64 {
+	output |= (uint64(c.Ident) & 0xFFFF) << 32
+	output |= (uint64(c.Arg) & 0xFFFFFFFF)
 	return output
 }
 
-func decodeBrush(input uint32, p Package) Package {
-	p.X = uint8((input & 0x0000FF00) >> (4 * 2))
-	p.Y = uint8((input & 0x000000FF))
+func decodeBrush(input uint64, p Package) Package {
+	p.X = uint16((input & 0x0000FFF000000000) >> 36)
+	p.Y = uint16((input & 0x0000000FFF000000) >> 24)
+	p.TypeBrush = uint8((input & 0x0000000000FF0000) >> 16)
+	p.TypeMaterial = uint8((input & 0x000000000000FF00) >> 8)
+	p.Extra = uint8((input & 0x00000000000000FF) >> 0)
 	return p
 }
 
-func encodeBrush(c Package, output uint32) uint32 {
-	output = output | (uint32(c.X))<<(4*2)
-	output = output | (uint32(c.Y))
-
+func encodeBrush(c Package, output uint64) uint64 {
+	output |= (uint64(c.X) & 0x0FFF) << 36
+	output |= (uint64(c.Y) & 0x0FFF) << 24
+	output |= (uint64(c.TypeBrush) & 0x00FF) << 16
+	output |= (uint64(c.TypeMaterial) & 0x00FF) << 8
+	output |= (uint64(c.Extra) & 0x00FF) << 0
 	return output
 }

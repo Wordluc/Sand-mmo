@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	sandmmo "sand-mmo"
-	commandengine "sand-mmo/commandEngine"
 	"sand-mmo/common"
+	chain "sand-mmo/responsibilityChain"
 )
 
 var world *sandmmo.World
@@ -32,11 +33,12 @@ func main() {
 func handlerConnection(conn net.Conn) {
 	fmt.Printf("New connection %v\n", conn.RemoteAddr())
 	defer conn.Close()
-	engine := commandengine.NewPackageEngine(world, commandengine.GetHandlers())
+	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn)
 	for {
-		r, err := common.ReadFromSocket(conn)
+		r, err := common.ReadFromTcpSocket(conn)
+		fmt.Println(r.Command)
 		if err != nil {
-			if err.Error() == "EOF" {
+			if err == io.EOF {
 				fmt.Printf("Closing connection %v\n", conn.RemoteAddr())
 				return
 			}
