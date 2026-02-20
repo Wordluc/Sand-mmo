@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	sandmmo "sand-mmo"
 	"sand-mmo/common"
 )
 
@@ -33,8 +34,9 @@ func GetHandlers() []Handler {
 		},
 		{
 			p: GetDrawCommand(0, 0, 0),
-			handler: func(p common.Package, _ *ResponsibilityChain) error {
-				fmt.Println("Draw")
+			handler: func(p common.Package, e *ResponsibilityChain) error {
+				fmt.Printf("Draw %v %v\n", p.X, p.Y)
+				e.world.Set(p.X, p.Y, sandmmo.Cell{Cell: 1})
 				return nil
 			},
 		},

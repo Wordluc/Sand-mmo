@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	t := sandmmo.NewWorld(100, 100)
+	t := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, 25)
 	world = &t
 	fmt.Println("Server setup ...")
 	for {

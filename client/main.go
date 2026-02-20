@@ -11,12 +11,9 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-const W_WINDOWS = 100
-const H_WINDOWS = 100
-
 func main() {
-	rl.InitWindow(W_WINDOWS, H_WINDOWS, "")
-	w := sandmmo.NewWorld(W_WINDOWS, H_WINDOWS)
+	rl.InitWindow(sandmmo.W_WINDOWS*sandmmo.SIZE_CELL, sandmmo.H_WINDOWS*sandmmo.SIZE_CELL, "")
+	w := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, 25)
 	socket, err := net.Dial("tcp", ":8000")
 	if err != nil {
 		panic(err)
@@ -38,13 +35,11 @@ func main() {
 			mousePosition.X = uint16(vec.X)
 			mousePosition.Y = uint16(vec.Y)
 
-			p := chain.GetDrawCommand(0, mousePosition.X, mousePosition.Y)
-			common.SendToTcpSocket(p, socket)
-		} else if rl.IsKeyPressed(rl.KeyD) {
-			p := chain.GetChunkCommand(257)
-			common.SendToTcpSocket(p, socket)
+			common.SendToTcpSocket(chain.GetDrawCommand(0, mousePosition.X/sandmmo.SIZE_CELL, mousePosition.Y/sandmmo.SIZE_CELL), socket)
+			common.SendToTcpSocket(chain.GetChunkCommand(0), socket)
 		}
 		rl.BeginDrawing()
+		w.Draw()
 		rl.EndDrawing()
 	}
 
@@ -62,7 +57,7 @@ func UpdateWorld(world *sandmmo.World, tcp net.Conn) {
 	go func() {
 		for {
 			//4->32bit
-			var bytes []byte = make([]byte, 4*sandmmo.SizeChunk*sandmmo.SizeChunk+2)
+			var bytes []byte = make([]byte, 4*world.ChunkSize*world.ChunkSize+2)
 			n, _, err := udpConn.ReadFromUDP(bytes)
 			if n <= 0 {
 				continue
@@ -72,8 +67,7 @@ func UpdateWorld(world *sandmmo.World, tcp net.Conn) {
 			}
 
 			port := binary.BigEndian.Uint16(bytes[0:3])
-			fmt.Printf("Received bytes %v,port :%v\n", bytes, port)
-			world.ImportCellByte(bytes[2:], port)
+			world.SetCellsByte(bytes[2:], port)
 		}
 	}()
 }

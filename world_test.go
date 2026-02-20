@@ -21,8 +21,8 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 	}
 
 	// 8x4 world
-	w := NewWorld(8, 4)
-	w.ImportCell(encoded)
+	w := NewWorld(8, 4, 2)
+	w.importCell(encoded)
 
 	caseTest := []struct {
 		idChunk int
