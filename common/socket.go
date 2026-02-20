@@ -21,9 +21,10 @@ func ReadFromTcpSocket(socket net.Conn) (res Package, err error) {
 }
 
 // TODO: create the udp version
-func SendToTcpSocket(p uint64, socket net.Conn) error {
+func SendToTcpSocket(p Package, socket net.Conn) error {
+	u64 := Encode(p)
 	var toSend []byte = make([]byte, 8)
-	binary.BigEndian.PutUint64(toSend, p)
+	binary.BigEndian.PutUint64(toSend, u64)
 	fmt.Printf("Sending %x\n", toSend)
 	_, err := socket.Write([]byte(toSend))
 

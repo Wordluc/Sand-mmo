@@ -3,9 +3,9 @@ package common
 type command = uint16
 
 const (
-	INIT command = iota
-	DRAW_IN
-	GET command = 16 + iota
+	DRAW_IN         = iota
+	GET     command = 16 + iota
+	INIT
 )
 
 type args = uint16
@@ -58,7 +58,7 @@ func Encode(c Package) uint64 {
 
 func decodeCommand(input uint64, p Package) Package {
 	p.Ident = uint16((input & 0x0000FFFF00000000) >> 32)
-	p.Arg = uint32((input & 0x00000000FFFFFFFF) >> 0)
+	p.Arg = uint32((input & 0x00000000FFFFFFFF))
 	return p
 }
 

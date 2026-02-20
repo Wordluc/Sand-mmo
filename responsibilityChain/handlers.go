@@ -1,19 +1,34 @@
 package responsibilityChain
 
 import (
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"sand-mmo/common"
-	"strings"
 )
 
 func GetHandlers() []Handler {
 	return []Handler{
 		{
 			p: GetChunkCommand(0),
-			handler: func(p common.Package, _ *ResponsibilityChain) error {
+			handler: func(p common.Package, e *ResponsibilityChain) error {
+				chunk := e.world.GetChunk(uint16(p.Arg))
+				var bytes []byte
+				bytes = binary.BigEndian.AppendUint16(bytes, uint16(p.Arg))
+				for i := range chunk {
+					bytes = binary.BigEndian.AppendUint32(bytes, chunk[i])
+				}
+				fmt.Printf("Sending.. %v\n", len(bytes))
+				n, err := e.udpConn.Write(bytes)
+				if err != nil {
+					return err
+				}
+				if n <= 0 {
+					return errors.New("Error sending cells")
+				}
 				fmt.Println("ReturnChunk")
-				return nil
+				return err
 			},
 		},
 		{
@@ -24,16 +39,14 @@ func GetHandlers() []Handler {
 			},
 		},
 		{
-			p: GetInitCommand(),
+			p: GetInitCommand(0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				fmt.Println("Init")
-				fullAdd := e.tcpConn.RemoteAddr()
-				add := strings.Split(fullAdd.String(), ":")
-				udpConn, err := net.Dial("udp", add[0]+":8001")
+				fmt.Println("Init ", p.Arg)
+				add, _ := net.ResolveUDPAddr("udp", fmt.Sprint("127.0.0.1:", p.Arg))
+				udpConn, err := net.DialUDP("udp", nil, add)
 				if err != nil {
 					return err
 				}
-				common.SendToTcpSocket(1234, udpConn)
 				e.udpConn = udpConn
 				return nil
 			},

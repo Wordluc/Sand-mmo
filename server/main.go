@@ -36,7 +36,6 @@ func handlerConnection(conn net.Conn) {
 	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn)
 	for {
 		r, err := common.ReadFromTcpSocket(conn)
-		fmt.Println(r.Command)
 		if err != nil {
 			if err == io.EOF {
 				fmt.Printf("Closing connection %v\n", conn.RemoteAddr())

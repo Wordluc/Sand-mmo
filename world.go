@@ -1,6 +1,8 @@
 package sandmmo
 
-import ()
+import (
+	"encoding/binary"
+)
 
 const SizeChunk = 2
 
@@ -16,14 +18,36 @@ type World struct {
 
 func NewWorld(w, h uint16) World {
 	world := World{}
-	world.cells = make([]Cell, 0)
+	world.cells = make([]Cell, w*h)
 	world.H = h
 	world.W = w
 	return world
 }
 
-// For tests purpose
-func (w *World) importCell(cells []uint32) {
+func (w *World) ImportCellByte(bytes []byte, idChunk uint16) {
+	const size = 4
+	var u32 uint32
+	var cell Cell
+	chunkPerRow := w.W / SizeChunk
+
+	chunkY := idChunk / chunkPerRow
+	chunkX := idChunk % chunkPerRow
+	iCell := chunkY*(w.W*SizeChunk) + chunkX*SizeChunk
+	var element = 0
+
+	for i := 0; i < len(bytes); i = i + size {
+		u32 = binary.BigEndian.Uint32(bytes[i : i+size])
+		cell = DecodeCell(u32)
+		w.cells[iCell] = cell
+		element += 1
+		if element >= SizeChunk {
+			iCell += w.W
+		}
+	}
+
+}
+func (w *World) ImportCell(cells []uint32) {
+	w.cells = []Cell{}
 	for i := range cells {
 		w.cells = append(w.cells, DecodeCell(cells[i]))
 	}

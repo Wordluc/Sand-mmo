@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/binary"
+	"fmt"
 	"net"
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
@@ -24,13 +26,9 @@ func main() {
 		Y uint16
 	}
 
-	p := common.Encode(chain.GetInitCommand())
-	if err != nil {
-		panic(err)
-	}
-
+	UpdateWorld(&w, socket)
+	p := chain.GetChunkCommand(0)
 	common.SendToTcpSocket(p, socket)
-	go UpdateWorld(&w)
 	for {
 		if rl.WindowShouldClose() {
 			return
@@ -40,9 +38,11 @@ func main() {
 			mousePosition.X = uint16(vec.X)
 			mousePosition.Y = uint16(vec.Y)
 
-			p := common.Encode(chain.GetDrawCommand(0, mousePosition.X, mousePosition.Y))
+			p := chain.GetDrawCommand(0, mousePosition.X, mousePosition.Y)
 			common.SendToTcpSocket(p, socket)
-
+		} else if rl.IsKeyPressed(rl.KeyD) {
+			p := chain.GetChunkCommand(257)
+			common.SendToTcpSocket(p, socket)
 		}
 		rl.BeginDrawing()
 		rl.EndDrawing()
@@ -50,15 +50,30 @@ func main() {
 
 }
 
-func UpdateWorld(world *sandmmo.World) {
-	udpConn, err := net.ListenPacket("udp", "127.0.0.1:8001")
+func UpdateWorld(world *sandmmo.World, tcp net.Conn) {
+	var port uint32 = 8005
+	add, _ := net.ResolveUDPAddr("udp", fmt.Sprint("127.0.0.1:", port))
+	udpConn, err := net.ListenUDP("udp", add)
 	if err != nil {
 		panic(err)
 	}
-	defer udpConn.Close()
-	for {
-		//4->32bit
-		var bytes [4*sandmmo.SizeChunk ^ 2]byte
-		udpConn.ReadFrom(bytes[:])
-	}
+	common.SendToTcpSocket(chain.GetInitCommand(port), tcp)
+	println("Udp connection ", udpConn.LocalAddr().String())
+	go func() {
+		for {
+			//4->32bit
+			var bytes []byte = make([]byte, 4*sandmmo.SizeChunk*sandmmo.SizeChunk+2)
+			n, _, err := udpConn.ReadFromUDP(bytes)
+			if n <= 0 {
+				continue
+			}
+			if err != nil {
+				continue
+			}
+
+			port := binary.BigEndian.Uint16(bytes[0:3])
+			fmt.Printf("Received bytes %v,port :%v\n", bytes, port)
+			world.ImportCellByte(bytes[2:], port)
+		}
+	}()
 }
