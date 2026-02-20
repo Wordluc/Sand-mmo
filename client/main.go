@@ -20,19 +20,18 @@ func main() {
 	}
 
 	UpdateWorld(&w, socket)
-	p := chain.GetChunkCommand(0)
-	common.SendToTcpSocket(p, socket)
+	//Insert fps target
 	for {
 		if rl.WindowShouldClose() {
 			return
 		}
-		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
+		//avoid to send same package twise
+		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 			vec := rl.GetMousePosition()
 			x := uint16(vec.X) / sandmmo.SIZE_CELL
 			y := uint16(vec.Y) / sandmmo.SIZE_CELL
 			chunkId := w.GetChuck(x, y)
 			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y), socket)
-			common.SendToTcpSocket(chain.GetChunkCommand(uint32(chunkId)), socket)
 		}
 		rl.BeginDrawing()
 		w.Draw()
@@ -40,9 +39,19 @@ func main() {
 	}
 
 }
-
+func GetFreePort() (port uint32, err error) {
+	var a *net.TCPAddr
+	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
+		var l *net.TCPListener
+		if l, err = net.ListenTCP("tcp", a); err == nil {
+			defer l.Close()
+			return uint32(l.Addr().(*net.TCPAddr).Port), nil
+		}
+	}
+	return
+}
 func UpdateWorld(world *sandmmo.World, tcp net.Conn) {
-	var port uint32 = 8005
+	port, _ := GetFreePort()
 	add, _ := net.ResolveUDPAddr("udp", fmt.Sprint("127.0.0.1:", port))
 	udpConn, err := net.ListenUDP("udp", add)
 	if err != nil {

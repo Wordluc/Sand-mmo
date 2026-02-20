@@ -1,7 +1,6 @@
 package responsibilityChain
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
@@ -14,12 +13,7 @@ func GetHandlers() []Handler {
 		{
 			p: GetChunkCommand(0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				chunk := e.world.GetChunk(uint16(p.Arg))
-				var bytes []byte
-				bytes = binary.BigEndian.AppendUint16(bytes, uint16(p.Arg))
-				for i := range chunk {
-					bytes = binary.BigEndian.AppendUint32(bytes, chunk[i])
-				}
+				bytes := e.world.GetChunkBytes(uint16(p.Arg))
 				fmt.Printf("Sending.. %v\n", len(bytes))
 				n, err := e.udpConn.Write(bytes)
 				if err != nil {
@@ -50,6 +44,10 @@ func GetHandlers() []Handler {
 					return err
 				}
 				e.udpConn = udpConn
+				e.callbackInitUdp(udpConn)
+				for i := range e.world.GetNumberChucks() {
+					udpConn.Write(e.world.GetChunkBytes(i))
+				}
 				return nil
 			},
 		},

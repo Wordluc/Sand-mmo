@@ -10,6 +10,7 @@ import (
 )
 
 var world *sandmmo.World
+var upds []net.Conn
 
 func main() {
 	n, err := net.Listen("tcp", ":8000")
@@ -29,11 +30,14 @@ func main() {
 	}
 
 }
-
+func callbackUdp(conn net.Conn) {
+	upds = append(upds, conn)
+}
 func handlerConnection(conn net.Conn) {
 	fmt.Printf("New connection %v\n", conn.RemoteAddr())
 	defer conn.Close()
 	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn)
+	engine.SetCallbackInitUdp(callbackUdp)
 	for {
 		r, err := common.ReadFromTcpSocket(conn)
 		if err != nil {
@@ -48,6 +52,15 @@ func handlerConnection(conn net.Conn) {
 		if err != nil {
 			fmt.Print(err.Error(), "\n\n")
 			continue
+		}
+		UpdateClientWorlds(world)
+	}
+}
+func UpdateClientWorlds(world *sandmmo.World) {
+	chunksToSend := world.GetTouchedChunks()
+	for _, iC := range chunksToSend {
+		for _, udp := range upds {
+			go udp.Write(world.GetChunkBytes(uint16(iC)))
 		}
 	}
 }

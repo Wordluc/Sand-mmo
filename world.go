@@ -2,6 +2,7 @@ package sandmmo
 
 import (
 	"encoding/binary"
+	"slices"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -15,10 +16,7 @@ type World struct {
 	H            uint16
 	ChunkSize    uint16
 	cells        []Cell
-	activeChunks []struct {
-		id    uint16
-		cells []Cell
-	}
+	activeChunks []uint8
 }
 
 func NewWorld(w, h, chunkSize uint16) World {
@@ -79,7 +77,19 @@ func (w *World) GetChuck(x, y uint16) uint16 {
 	chunkPerRow := w.W / w.ChunkSize
 	return (y/w.ChunkSize)*chunkPerRow + x/w.ChunkSize
 }
+func (w *World) GetNumberChucks() uint16 {
+	return w.W / w.ChunkSize * w.H / w.ChunkSize
+}
+
+func (w *World) GetTouchedChunks() []uint8 {
+	r := w.activeChunks
+	w.activeChunks = []uint8{}
+	r = slices.Compact(r)
+	return r
+}
+
 func (w *World) Set(x, y uint16, cell Cell) {
+	w.activeChunks = append(w.activeChunks, uint8(w.GetChuck(x, y)))
 	indexCell := x + (y * w.W)
 	w.cells[indexCell] = cell
 }
@@ -107,4 +117,13 @@ func (w *World) GetChunk(idChunk uint16) []uint32 {
 	}
 
 	return decoded
+}
+func (w *World) GetChunkBytes(idChunk uint16) []byte {
+	chunk := w.GetChunk(idChunk)
+	var bytes []byte
+	bytes = binary.BigEndian.AppendUint16(bytes, idChunk)
+	for i := range chunk {
+		bytes = binary.BigEndian.AppendUint32(bytes, chunk[i])
+	}
+	return bytes
 }
