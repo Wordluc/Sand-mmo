@@ -18,10 +18,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var mousePosition struct {
-		X uint16
-		Y uint16
-	}
 
 	UpdateWorld(&w, socket)
 	p := chain.GetChunkCommand(0)
@@ -32,11 +28,11 @@ func main() {
 		}
 		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
 			vec := rl.GetMousePosition()
-			mousePosition.X = uint16(vec.X)
-			mousePosition.Y = uint16(vec.Y)
-
-			common.SendToTcpSocket(chain.GetDrawCommand(0, mousePosition.X/sandmmo.SIZE_CELL, mousePosition.Y/sandmmo.SIZE_CELL), socket)
-			common.SendToTcpSocket(chain.GetChunkCommand(0), socket)
+			x := uint16(vec.X) / sandmmo.SIZE_CELL
+			y := uint16(vec.Y) / sandmmo.SIZE_CELL
+			chunkId := w.GetChuck(x, y)
+			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y), socket)
+			common.SendToTcpSocket(chain.GetChunkCommand(uint32(chunkId)), socket)
 		}
 		rl.BeginDrawing()
 		w.Draw()

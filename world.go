@@ -74,6 +74,11 @@ func (w *World) importCell(cells []uint32) {
 		w.cells = append(w.cells, DecodeCell(cells[i]))
 	}
 }
+
+func (w *World) GetChuck(x, y uint16) uint16 {
+	chunkPerRow := w.W / w.ChunkSize
+	return (y/w.ChunkSize)*chunkPerRow + x/w.ChunkSize
+}
 func (w *World) Set(x, y uint16, cell Cell) {
 	indexCell := x + (y * w.W)
 	w.cells[indexCell] = cell
