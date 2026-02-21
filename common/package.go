@@ -2,10 +2,13 @@ package common
 
 type command = uint16
 
+// <16 brush
+// <=16 commands
 const (
 	DRAW_IN         = iota
 	GET     command = 16 + iota
 	INIT
+	END
 )
 
 type args = uint16

@@ -13,14 +13,16 @@ import (
 
 func main() {
 	rl.InitWindow(sandmmo.W_WINDOWS*sandmmo.SIZE_CELL, sandmmo.H_WINDOWS*sandmmo.SIZE_CELL, "")
-	w := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, 25)
+	w := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, sandmmo.CHUNK_SIZE)
 	socket, err := net.Dial("tcp", ":8000")
 	if err != nil {
 		panic(err)
 	}
-
-	UpdateWorld(&w, socket)
+	udp := createUdpConnection(socket)
+	UpdateWorld(&w, udp)
+	defer common.SendToTcpSocket(chain.GetENDCommand(), socket)
 	//Insert fps target
+	rl.SetTargetFPS(30)
 	for {
 		if rl.WindowShouldClose() {
 			return
@@ -50,7 +52,9 @@ func GetFreePort() (port uint32, err error) {
 	}
 	return
 }
-func UpdateWorld(world *sandmmo.World, tcp net.Conn) {
+
+func createUdpConnection(tcp net.Conn) *net.UDPConn {
+
 	port, _ := GetFreePort()
 	add, _ := net.ResolveUDPAddr("udp", fmt.Sprint("127.0.0.1:", port))
 	udpConn, err := net.ListenUDP("udp", add)
@@ -59,11 +63,16 @@ func UpdateWorld(world *sandmmo.World, tcp net.Conn) {
 	}
 	common.SendToTcpSocket(chain.GetInitCommand(port), tcp)
 	println("Udp connection ", udpConn.LocalAddr().String())
+
+	return udpConn
+}
+
+func UpdateWorld(world *sandmmo.World, udp *net.UDPConn) {
 	go func() {
 		for {
 			//4->32bit
 			var bytes []byte = make([]byte, 4*world.ChunkSize*world.ChunkSize+2)
-			n, _, err := udpConn.ReadFromUDP(bytes)
+			n, _, err := udp.ReadFromUDP(bytes)
 			if n <= 0 {
 				continue
 			}

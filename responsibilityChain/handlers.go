@@ -51,5 +51,12 @@ func GetHandlers() []Handler {
 				return nil
 			},
 		},
+		{
+			p: GetENDCommand(),
+			handler: func(p common.Package, e *ResponsibilityChain) error {
+				fmt.Println("End ", e.udpConn.RemoteAddr())
+				return nil
+			},
+		},
 	}
 }

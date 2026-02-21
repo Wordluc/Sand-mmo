@@ -3,12 +3,16 @@ package responsibilityChain
 import "sand-mmo/common"
 
 func GetInitCommand(chunkId uint32) (p common.Package) {
-	//I need to find a way to comunition a port to start a udp socket to convey map information
 	return common.Package{
 		Command: common.INIT,
 		CommandPackage: common.CommandPackage{
 			Arg: chunkId,
 		},
+	}
+}
+func GetENDCommand() (p common.Package) {
+	return common.Package{
+		Command: common.END,
 	}
 }
 func GetChunkCommand(chunkId uint32) (p common.Package) {

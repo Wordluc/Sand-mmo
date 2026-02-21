@@ -2,6 +2,7 @@ package sandmmo
 
 import (
 	"encoding/binary"
+	"fmt"
 	"slices"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -10,6 +11,7 @@ import (
 const W_WINDOWS = 50
 const H_WINDOWS = 50
 const SIZE_CELL = 10
+const CHUNK_SIZE = 25
 
 type World struct {
 	W            uint16
@@ -89,6 +91,14 @@ func (w *World) GetTouchedChunks() []uint8 {
 }
 
 func (w *World) Set(x, y uint16, cell Cell) {
+	if x >= w.W {
+		fmt.Println("out of bound")
+		return
+	}
+	if y >= w.H {
+		fmt.Println("out of bound")
+		return
+	}
 	w.activeChunks = append(w.activeChunks, uint8(w.GetChuck(x, y)))
 	indexCell := x + (y * w.W)
 	w.cells[indexCell] = cell
