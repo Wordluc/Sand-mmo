@@ -20,6 +20,7 @@ func main() {
 	}
 	udp := createUdpConnection(socket)
 	UpdateWorld(&w, udp)
+	defer udp.Close()
 	defer common.SendToTcpSocket(chain.GetENDCommand(), socket)
 	//Insert fps target
 	rl.SetTargetFPS(30)

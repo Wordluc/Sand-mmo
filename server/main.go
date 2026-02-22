@@ -1,12 +1,15 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
+	"slices"
+	"syscall"
 	"time"
 )
 
@@ -64,9 +67,16 @@ func UpdateClientWorlds(world *sandmmo.World) {
 			time.Sleep(100 * time.Millisecond)
 			chunksToSend := world.GetTouchedChunks()
 			for _, iC := range chunksToSend {
-				chunk := world.GetChunkBytes(uint16(iC))
-				for _, udp := range *upds {
-					go udp.Write(chunk)
+				for iSocket, udp := range *upds {
+					if udp == nil {
+						continue
+					}
+					chunk := world.GetChunkBytes(uint16(iC))
+					_, err := udp.Write(chunk)
+					if errors.Is(err, syscall.ECONNREFUSED) {
+						udp.Close()
+						*upds = slices.Delete(*upds, iSocket, iSocket+1)
+					}
 				}
 			}
 		}
