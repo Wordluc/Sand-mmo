@@ -2,7 +2,7 @@ package sandmmo
 
 import (
 	"encoding/binary"
-	"fmt"
+	"math"
 	"slices"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -51,19 +51,59 @@ func (w *World) SetCellsByte(bytes []byte, idChunk uint16) {
 
 }
 
+func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center, up, down, right, left *Cell) error) error {
+
+	chunkPerRow := w.W / w.ChunkSize
+	chunkY := idChunk / chunkPerRow
+	chunkX := idChunk % chunkPerRow
+	x := chunkX*w.ChunkSize + w.ChunkSize
+	y := chunkY*w.ChunkSize + w.ChunkSize
+	for {
+		if err := f(x, y, w.Get(x, y), w.Get(x, y-1), w.Get(x, y+1), w.Get(x+1, y), w.Get(x-1, y)); err != nil {
+			return err
+		}
+		x--
+		if x < chunkX*w.ChunkSize || x == math.MaxUint16 {
+			x = chunkX*w.ChunkSize + w.ChunkSize
+			y--
+			if y < chunkY*w.ChunkSize || y == math.MaxUint16 {
+				return nil
+			}
+		}
+	}
+}
+
+func (w *World) Simulate(idChunk uint16) error {
+	return w.forEachCell(idChunk, func(x, y uint16, center, up, down, right, left *Cell) error {
+		if center == nil {
+			return nil
+		}
+		if center.IsEmpty() || center.Touched {
+			return nil
+		}
+		if down != nil && down.IsEmpty() {
+			center.Touched = true
+			w.Set(x, y+1, *center)
+			w.Set(x, y, Cell{})
+		}
+
+		return nil
+	})
+}
+
 func (w *World) Draw() {
-	var x int32
-	var y int32
+	var i, x, y uint16
 	var color rl.Color
-	for i := range w.cells {
-		x = int32(i%int(w.W)) * SIZE_CELL
-		y = int32(i/int(w.W)) * SIZE_CELL
+	for range w.cells {
+		x = i % w.W * SIZE_CELL
+		y = i / w.W * SIZE_CELL
 		if w.cells[i].Cell == 1 {
 			color = rl.Black
 		} else {
 			color = rl.Beige
 		}
-		rl.DrawRectangle(x, y, SIZE_CELL, SIZE_CELL, color)
+		rl.DrawRectangle(int32(x), int32(y), SIZE_CELL, SIZE_CELL, color)
+		i++
 	}
 }
 
@@ -75,7 +115,7 @@ func (w *World) importCell(cells []uint32) {
 	}
 }
 
-func (w *World) GetChuck(x, y uint16) uint16 {
+func (w *World) GetChunkId(x, y uint16) uint16 {
 	chunkPerRow := w.W / w.ChunkSize
 	return (y/w.ChunkSize)*chunkPerRow + x/w.ChunkSize
 }
@@ -83,30 +123,48 @@ func (w *World) GetNumberChucks() uint16 {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
 }
 
-func (w *World) GetTouchedChunks() []uint8 {
+func (w *World) GetTouchedChunks(reset bool) []uint8 {
 	r := w.activeChunks
-	w.activeChunks = []uint8{}
 	r = slices.Compact(r)
+	w.activeChunks = r
+	if reset {
+		w.activeChunks = []uint8{}
+	}
 	return r
 }
 
 func (w *World) Set(x, y uint16, cell Cell) {
+	if x < 0 {
+		return
+	}
 	if x >= w.W {
-		fmt.Println("out of bound")
+		return
+	}
+	if y < 0 {
 		return
 	}
 	if y >= w.H {
-		fmt.Println("out of bound")
 		return
 	}
-	w.activeChunks = append(w.activeChunks, uint8(w.GetChuck(x, y)))
+	w.activeChunks = append(w.activeChunks, uint8(w.GetChunkId(x, y)))
 	indexCell := x + (y * w.W)
 	w.cells[indexCell] = cell
 }
 
-func (w *World) Get(x, y uint16) Cell {
-	indexCell := x * y
-	return w.cells[indexCell]
+func (w *World) Get(x, y uint16) *Cell {
+	if x < 0 {
+		return nil
+	}
+	if x >= w.W {
+		return nil
+	}
+	if y < 0 {
+		return nil
+	}
+	if y >= w.H {
+		return nil
+	}
+	return &w.cells[x+(y*w.W)]
 }
 
 func (w *World) GetChunk(idChunk uint16) []uint32 {
@@ -118,17 +176,20 @@ func (w *World) GetChunk(idChunk uint16) []uint32 {
 	chunkX := idChunk % chunkPerRow
 
 	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
-
+	var i uint16
 	for range uint16(w.ChunkSize) {
+		i = 0
 		for _, cell := range w.cells[iCell : iCell+w.ChunkSize] {
+			w.cells[iCell+i].Touched = false
 			decoded = append(decoded, EncodeCell(cell))
+			i++
 		}
 		iCell += (w.W)
 	}
 
 	return decoded
 }
-func (w *World) GetChunkBytes(idChunk uint16) []byte {
+func (w *World) GetChunkBytesToSend(idChunk uint16) []byte {
 	chunk := w.GetChunk(idChunk)
 	var bytes []byte
 	bytes = binary.BigEndian.AppendUint16(bytes, idChunk)

@@ -65,18 +65,26 @@ func UpdateClientWorlds(world *sandmmo.World) {
 	go func() {
 		for {
 			time.Sleep(100 * time.Millisecond)
-			chunksToSend := world.GetTouchedChunks()
+			//Lock world to out communications
+			//Loop simulation
+			chunksToSend := world.GetTouchedChunks(true)
+			//UnLock
 			for _, iC := range chunksToSend {
+				world.Simulate(uint16(iC))
+			}
+			chunksToSend = world.GetTouchedChunks(false)
+			for _, iC := range chunksToSend {
+				chunk := world.GetChunkBytesToSend(uint16(iC))
 				for iSocket, udp := range *upds {
 					if udp == nil {
 						continue
 					}
-					chunk := world.GetChunkBytes(uint16(iC))
-					_, err := udp.Write(chunk)
-					if errors.Is(err, syscall.ECONNREFUSED) {
-						udp.Close()
-						*upds = slices.Delete(*upds, iSocket, iSocket+1)
-					}
+					go func() {
+						_, err := udp.Write(chunk)
+						if errors.Is(err, syscall.ECONNREFUSED) {
+							*upds = slices.Delete(*upds, iSocket, iSocket+1)
+						}
+					}()
 				}
 			}
 		}

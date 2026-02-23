@@ -2,7 +2,6 @@ package common
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
 )
 
@@ -25,7 +24,6 @@ func SendToTcpSocket(p Package, socket net.Conn) error {
 	u64 := Encode(p)
 	var toSend []byte = make([]byte, 8)
 	binary.BigEndian.PutUint64(toSend, u64)
-	fmt.Printf("Sending %x\n", toSend)
 	_, err := socket.Write([]byte(toSend))
 
 	return err

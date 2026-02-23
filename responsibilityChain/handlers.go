@@ -13,8 +13,8 @@ func GetHandlers() []Handler {
 		{
 			p: GetChunkCommand(0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				bytes := e.world.GetChunkBytes(uint16(p.Arg))
-				fmt.Printf("Sending.. %v\n", len(bytes))
+				bytes := e.world.GetChunkBytesToSend(uint16(p.Arg))
+				//			fmt.Printf("Sending.. %v\n", len(bytes))
 				n, err := e.udpConn.Write(bytes)
 				if err != nil {
 					return err
@@ -22,14 +22,14 @@ func GetHandlers() []Handler {
 				if n <= 0 {
 					return errors.New("Error sending cells")
 				}
-				fmt.Println("ReturnChunk")
+				//		fmt.Println("ReturnChunk")
 				return err
 			},
 		},
 		{
 			p: GetDrawCommand(0, 0, 0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				fmt.Printf("Draw %v %v\n", p.X, p.Y)
+				//	fmt.Printf("Draw %v %v\n", p.X, p.Y)
 				e.world.Set(p.X, p.Y, sandmmo.Cell{Cell: 1})
 				return nil
 			},
@@ -46,7 +46,7 @@ func GetHandlers() []Handler {
 				e.udpConn = udpConn
 				e.callbackInitUdp(udpConn)
 				for i := range e.world.GetNumberChucks() {
-					udpConn.Write(e.world.GetChunkBytes(i))
+					udpConn.Write(e.world.GetChunkBytesToSend(i))
 				}
 				return nil
 			},

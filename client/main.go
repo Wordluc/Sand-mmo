@@ -33,7 +33,7 @@ func main() {
 			vec := rl.GetMousePosition()
 			x := uint16(vec.X) / sandmmo.SIZE_CELL
 			y := uint16(vec.Y) / sandmmo.SIZE_CELL
-			chunkId := w.GetChuck(x, y)
+			chunkId := w.GetChunkId(x, y)
 			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y), socket)
 		}
 		rl.BeginDrawing()
