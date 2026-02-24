@@ -22,7 +22,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	addrUdp, _ := net.ResolveUDPAddr("udp", ":8001")
+	addrUdp, _ := net.ResolveUDPAddr("udp", ":8000")
 	udp, _ = net.ListenUDP("udp", addrUdp)
 	t := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, sandmmo.CHUNK_SIZE)
 	world = &t
@@ -84,6 +84,9 @@ func UpdateClientWorlds(world *sandmmo.World) {
 					}
 					go func() {
 						_, err := udp.WriteTo(chunk, addr)
+						if err != nil {
+							fmt.Println(err)
+						}
 						if errors.Is(err, syscall.ECONNREFUSED) {
 							addrsUdp = slices.Delete(addrsUdp, iAddr, iAddr+1)
 						}

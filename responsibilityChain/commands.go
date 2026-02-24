@@ -2,11 +2,11 @@ package responsibilityChain
 
 import "sand-mmo/common"
 
-func GetInitCommand(chunkId uint32) (p common.Package) {
+func GetInitCommand(port uint32) (p common.Package) {
 	return common.Package{
 		Command: common.INIT,
 		CommandPackage: common.CommandPackage{
-			Arg: chunkId,
+			Arg: port,
 		},
 	}
 }
