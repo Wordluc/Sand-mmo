@@ -3,7 +3,6 @@ package responsibilityChain
 import (
 	"errors"
 	"fmt"
-	"net"
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
 )
@@ -37,12 +36,13 @@ func GetHandlers() []Handler {
 		{
 			p: GetInitCommand(0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				ip := e.tcpConn.RemoteAddr().(*net.TCPAddr).IP
-				fmt.Println("Init ", e.tcpConn.RemoteAddr())
-				addrTo := &net.UDPAddr{IP: ip, Port: int(p.Arg)}
-				e.callbackInitUdp(addrTo)
+				t := make([]byte, 4)
+				_, addr, _ := e.udpConn.ReadFromUDP(t)
+				e.callbackInitUdp(addr)
+				fmt.Println("Init udp connection with", addr)
+
 				for i := range e.world.GetNumberChucks() {
-					e.udpConn.WriteTo(e.world.GetChunkBytesToSend(i), addrTo)
+					e.udpConn.WriteToUDP(e.world.GetChunkBytesToSend(i), addr)
 				}
 				return nil
 			},

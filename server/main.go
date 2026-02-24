@@ -23,10 +23,14 @@ func main() {
 		panic(err)
 	}
 	addrUdp, _ := net.ResolveUDPAddr("udp", ":8000")
-	udp, _ = net.ListenUDP("udp", addrUdp)
+	udp, err = net.ListenUDP("udp", addrUdp)
+	if err != nil {
+		panic(err)
+	}
 	t := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, sandmmo.CHUNK_SIZE)
 	world = &t
 	fmt.Println("Server setup ...")
+	fmt.Printf("Tcp: %v, Udp: %v\n", n.Addr(), udp.LocalAddr())
 
 	UpdateClientWorlds(world)
 	for {
@@ -43,7 +47,7 @@ func callbackUdp(addr net.Addr) {
 	addrsUdp = append(addrsUdp, addr)
 }
 func handlerConnection(conn net.Conn) {
-	fmt.Printf("New connection %v\n", conn.RemoteAddr())
+	fmt.Printf("New tcp connection with %v\n", conn.RemoteAddr())
 	defer conn.Close()
 	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn, udp)
 	engine.SetCallbackInitUdp(callbackUdp)
@@ -51,7 +55,7 @@ func handlerConnection(conn net.Conn) {
 		r, err := common.ReadFromTcpSocket(conn)
 		if err != nil {
 			if err == io.EOF {
-				fmt.Printf("Closing connection %v\n", conn.RemoteAddr())
+				fmt.Printf("Closing tcp connection with %v\n", conn.RemoteAddr())
 				return
 			}
 			fmt.Printf("Error receiving %s\n", err.Error())
@@ -83,7 +87,7 @@ func UpdateClientWorlds(world *sandmmo.World) {
 						continue
 					}
 					go func() {
-						_, err := udp.WriteTo(chunk, addr)
+						_, err := udp.WriteTo(chunk, addr.(*net.UDPAddr))
 						if err != nil {
 							fmt.Println(err)
 						}

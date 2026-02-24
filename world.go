@@ -11,7 +11,7 @@ import (
 const W_WINDOWS = 50
 const H_WINDOWS = 50
 const SIZE_CELL = 10
-const CHUNK_SIZE = 25
+const CHUNK_SIZE = 10
 
 type World struct {
 	W            uint16
@@ -51,7 +51,7 @@ func (w *World) SetCellsByte(bytes []byte, idChunk uint16) {
 
 }
 
-func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center, up, down, right, left *Cell) error) error {
+func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center *Cell) error) error {
 
 	chunkPerRow := w.W / w.ChunkSize
 	chunkY := idChunk / chunkPerRow
@@ -59,7 +59,7 @@ func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center, up, down
 	x := chunkX*w.ChunkSize + w.ChunkSize
 	y := chunkY*w.ChunkSize + w.ChunkSize
 	for {
-		if err := f(x, y, w.Get(x, y), w.Get(x, y-1), w.Get(x, y+1), w.Get(x+1, y), w.Get(x-1, y)); err != nil {
+		if err := f(x, y, w.Get(x, y)); err != nil {
 			return err
 		}
 		x--
@@ -74,18 +74,38 @@ func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center, up, down
 }
 
 func (w *World) Simulate(idChunk uint16) error {
-	return w.forEachCell(idChunk, func(x, y uint16, center, up, down, right, left *Cell) error {
+
+	type coordinate struct {
+		x int32
+		y int32
+	}
+	isFree := func(x, y int32) bool {
+		cell := w.Get(uint16(x), uint16(y))
+		return cell != nil && cell.IsEmpty()
+	}
+	simulateMovements := func(x, y int32, cell Cell, offsets []coordinate) {
+		for _, o := range offsets {
+			if isFree(o.x+x, o.y+y) {
+				w.Set(uint16(o.x+x), uint16(o.y+y), cell)
+				w.Set(uint16(x), uint16(y), Cell{})
+				return
+			}
+		}
+	}
+	return w.forEachCell(idChunk, func(_x, _y uint16, center *Cell) error {
 		if center == nil {
 			return nil
 		}
 		if center.IsEmpty() || center.Touched {
 			return nil
 		}
-		if down != nil && down.IsEmpty() {
-			center.Touched = true
-			w.Set(x, y+1, *center)
-			w.Set(x, y, Cell{})
-		}
+		x := int32(_x)
+		y := int32(_y)
+		simulateMovements(x, y, *center, []coordinate{
+			{x: 0, y: 1},
+			{x: 1, y: 1},
+			{x: -1, y: 1},
+		})
 
 		return nil
 	})
@@ -125,6 +145,8 @@ func (w *World) GetNumberChucks() uint16 {
 
 func (w *World) GetTouchedChunks(reset bool) []uint8 {
 	r := w.activeChunks
+	//TODO: optimize this
+	slices.Sort(r)
 	r = slices.Compact(r)
 	w.activeChunks = r
 	if reset {
@@ -132,7 +154,6 @@ func (w *World) GetTouchedChunks(reset bool) []uint8 {
 	}
 	return r
 }
-
 func (w *World) Set(x, y uint16, cell Cell) {
 	if x < 0 {
 		return

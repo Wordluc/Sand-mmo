@@ -42,26 +42,15 @@ func main() {
 	}
 
 }
-func GetFreePort() (port uint32, err error) {
-	var a *net.TCPAddr
-	if a, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
-		var l *net.TCPListener
-		if l, err = net.ListenTCP("tcp", a); err == nil {
-			defer l.Close()
-			return uint32(l.Addr().(*net.TCPAddr).Port), nil
-		}
-	}
-	return
-}
 
 func createDialUdp(tcp net.Conn) *net.UDPConn {
-
-	addTo, _ := net.ResolveUDPAddr("udp", fmt.Sprint(tcp.RemoteAddr().(*net.TCPAddr).IP, ":", 8001))
+	addTo, _ := net.ResolveUDPAddr("udp", fmt.Sprint(tcp.RemoteAddr().(*net.TCPAddr).IP, ":", 8000))
 	udpConn, err := net.DialUDP("udp", nil, addTo)
 	if err != nil {
 		panic(err)
 	}
-	common.SendToTcpSocket(chain.GetInitCommand(uint32(udpConn.LocalAddr().(*net.UDPAddr).Port)), tcp)
+	common.SendToTcpSocket(chain.GetInitCommand(8000), tcp)
+	udpConn.Write([]byte("ping"))
 	println("Udp connection ", udpConn.LocalAddr().String())
 
 	return udpConn
@@ -72,7 +61,7 @@ func UpdateWorld(world *sandmmo.World, udp *net.UDPConn) {
 		for {
 			//4->32bit
 			var bytes []byte = make([]byte, 4*world.ChunkSize*world.ChunkSize+2)
-			n, _, err := udp.ReadFromUDP(bytes)
+			n, _, err := udp.ReadFrom(bytes)
 			if n <= 0 {
 				continue
 			}

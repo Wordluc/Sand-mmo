@@ -1,4 +1,5 @@
 #:schema https://json.schemastore.org/any.json
 
 [build]
-  cmd = "./run.sh"
+	cmd = "go build -o tmp/main ./server"
+	bin = "tmp/main"
