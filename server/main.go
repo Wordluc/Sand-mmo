@@ -74,12 +74,12 @@ func UpdateClientWorlds(world *sandmmo.World) {
 			time.Sleep(50 * time.Millisecond)
 			//Lock world to out communications
 			//Loop simulation
-			chunksToSend := world.GetTouchedChunks(true)
+			chunksToSend := world.GetAllTouchedChunk()
 			//UnLock
 			for _, iC := range chunksToSend {
 				world.Simulate(uint16(iC))
 			}
-			chunksToSend = world.GetTouchedChunks(false)
+			chunksToSend = world.GetChunksToSend()
 			for _, iC := range chunksToSend {
 				chunk := world.GetChunkBytesToSend(uint16(iC))
 				for iAddr, addr := range addrsUdp {

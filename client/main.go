@@ -68,9 +68,8 @@ func UpdateWorld(world *sandmmo.World, udp *net.UDPConn) {
 			if err != nil {
 				continue
 			}
-
-			port := binary.BigEndian.Uint16(bytes[0:3])
-			world.SetCellsByte(bytes[2:], port)
+			idChunk := binary.BigEndian.Uint16(bytes[0:2])
+			world.SetCellsByte(bytes[2:], idChunk)
 		}
 	}()
 }

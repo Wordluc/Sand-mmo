@@ -2,6 +2,7 @@ package sandmmo
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"slices"
 
@@ -56,8 +57,8 @@ func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center *Cell) er
 	chunkPerRow := w.W / w.ChunkSize
 	chunkY := idChunk / chunkPerRow
 	chunkX := idChunk % chunkPerRow
-	x := chunkX*w.ChunkSize + w.ChunkSize
-	y := chunkY*w.ChunkSize + w.ChunkSize
+	x := chunkX*w.ChunkSize + w.ChunkSize - 1
+	y := chunkY*w.ChunkSize + w.ChunkSize - 1
 	for {
 		if err := f(x, y, w.Get(x, y)); err != nil {
 			return err
@@ -83,11 +84,13 @@ func (w *World) Simulate(idChunk uint16) error {
 		cell := w.Get(uint16(x), uint16(y))
 		return cell != nil && cell.IsEmpty()
 	}
-	simulateMovements := func(x, y int32, cell Cell, offsets []coordinate) {
+	simulateMovements := func(x, y int32, cell *Cell, offsets []coordinate) {
 		for _, o := range offsets {
 			if isFree(o.x+x, o.y+y) {
-				w.Set(uint16(o.x+x), uint16(o.y+y), cell)
+				cell.Touched = true
+				w.Set(uint16(o.x+x), uint16(o.y+y), *cell)
 				w.Set(uint16(x), uint16(y), Cell{})
+
 				return
 			}
 		}
@@ -101,7 +104,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		}
 		x := int32(_x)
 		y := int32(_y)
-		simulateMovements(x, y, *center, []coordinate{
+		simulateMovements(x, y, center, []coordinate{
 			{x: 0, y: 1},
 			{x: 1, y: 1},
 			{x: -1, y: 1},
@@ -123,6 +126,7 @@ func (w *World) Draw() {
 			color = rl.Beige
 		}
 		rl.DrawRectangle(int32(x), int32(y), SIZE_CELL, SIZE_CELL, color)
+		rl.DrawText(fmt.Sprint(y/SIZE_CELL), 0, int32(y), SIZE_CELL, rl.Black)
 		i++
 	}
 }
@@ -143,15 +147,17 @@ func (w *World) GetNumberChucks() uint16 {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
 }
 
-func (w *World) GetTouchedChunks(reset bool) []uint8 {
+func (w *World) GetAllTouchedChunk() []uint8 {
 	r := w.activeChunks
-	//TODO: optimize this
+	w.activeChunks = []uint8{}
+
+	return r
+}
+func (w *World) GetChunksToSend() []uint8 {
+	r := slices.Clone(w.activeChunks)
 	slices.Sort(r)
 	r = slices.Compact(r)
-	w.activeChunks = r
-	if reset {
-		w.activeChunks = []uint8{}
-	}
+
 	return r
 }
 func (w *World) Set(x, y uint16, cell Cell) {
@@ -204,7 +210,9 @@ func (w *World) GetChunk(idChunk uint16) []uint32 {
 			w.cells[iCell+i].Touched = false
 			decoded = append(decoded, EncodeCell(cell))
 			i++
+			fmt.Println(len(decoded))
 		}
+		fmt.Println()
 		iCell += (w.W)
 	}
 
