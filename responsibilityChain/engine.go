@@ -12,17 +12,18 @@ type ResponsibilityChain struct {
 	i               int
 	world           *sandmmo.World
 	tcpConn         net.Conn
-	udpConn         net.Conn
-	callbackInitUdp func(net.Conn)
+	udpConn         *net.UDPConn
+	callbackInitUdp func(net.Addr)
 }
 
-func NewResponsibilityChainEngine(world *sandmmo.World, ps []Handler, conn net.Conn) (res ResponsibilityChain) {
+func NewResponsibilityChainEngine(world *sandmmo.World, ps []Handler, tcpConn net.Conn, udpConn *net.UDPConn) (res ResponsibilityChain) {
 	res.ps = ps
 	res.world = world
-	res.tcpConn = conn
+	res.tcpConn = tcpConn
+	res.udpConn = udpConn
 	return res
 }
-func (pm *ResponsibilityChain) SetCallbackInitUdp(callback func(net.Conn)) {
+func (pm *ResponsibilityChain) SetCallbackInitUdp(callback func(net.Addr)) {
 	pm.callbackInitUdp = callback
 }
 func (pm *ResponsibilityChain) Run(p common.Package) error {

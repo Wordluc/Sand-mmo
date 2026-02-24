@@ -37,16 +37,12 @@ func GetHandlers() []Handler {
 		{
 			p: GetInitCommand(0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				fmt.Println("Init ", p.Arg)
-				add, _ := net.ResolveUDPAddr("udp", fmt.Sprint("127.0.0.1:", p.Arg))
-				udpConn, err := net.DialUDP("udp", nil, add)
-				if err != nil {
-					return err
-				}
-				e.udpConn = udpConn
-				e.callbackInitUdp(udpConn)
+				ip := e.tcpConn.RemoteAddr().(*net.TCPAddr).IP
+				fmt.Println("Init ", e.tcpConn.RemoteAddr())
+				addrTo := &net.UDPAddr{IP: ip, Port: int(p.Arg)}
+				e.callbackInitUdp(addrTo)
 				for i := range e.world.GetNumberChucks() {
-					udpConn.Write(e.world.GetChunkBytesToSend(i))
+					e.udpConn.WriteTo(e.world.GetChunkBytesToSend(i), addrTo)
 				}
 				return nil
 			},
@@ -55,7 +51,6 @@ func GetHandlers() []Handler {
 			p: GetENDCommand(),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				fmt.Println("End ", e.udpConn.RemoteAddr())
-				e.udpConn.Close()
 				return nil
 			},
 		},

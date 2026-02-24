@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	udp := createUdpConnection(socket)
+	udp := createDialUdp(socket)
 	UpdateWorld(&w, udp)
 	defer udp.Close()
 	defer common.SendToTcpSocket(chain.GetENDCommand(), socket)
@@ -54,15 +54,14 @@ func GetFreePort() (port uint32, err error) {
 	return
 }
 
-func createUdpConnection(tcp net.Conn) *net.UDPConn {
+func createDialUdp(tcp net.Conn) *net.UDPConn {
 
-	port, _ := GetFreePort()
-	add, _ := net.ResolveUDPAddr("udp", fmt.Sprint("127.0.0.1:", port))
-	udpConn, err := net.ListenUDP("udp", add)
+	addTo, _ := net.ResolveUDPAddr("udp", fmt.Sprint(tcp.RemoteAddr().(*net.TCPAddr).IP, ":", 8001))
+	udpConn, err := net.DialUDP("udp", nil, addTo)
 	if err != nil {
 		panic(err)
 	}
-	common.SendToTcpSocket(chain.GetInitCommand(port), tcp)
+	common.SendToTcpSocket(chain.GetInitCommand(uint32(udpConn.LocalAddr().(*net.UDPAddr).Port)), tcp)
 	println("Udp connection ", udpConn.LocalAddr().String())
 
 	return udpConn

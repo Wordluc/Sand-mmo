@@ -14,13 +14,16 @@ import (
 )
 
 var world *sandmmo.World
-var upds *[]net.Conn = &[]net.Conn{}
+var addrsUdp []net.Addr = []net.Addr{}
+var udp *net.UDPConn
 
 func main() {
 	n, err := net.Listen("tcp", ":8000")
 	if err != nil {
 		panic(err)
 	}
+	addrUdp, _ := net.ResolveUDPAddr("udp", ":8001")
+	udp, _ = net.ListenUDP("udp", addrUdp)
 	t := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, sandmmo.CHUNK_SIZE)
 	world = &t
 	fmt.Println("Server setup ...")
@@ -36,13 +39,13 @@ func main() {
 	}
 
 }
-func callbackUdp(conn net.Conn) {
-	*upds = append(*upds, conn)
+func callbackUdp(addr net.Addr) {
+	addrsUdp = append(addrsUdp, addr)
 }
 func handlerConnection(conn net.Conn) {
 	fmt.Printf("New connection %v\n", conn.RemoteAddr())
 	defer conn.Close()
-	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn)
+	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn, udp)
 	engine.SetCallbackInitUdp(callbackUdp)
 	for {
 		r, err := common.ReadFromTcpSocket(conn)
@@ -64,7 +67,7 @@ func handlerConnection(conn net.Conn) {
 func UpdateClientWorlds(world *sandmmo.World) {
 	go func() {
 		for {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 			//Lock world to out communications
 			//Loop simulation
 			chunksToSend := world.GetTouchedChunks(true)
@@ -75,14 +78,14 @@ func UpdateClientWorlds(world *sandmmo.World) {
 			chunksToSend = world.GetTouchedChunks(false)
 			for _, iC := range chunksToSend {
 				chunk := world.GetChunkBytesToSend(uint16(iC))
-				for iSocket, udp := range *upds {
-					if udp == nil {
+				for iAddr, addr := range addrsUdp {
+					if addr == nil {
 						continue
 					}
 					go func() {
-						_, err := udp.Write(chunk)
+						_, err := udp.WriteTo(chunk, addr)
 						if errors.Is(err, syscall.ECONNREFUSED) {
-							*upds = slices.Delete(*upds, iSocket, iSocket+1)
+							addrsUdp = slices.Delete(addrsUdp, iAddr, iAddr+1)
 						}
 					}()
 				}
