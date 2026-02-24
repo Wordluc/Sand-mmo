@@ -1,6 +1,6 @@
 module sand-mmo
 
-go 1.24.4
+go 1.26
 
 require (
 	github.com/ebitengine/purego v0.7.1 // indirect
