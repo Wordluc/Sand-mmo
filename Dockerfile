@@ -1,16 +1,20 @@
-FROM golang:1.24.4-alpine AS build
+FROM golang:1.26
 
-WORKDIR /build
+WORKDIR /code
 
-COPY go.mod ./
+RUN apt-get update && apt-get install -y gcc make build-essential
+RUN apt-get install -y libgl1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev libwayland-dev libxkbcommon-dev ca-certificates
 
-RUN go mod download
+RUN ldconfig
 
 COPY . .
 
 RUN go build server/main.go
 
-EXPOSE 8000
+# Tell ldconfig we have new libraries to look at
+
+EXPOSE 8000/tcp
+EXPOSE 8000/udp
 
 # Run the application
 CMD ["./main"]
