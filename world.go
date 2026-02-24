@@ -148,7 +148,7 @@ func (w *World) GetNumberChucks() uint16 {
 }
 
 func (w *World) GetAllTouchedChunk() []uint8 {
-	r := w.activeChunks
+	r := slices.Compact(w.activeChunks)
 	w.activeChunks = []uint8{}
 
 	return r
@@ -210,9 +210,7 @@ func (w *World) GetChunk(idChunk uint16) []uint32 {
 			w.cells[iCell+i].Touched = false
 			decoded = append(decoded, EncodeCell(cell))
 			i++
-			fmt.Println(len(decoded))
 		}
-		fmt.Println()
 		iCell += (w.W)
 	}
 
