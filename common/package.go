@@ -32,11 +32,11 @@ type CommandPackage struct {
 
 // 16bit command | 12b x | 12b y | 8b typeBrush | 8b typeMaterial | 8b extra
 type BrushPackage struct {
-	X            uint16
-	Y            uint16
-	TypeBrush    uint8
-	TypeMaterial uint8
-	Extra        uint8
+	X         uint16
+	Y         uint16
+	TypeBrush uint8
+	CellType  uint8
+	Extra     uint8
 }
 
 func Decode(input uint64) Package {
@@ -75,7 +75,7 @@ func decodeBrush(input uint64, p Package) Package {
 	p.X = uint16((input & 0x0000FFF000000000) >> 36)
 	p.Y = uint16((input & 0x0000000FFF000000) >> 24)
 	p.TypeBrush = uint8((input & 0x0000000000FF0000) >> 16)
-	p.TypeMaterial = uint8((input & 0x000000000000FF00) >> 8)
+	p.CellType = uint8((input & 0x000000000000FF00) >> 8)
 	p.Extra = uint8((input & 0x00000000000000FF) >> 0)
 	return p
 }
@@ -84,7 +84,7 @@ func encodeBrush(c Package, output uint64) uint64 {
 	output |= (uint64(c.X) & 0x0FFF) << 36
 	output |= (uint64(c.Y) & 0x0FFF) << 24
 	output |= (uint64(c.TypeBrush) & 0x00FF) << 16
-	output |= (uint64(c.TypeMaterial) & 0x00FF) << 8
+	output |= (uint64(c.CellType) & 0x00FF) << 8
 	output |= (uint64(c.Extra) & 0x00FF) << 0
 	return output
 }

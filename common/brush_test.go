@@ -15,11 +15,11 @@ func TestEncode(t *testing.T) {
 			p: Package{
 				Command: 0x1,
 				BrushPackage: BrushPackage{
-					X:            0x123,
-					Y:            0x456,
-					TypeBrush:    0xAA,
-					TypeMaterial: 0xBB,
-					Extra:        0xCC,
+					X:         0x123,
+					Y:         0x456,
+					TypeBrush: 0xAA,
+					CellType:  0xBB,
+					Extra:     0xCC,
 				},
 			},
 			want: 0x0001123456AABBCC,
@@ -40,11 +40,11 @@ func TestEncode(t *testing.T) {
 			p: Package{
 				Command: 0x000F,
 				BrushPackage: BrushPackage{
-					X:            0xFFF,
-					Y:            0xFFF,
-					TypeBrush:    0xFF,
-					TypeMaterial: 0xFF,
-					Extra:        0xFF,
+					X:         0xFFF,
+					Y:         0xFFF,
+					TypeBrush: 0xFF,
+					CellType:  0xFF,
+					Extra:     0xFF,
 				},
 			},
 			want: 0x000FFFFFFFFFFFFF,
@@ -83,11 +83,11 @@ func TestDecode(t *testing.T) {
 			want: Package{
 				Command: 0x0001,
 				BrushPackage: BrushPackage{
-					X:            0x123,
-					Y:            0x456,
-					TypeBrush:    0xAA,
-					TypeMaterial: 0xBB,
-					Extra:        0xCC,
+					X:         0x123,
+					Y:         0x456,
+					TypeBrush: 0xAA,
+					CellType:  0xBB,
+					Extra:     0xCC,
 				},
 			},
 		},
@@ -112,7 +112,7 @@ func TestDecode(t *testing.T) {
 				got.X != tt.want.X ||
 				got.Y != tt.want.Y ||
 				got.TypeBrush != tt.want.TypeBrush ||
-				got.TypeMaterial != tt.want.TypeMaterial ||
+				got.CellType != tt.want.CellType ||
 				got.Extra != tt.want.Extra ||
 				got.Ident != tt.want.Ident ||
 				got.Arg != tt.want.Arg {

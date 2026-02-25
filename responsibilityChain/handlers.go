@@ -26,10 +26,10 @@ func GetHandlers() []Handler {
 			},
 		},
 		{
-			p: GetDrawCommand(0, 0, 0),
+			p: GetDrawCommand(0, 0, 0, sandmmo.NULL_CELL),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				//	fmt.Printf("Draw %v %v\n", p.X, p.Y)
-				e.world.Set(p.X, p.Y, sandmmo.Cell{Cell: 1})
+				e.world.Set(p.X, p.Y, sandmmo.Cell{CellType: p.CellType})
 				return nil
 			},
 		},

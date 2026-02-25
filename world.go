@@ -104,11 +104,22 @@ func (w *World) Simulate(idChunk uint16) error {
 		}
 		x := int32(_x)
 		y := int32(_y)
-		simulateMovements(x, y, center, []coordinate{
-			{x: 0, y: 1},
-			{x: 1, y: 1},
-			{x: -1, y: 1},
-		})
+		switch center.CellType {
+		case SAND_CELL:
+			simulateMovements(x, y, center, []coordinate{
+				{x: 0, y: 1},
+				{x: 1, y: 1},
+				{x: -1, y: 1},
+			})
+		case WATER_CELL:
+			simulateMovements(x, y, center, []coordinate{
+				{x: 0, y: 1},
+				{x: 1, y: 1},
+				{x: -1, y: 1},
+				{x: -1, y: 0},
+				{x: 1, y: 0},
+			})
+		}
 
 		return nil
 	})
@@ -120,10 +131,13 @@ func (w *World) Draw() {
 	for range w.cells {
 		x = i % w.W * SIZE_CELL
 		y = i / w.W * SIZE_CELL
-		if w.cells[i].Cell == 1 {
-			color = rl.Black
-		} else {
-			color = rl.Beige
+		switch w.cells[i].CellType {
+		case SAND_CELL:
+			color = rl.Yellow
+		case WATER_CELL:
+			color = rl.Blue
+		case NULL_CELL:
+			color = rl.SkyBlue
 		}
 		rl.DrawRectangle(int32(x), int32(y), SIZE_CELL, SIZE_CELL, color)
 		rl.DrawText(fmt.Sprint(y/SIZE_CELL), 0, int32(y), SIZE_CELL, rl.Black)
@@ -148,10 +162,8 @@ func (w *World) GetNumberChucks() uint16 {
 }
 
 func (w *World) GetAllTouchedChunk() []uint8 {
-	r := slices.Compact(w.activeChunks)
-	w.activeChunks = []uint8{}
-
-	return r
+	w.activeChunks = slices.Compact(w.activeChunks)
+	return w.activeChunks
 }
 func (w *World) GetChunksToSend() []uint8 {
 	r := slices.Clone(w.activeChunks)

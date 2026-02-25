@@ -8,11 +8,15 @@ import (
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
 
+	ru "github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+const W_BUTTONS_SIDE = 100
+const W_GAME = sandmmo.W_WINDOWS * sandmmo.SIZE_CELL
+
 func main() {
-	rl.InitWindow(sandmmo.W_WINDOWS*sandmmo.SIZE_CELL, sandmmo.H_WINDOWS*sandmmo.SIZE_CELL, "")
+	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, sandmmo.H_WINDOWS*sandmmo.SIZE_CELL, "")
 	w := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, sandmmo.CHUNK_SIZE)
 	socket, err := net.Dial("tcp", ":8000")
 	if err != nil {
@@ -24,6 +28,7 @@ func main() {
 	defer common.SendToTcpSocket(chain.GetENDCommand(), socket)
 	//Insert fps target
 	rl.SetTargetFPS(30)
+	var cellType sandmmo.CellType = sandmmo.SAND_CELL
 	for {
 		if rl.WindowShouldClose() {
 			return
@@ -34,9 +39,17 @@ func main() {
 			x := uint16(vec.X) / sandmmo.SIZE_CELL
 			y := uint16(vec.Y) / sandmmo.SIZE_CELL
 			chunkId := w.GetChunkId(x, y)
-			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y), socket)
+			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y, cellType), socket)
 		}
+
 		rl.BeginDrawing()
+		rl.ClearBackground(rl.SkyBlue)
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 0, Width: 50, Height: 20}, "Water") {
+			cellType = sandmmo.WATER_CELL
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 25, Width: 50, Height: 20}, "Sand") {
+			cellType = sandmmo.SAND_CELL
+		}
 		w.Draw()
 		rl.EndDrawing()
 	}
