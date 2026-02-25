@@ -8,12 +8,13 @@ import (
 )
 
 type ResponsibilityChain struct {
-	ps              []Handler
-	i               int
-	world           *sandmmo.World
-	tcpConn         net.Conn
-	udpConn         *net.UDPConn
-	callbackInitUdp func(net.Addr)
+	ps                []Handler
+	i                 int
+	world             *sandmmo.World
+	tcpConn           net.Conn
+	udpConn           *net.UDPConn
+	callbackAddUdp    func(net.Addr, net.Addr)
+	callbackRemoveUdp func(net.Addr)
 }
 
 func NewResponsibilityChainEngine(world *sandmmo.World, ps []Handler, tcpConn net.Conn, udpConn *net.UDPConn) (res ResponsibilityChain) {
@@ -23,9 +24,15 @@ func NewResponsibilityChainEngine(world *sandmmo.World, ps []Handler, tcpConn ne
 	res.udpConn = udpConn
 	return res
 }
-func (pm *ResponsibilityChain) SetCallbackInitUdp(callback func(net.Addr)) {
-	pm.callbackInitUdp = callback
+
+func (pm *ResponsibilityChain) SetCallbackAddUdp(callback func(net.Addr, net.Addr)) {
+	pm.callbackAddUdp = callback
 }
+
+func (pm *ResponsibilityChain) SetCallbackRemoveUdp(callback func(net.Addr)) {
+	pm.callbackRemoveUdp = callback
+}
+
 func (pm *ResponsibilityChain) Run(p common.Package) error {
 	if pm.i >= len(pm.ps) {
 		return fmt.Errorf("Handler not found for: %x", p.Code)

@@ -62,10 +62,11 @@ func UpdateWorld(world *sandmmo.World, udp *net.UDPConn) {
 			//4->32bit
 			var bytes []byte = make([]byte, 4*world.ChunkSize*world.ChunkSize+2)
 			n, _, err := udp.ReadFrom(bytes)
-			if n <= 0 {
+			if err != nil {
+				fmt.Println(err)
 				continue
 			}
-			if err != nil {
+			if n <= 0 {
 				continue
 			}
 			idChunk := binary.BigEndian.Uint16(bytes[0:2])

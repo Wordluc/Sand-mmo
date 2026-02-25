@@ -38,7 +38,7 @@ func GetHandlers() []Handler {
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				t := make([]byte, 4)
 				_, addr, _ := e.udpConn.ReadFromUDP(t)
-				e.callbackInitUdp(addr)
+				e.callbackAddUdp(e.tcpConn.RemoteAddr(), addr)
 				fmt.Println("Init udp connection with", addr)
 
 				for i := range e.world.GetNumberChucks() {
@@ -50,7 +50,8 @@ func GetHandlers() []Handler {
 		{
 			p: GetENDCommand(),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				fmt.Println("End ", e.udpConn.RemoteAddr())
+				fmt.Println("End ", e.tcpConn.RemoteAddr())
+				e.callbackRemoveUdp(e.tcpConn.RemoteAddr())
 				return nil
 			},
 		},

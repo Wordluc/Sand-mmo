@@ -1,20 +1,17 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
-	"slices"
-	"syscall"
 	"time"
 )
 
 var world *sandmmo.World
-var addrsUdp []net.Addr = []net.Addr{}
+var addrsUdp map[net.Addr]net.Addr = map[net.Addr]net.Addr{}
 var udp *net.UDPConn
 
 func main() {
@@ -43,14 +40,18 @@ func main() {
 	}
 
 }
-func callbackUdp(addr net.Addr) {
-	addrsUdp = append(addrsUdp, addr)
+func callbackAddUdp(tcp, udp net.Addr) {
+	addrsUdp[tcp] = udp
+}
+func callbackRemoveUdp(tcp net.Addr) {
+	delete(addrsUdp, tcp)
 }
 func handlerConnection(conn net.Conn) {
 	fmt.Printf("New tcp connection with %v\n", conn.RemoteAddr())
 	defer conn.Close()
 	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn, udp)
-	engine.SetCallbackInitUdp(callbackUdp)
+	engine.SetCallbackAddUdp(callbackAddUdp)
+	engine.SetCallbackRemoveUdp(callbackRemoveUdp)
 	for {
 		r, err := common.ReadFromTcpSocket(conn)
 		if err != nil {
@@ -82,7 +83,7 @@ func UpdateClientWorlds(world *sandmmo.World) {
 			chunksToSend = world.GetChunksToSend()
 			for _, iC := range chunksToSend {
 				chunk := world.GetChunkBytesToSend(uint16(iC))
-				for iAddr, addr := range addrsUdp {
+				for _, addr := range addrsUdp {
 					if addr == nil {
 						continue
 					}
@@ -90,9 +91,6 @@ func UpdateClientWorlds(world *sandmmo.World) {
 						_, err := udp.WriteTo(chunk, addr.(*net.UDPAddr))
 						if err != nil {
 							fmt.Println(err)
-						}
-						if errors.Is(err, syscall.ECONNREFUSED) {
-							addrsUdp = slices.Delete(addrsUdp, iAddr, iAddr+1)
 						}
 					}()
 				}
