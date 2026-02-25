@@ -84,16 +84,18 @@ func (w *World) Simulate(idChunk uint16) error {
 		cell := w.Get(uint16(x), uint16(y))
 		return cell != nil && cell.IsEmpty()
 	}
-	simulateMovements := func(x, y int32, cell *Cell, offsets []coordinate) {
+	simulateMovements := func(x, y int32, cell **Cell, offsets []coordinate) bool {
 		for _, o := range offsets {
 			if isFree(o.x+x, o.y+y) {
-				cell.Touched = true
-				w.Set(uint16(o.x+x), uint16(o.y+y), *cell)
+				(*cell).Touched = true
+				w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
+				*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
 				w.Set(uint16(x), uint16(y), Cell{})
 
-				return
+				return true
 			}
 		}
+		return false
 	}
 	return w.forEachCell(idChunk, func(_x, _y uint16, center *Cell) error {
 		if center == nil {
@@ -106,13 +108,13 @@ func (w *World) Simulate(idChunk uint16) error {
 		y := int32(_y)
 		switch center.CellType {
 		case SAND_CELL:
-			simulateMovements(x, y, center, []coordinate{
+			simulateMovements(x, y, &center, []coordinate{
 				{x: 0, y: 1},
 				{x: 1, y: 1},
 				{x: -1, y: 1},
 			})
 		case WATER_CELL:
-			simulateMovements(x, y, center, []coordinate{
+			simulateMovements(x, y, &center, []coordinate{
 				{x: 0, y: 1},
 				{x: 1, y: 1},
 				{x: -1, y: 1},
@@ -120,13 +122,20 @@ func (w *World) Simulate(idChunk uint16) error {
 				{x: 1, y: 0},
 			})
 		case SMOKE_CELL:
-			simulateMovements(x, y, center, []coordinate{
+			if center.Life == 0 {
+				w.Set(_x, _y, Cell{})
+				return nil
+			}
+			moved := simulateMovements(x, y, &center, []coordinate{
 				{x: 0, y: -1},
 				{x: 1, y: -1},
 				{x: -1, y: -1},
 				{x: -1, y: 0},
 				{x: 1, y: 0},
 			})
+			if moved {
+				center.Life -= 1
+			}
 		}
 
 		return nil

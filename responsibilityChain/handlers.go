@@ -29,7 +29,8 @@ func GetHandlers() []Handler {
 			p: GetDrawCommand(0, 0, 0, sandmmo.NULL_CELL),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				//	fmt.Printf("Draw %v %v\n", p.X, p.Y)
-				e.world.Set(p.X, p.Y, sandmmo.Cell{CellType: p.CellType})
+				//TODO: to change, create a factory of cell
+				e.world.Set(p.X, p.Y, sandmmo.Cell{CellType: p.CellType, Life: 50})
 				return nil
 			},
 		},
