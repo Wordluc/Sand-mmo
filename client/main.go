@@ -50,6 +50,9 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 25, Width: 50, Height: 20}, "Sand") {
 			cellType = sandmmo.SAND_CELL
 		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 25 * 2, Width: 50, Height: 20}, "Smoke") {
+			cellType = sandmmo.SMOKE_CELL
+		}
 		w.Draw()
 		rl.EndDrawing()
 	}

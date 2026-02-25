@@ -119,6 +119,14 @@ func (w *World) Simulate(idChunk uint16) error {
 				{x: -1, y: 0},
 				{x: 1, y: 0},
 			})
+		case SMOKE_CELL:
+			simulateMovements(x, y, center, []coordinate{
+				{x: 0, y: -1},
+				{x: 1, y: -1},
+				{x: -1, y: -1},
+				{x: -1, y: 0},
+				{x: 1, y: 0},
+			})
 		}
 
 		return nil
@@ -136,6 +144,8 @@ func (w *World) Draw() {
 			color = rl.Yellow
 		case WATER_CELL:
 			color = rl.Blue
+		case SMOKE_CELL:
+			color = rl.LightGray
 		case NULL_CELL:
 			color = rl.SkyBlue
 		}

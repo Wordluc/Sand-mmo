@@ -6,6 +6,7 @@ const (
 	NULL_CELL CellType = iota
 	SAND_CELL
 	WATER_CELL
+	SMOKE_CELL
 )
 
 type Cell struct {
