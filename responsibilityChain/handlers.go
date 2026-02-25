@@ -26,11 +26,60 @@ func GetHandlers() []Handler {
 			},
 		},
 		{
-			p: GetDrawCommand(0, 0, 0, sandmmo.NULL_CELL),
+			p: GetDrawCommand(0, 0, 0, sandmmo.NULL_CELL, 0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				//	fmt.Printf("Draw %v %v\n", p.X, p.Y)
 				//TODO: to change, create a factory of cell
-				e.world.Set(p.X, p.Y, sandmmo.Cell{CellType: p.CellType, Life: 50})
+				drawCircle := func(radius int) {
+					for iy := range radius * 2 {
+						for ix := range radius * 2 {
+							dx := (radius - ix)
+							dy := (radius - iy)
+
+							x := int(p.X) - dx
+							if x < 0 {
+								continue
+							}
+							y := int(p.Y) - dy
+							if y < 0 {
+								continue
+							}
+							if (dx*dx + dy*dy) <= radius*radius/4 {
+								e.world.Set(uint16(x), uint16(y), sandmmo.NewCell(p.CellType, 10))
+							}
+						}
+					}
+				}
+				drawBox := func(size int) {
+					for iy := range size * 2 {
+						for ix := range size * 2 {
+							dx := (size - ix)
+							dy := (size - iy)
+
+							x := int(p.X) - dx
+							if x < 0 {
+								continue
+							}
+							y := int(p.Y) - dy
+							if y < 0 {
+								continue
+							}
+							cell := sandmmo.NewCell(p.CellType, 10)
+							e.world.Set(uint16(x), uint16(y), cell)
+						}
+					}
+				}
+				switch p.BrushType {
+				case common.CIRCLE_SMALL:
+					drawCircle(4)
+				case common.CIRCLE_BIG:
+					drawCircle(6)
+				case common.SQUARE_SMALL:
+					drawBox(4)
+				case common.SQUARE_BIG:
+					drawBox(6)
+
+				}
 				return nil
 			},
 		},

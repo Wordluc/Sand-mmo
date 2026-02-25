@@ -8,11 +8,11 @@ import (
 func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
 	worldCells := []Cell{
-		{1, 10, 1, false}, {2, 20, 2, false}, {3, 30, 3, false}, {4, 40, 4, false}, {5, 50, 5, false}, {6, 60, 6, false}, {7, 70, 7, false}, {8, 80, 8, false},
-		{9, 90, 9, false}, {10, 100, 10, false}, {11, 110, 11, false}, {12, 120, 12, false}, {13, 130, 13, false}, {14, 140, 14, false}, {15, 150, 15, false}, {16, 160, 16, false},
+		NewCell(1, 10), NewCell(2, 20), NewCell(3, 30), NewCell(4, 40), NewCell(5, 50), NewCell(6, 60), NewCell(7, 70), NewCell(8, 80),
+		NewCell(9, 90), NewCell(10, 100), NewCell(11, 110), NewCell(12, 120), NewCell(13, 130), NewCell(14, 140), NewCell(15, 150), NewCell(16, 160),
 
-		{17, 170, 17, false}, {18, 180, 18, false}, {19, 190, 19, false}, {20, 200, 20, false}, {21, 210, 21, false}, {22, 220, 22, false}, {23, 230, 23, false}, {24, 240, 24, false},
-		{25, 250, 25, false}, {26, 260, 26, false}, {27, 270, 27, false}, {28, 280, 28, false}, {29, 290, 29, false}, {30, 300, 30, false}, {31, 310, 31, false}, {32, 320, 32, false},
+		NewCell(17, 170), NewCell(18, 180), NewCell(19, 190), NewCell(20, 200), NewCell(21, 210), NewCell(22, 220), NewCell(23, 230), NewCell(24, 240),
+		NewCell(25, 250), NewCell(26, 260), NewCell(27, 270), NewCell(28, 280), NewCell(29, 290), NewCell(30, 300), NewCell(31, 310), NewCell(32, 320),
 	}
 
 	var encoded []uint32

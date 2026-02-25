@@ -12,18 +12,18 @@ func TestDecodeCell_Golden(t *testing.T) {
 			name: "mixed",
 			in:   0xA123BC00,
 			want: Cell{
-				CellType: CellType(0xA1),
-				Life:     0x23B,
-				Extra:    0xC00,
+				CellType:       CellType(0xA1),
+				InitialLifeSec: 0x23B,
+				Extra:          0xC00,
 			},
 		},
 		{
 			name: "all max",
 			in:   0xFFFFFF00,
 			want: Cell{
-				CellType: 0xFF,
-				Life:     0xFFF,
-				Extra:    0xF00,
+				CellType:       0xFF,
+				InitialLifeSec: 0xFFF,
+				Extra:          0xF00,
 			},
 		},
 		{
@@ -34,7 +34,7 @@ func TestDecodeCell_Golden(t *testing.T) {
 		{
 			name: "only life",
 			in:   0x0ABC0000,
-			want: Cell{CellType: 0x0A, Life: 0xBC0},
+			want: Cell{CellType: 0x0A, InitialLifeSec: 0xBC0},
 		},
 	}
 
@@ -45,8 +45,8 @@ func TestDecodeCell_Golden(t *testing.T) {
 			if out.CellType != tt.want.CellType {
 				t.Fatalf("cell = %X want %X", out.CellType, tt.want.CellType)
 			}
-			if out.Life != tt.want.Life {
-				t.Fatalf("life = %X want %X", out.Life, tt.want.Life)
+			if out.InitialLifeSec != tt.want.InitialLifeSec {
+				t.Fatalf("life = %X want %X", out.InitialLifeSec, tt.want.InitialLifeSec)
 			}
 			if en := uint32(EncodeCell(out)); en != tt.in {
 				t.Fatalf("encode = %x should be %X", en, tt.in)

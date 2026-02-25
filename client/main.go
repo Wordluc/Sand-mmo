@@ -13,11 +13,11 @@ import (
 )
 
 const W_BUTTONS_SIDE = 100
-const W_GAME = sandmmo.W_WINDOWS * sandmmo.SIZE_CELL
+const W_GAME = common.W_WINDOWS * common.SIZE_CELL
 
 func main() {
-	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, sandmmo.H_WINDOWS*sandmmo.SIZE_CELL, "")
-	w := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, sandmmo.CHUNK_SIZE)
+	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, common.H_WINDOWS*common.SIZE_CELL, "")
+	w := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 	socket, err := net.Dial("tcp", ":8000")
 	if err != nil {
 		panic(err)
@@ -29,6 +29,7 @@ func main() {
 	//Insert fps target
 	rl.SetTargetFPS(30)
 	var cellType sandmmo.CellType = sandmmo.SAND_CELL
+	var brushType common.BrushType = common.CIRCLE_SMALL
 	for {
 		if rl.WindowShouldClose() {
 			return
@@ -36,10 +37,10 @@ func main() {
 		//avoid to send same package twise
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 			vec := rl.GetMousePosition()
-			x := uint16(vec.X) / sandmmo.SIZE_CELL
-			y := uint16(vec.Y) / sandmmo.SIZE_CELL
+			x := uint16(vec.X) / common.SIZE_CELL
+			y := uint16(vec.Y) / common.SIZE_CELL
 			chunkId := w.GetChunkId(x, y)
-			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y, cellType), socket)
+			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y, cellType, brushType), socket)
 		}
 
 		rl.BeginDrawing()
@@ -50,8 +51,20 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 25, Width: 50, Height: 20}, "Sand") {
 			cellType = sandmmo.SAND_CELL
 		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 25 * 2, Width: 50, Height: 20}, "Smoke") {
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 50, Width: 50, Height: 20}, "Smoke") {
 			cellType = sandmmo.SMOKE_CELL
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 75, Width: 50, Height: 20}, "Small Circle") {
+			brushType = common.CIRCLE_SMALL
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 100, Width: 50, Height: 20}, "Big Circle") {
+			brushType = common.CIRCLE_BIG
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 125, Width: 50, Height: 20}, "Small Square") {
+			brushType = common.SQUARE_SMALL
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 150, Width: 50, Height: 20}, "Big Square") {
+			brushType = common.SQUARE_BIG
 		}
 		w.Draw()
 		rl.EndDrawing()

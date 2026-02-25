@@ -17,7 +17,7 @@ func TestEncode(t *testing.T) {
 				BrushPackage: BrushPackage{
 					X:         0x123,
 					Y:         0x456,
-					TypeBrush: 0xAA,
+					BrushType: 0xAA,
 					CellType:  0xBB,
 					Extra:     0xCC,
 				},
@@ -42,7 +42,7 @@ func TestEncode(t *testing.T) {
 				BrushPackage: BrushPackage{
 					X:         0xFFF,
 					Y:         0xFFF,
-					TypeBrush: 0xFF,
+					BrushType: 0xFF,
 					CellType:  0xFF,
 					Extra:     0xFF,
 				},
@@ -85,7 +85,7 @@ func TestDecode(t *testing.T) {
 				BrushPackage: BrushPackage{
 					X:         0x123,
 					Y:         0x456,
-					TypeBrush: 0xAA,
+					BrushType: 0xAA,
 					CellType:  0xBB,
 					Extra:     0xCC,
 				},
@@ -111,7 +111,7 @@ func TestDecode(t *testing.T) {
 			if got.Command != tt.want.Command ||
 				got.X != tt.want.X ||
 				got.Y != tt.want.Y ||
-				got.TypeBrush != tt.want.TypeBrush ||
+				got.BrushType != tt.want.BrushType ||
 				got.CellType != tt.want.CellType ||
 				got.Extra != tt.want.Extra ||
 				got.Ident != tt.want.Ident ||

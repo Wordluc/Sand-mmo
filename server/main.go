@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
@@ -24,7 +25,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	t := sandmmo.NewWorld(sandmmo.W_WINDOWS, sandmmo.H_WINDOWS, sandmmo.CHUNK_SIZE)
+	t := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 	world = &t
 	fmt.Println("Server setup ...")
 	fmt.Printf("Tcp: %v, Udp: %v\n", n.Addr(), udp.LocalAddr())
@@ -72,10 +73,11 @@ func handlerConnection(conn net.Conn) {
 func UpdateClientWorlds(world *sandmmo.World) {
 	go func() {
 		for {
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(common.SLEEP * time.Millisecond)
+			sandmmo.GTouchedId = uint8(rand.Intn(256))
 			//Lock world to out communications
 			//Loop simulation
-			chunksToSend := world.GetAllTouchedChunk()
+			chunksToSend := world.GetActiveChunksAndNeiboroud()
 			//UnLock
 			for _, iC := range chunksToSend {
 				world.Simulate(uint16(iC))
@@ -87,12 +89,10 @@ func UpdateClientWorlds(world *sandmmo.World) {
 					if addr == nil {
 						continue
 					}
-					go func() {
-						_, err := udp.WriteTo(chunk, addr.(*net.UDPAddr))
-						if err != nil {
-							fmt.Println(err)
-						}
-					}()
+					_, err := udp.WriteTo(chunk, addr.(*net.UDPAddr))
+					if err != nil {
+						fmt.Println(err)
+					}
 				}
 			}
 		}
