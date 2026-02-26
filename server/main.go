@@ -98,8 +98,8 @@ func UpdateClientWorlds(world *sandmmo.World) {
 				break
 			}
 			sandmmo.GTouchedId = t
-			fmt.Println(sandmmo.GTouchedId)
 			var chunks [][]byte = make([][]byte, len(chunksToSend))
+			//Could be this optimized ?,waitGroups?
 			for i, iC := range chunksToSend {
 				chunks[i] = world.GetChunkBytesToSend(uint16(iC))
 			}
