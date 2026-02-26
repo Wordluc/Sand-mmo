@@ -91,8 +91,8 @@ func (w *World) Simulate(idChunk uint16) error {
 			if isFree(o.x+x, o.y+y) {
 				(*cell).Touched()
 				w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
-				*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
 				w.Set(uint16(x), uint16(y), Cell{})
+				*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
 
 				return true
 			}
@@ -148,9 +148,10 @@ func (w *World) Simulate(idChunk uint16) error {
 			})
 			center.RemainingLife -= 1
 			center.Touched()
+			w.activeChunks = append(w.activeChunks, uint8(idChunk))
 		}
 		if center.forceTouched {
-			w.activeChunks = append(w.activeChunks, uint8(w.GetChunkId(_x, _y)))
+			w.activeChunks = append(w.activeChunks, uint8(idChunk))
 			center.forceTouched = false
 		}
 
@@ -190,7 +191,8 @@ func (w *World) importCell(cells []uint32) {
 
 func (w *World) GetChunkId(x, y uint16) uint16 {
 	chunkPerRow := w.W / w.ChunkSize
-	return (y/w.ChunkSize)*chunkPerRow + x/w.ChunkSize
+	id := (y/w.ChunkSize)*chunkPerRow + x/w.ChunkSize
+	return id
 }
 func (w *World) GetNumberChucks() uint16 {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
@@ -202,19 +204,17 @@ func (w *World) GetActiveChunksAndNeiboroud() (res []uint8) {
 
 	chunkPerRow := int(w.W / w.ChunkSize)
 	totalChunks := chunkPerRow * int(w.H/w.ChunkSize)
-
 	offsets := []int{
 		0,
 		-1, +1,
 		-chunkPerRow, +chunkPerRow,
-		-chunkPerRow - 1, -chunkPerRow + 1,
+		-(chunkPerRow + 1), -(chunkPerRow - 1),
 		+chunkPerRow - 1, +chunkPerRow + 1,
 	}
 
 	for _, c := range chunks {
 
 		baseChunks := int(c)
-
 		for _, off := range offsets {
 
 			n := baseChunks + off
@@ -233,11 +233,11 @@ func (w *World) GetActiveChunksAndNeiboroud() (res []uint8) {
 }
 
 func (w *World) GetChunksToSend() []uint8 {
-	r := slices.Clone(w.activeChunks)
+	r := w.activeChunks
 	slices.Sort(r)
-	r = slices.Compact(r)
+	w.activeChunks = slices.Compact(r)
 
-	return r
+	return w.activeChunks
 }
 func (w *World) Set(x, y uint16, cell Cell) {
 	if x < 0 {
