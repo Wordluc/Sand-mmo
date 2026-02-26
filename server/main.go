@@ -89,7 +89,16 @@ func UpdateClientWorlds(world *sandmmo.World) {
 			}
 			chunksToSend = world.GetChunksToSend()
 			addrsToUse := addrsUdp
-			sandmmo.GTouchedId = uint8(rand.Intn(256))
+			t := uint8(rand.Intn(256))
+			for {
+				if t == sandmmo.GTouchedId {
+					t = uint8(rand.Intn(256))
+					continue
+				}
+				break
+			}
+			sandmmo.GTouchedId = t
+			fmt.Println(sandmmo.GTouchedId)
 			var chunks [][]byte = make([][]byte, len(chunksToSend))
 			for i, iC := range chunksToSend {
 				chunks[i] = world.GetChunkBytesToSend(uint16(iC))
