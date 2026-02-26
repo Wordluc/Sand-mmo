@@ -62,13 +62,13 @@ func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center *Cell) er
 		if err := f(x, y, w.Get(x, y)); err != nil {
 			return err
 		}
-		x--
+		x = x - 1
 		if x < chunkX*w.ChunkSize || x == math.MaxUint16 {
 			x = chunkX*w.ChunkSize + w.ChunkSize
-			y--
-			if y < chunkY*w.ChunkSize || y == math.MaxUint16 {
-				return nil
-			}
+			y = y - 1
+		}
+		if y < chunkY*w.ChunkSize || y == math.MaxUint16 {
+			return nil
 		}
 	}
 }
@@ -103,6 +103,10 @@ func (w *World) Simulate(idChunk uint16) error {
 		if center == nil {
 			return nil
 		}
+		if center.forceTouched {
+			w.activeChunks = append(w.activeChunks, uint8(idChunk))
+			center.forceTouched = false
+		}
 		if center.IsEmpty() || center.IsTouched() {
 			return nil
 		}
@@ -135,7 +139,8 @@ func (w *World) Simulate(idChunk uint16) error {
 				w.Set(_x, _y, Cell{})
 				return nil
 			}
-			simulateMovements(x, y, &center, [][]coordinate{
+			center.RemainingLife -= 1
+			moved := simulateMovements(x, y, &center, [][]coordinate{
 				{
 					{x: 0, y: -1},
 				}, {
@@ -146,13 +151,10 @@ func (w *World) Simulate(idChunk uint16) error {
 					{x: 1, y: 0},
 				},
 			})
-			center.RemainingLife -= 1
-			center.Touched()
-			w.activeChunks = append(w.activeChunks, uint8(idChunk))
-		}
-		if center.forceTouched {
-			w.activeChunks = append(w.activeChunks, uint8(idChunk))
-			center.forceTouched = false
+			if !moved {
+				center.Touched()
+				w.activeChunks = append(w.activeChunks, uint8(idChunk))
+			}
 		}
 
 		return nil
