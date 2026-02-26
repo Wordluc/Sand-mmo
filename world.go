@@ -149,6 +149,10 @@ func (w *World) Simulate(idChunk uint16) error {
 			center.RemainingLife -= 1
 			center.Touched()
 		}
+		if center.forceTouched {
+			w.activeChunks = append(w.activeChunks, uint8(w.GetChunkId(_x, _y)))
+			center.forceTouched = false
+		}
 
 		return nil
 	})

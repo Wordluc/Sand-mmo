@@ -17,12 +17,15 @@ type Cell struct {
 	RemainingLife  float32
 	Extra          uint16
 	touchedId      uint8
+	forceTouched   bool
 }
 
 func NewCell(cellType CellType, initialLife uint16) (res Cell) {
 	res.CellType = cellType
 	res.InitialLifeSec = initialLife
 	res.RemainingLife = float32(res.InitialLifeSec * 1000 / common.SLEEP)
+	res.touchedId = GTouchedId - 1
+	res.forceTouched = true
 	return res
 
 }

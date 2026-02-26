@@ -8,12 +8,14 @@ import (
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
+	"sync"
 	"time"
 )
 
 var world *sandmmo.World
 var addrsUdp map[net.Addr]net.Addr = map[net.Addr]net.Addr{}
 var udp *net.UDPConn
+var m sync.Mutex
 
 func main() {
 	n, err := net.Listen("tcp", ":8000")
@@ -63,18 +65,21 @@ func handlerConnection(conn net.Conn) {
 			fmt.Printf("Error receiving %s\n", err.Error())
 			continue
 		}
+		m.Lock()
 		err = engine.Run(r)
 		if err != nil {
 			fmt.Print(err.Error(), "\n\n")
 			continue
 		}
+		m.Unlock()
 	}
 }
 func UpdateClientWorlds(world *sandmmo.World) {
 	go func() {
 		for {
 			time.Sleep(common.SLEEP * time.Millisecond)
-			sandmmo.GTouchedId = uint8(rand.Intn(256))
+
+			m.Lock()
 			//Lock world to out communications
 			//Loop simulation
 			chunksToSend := world.GetActiveChunksAndNeiboroud()
@@ -83,9 +88,16 @@ func UpdateClientWorlds(world *sandmmo.World) {
 				world.Simulate(uint16(iC))
 			}
 			chunksToSend = world.GetChunksToSend()
-			for _, iC := range chunksToSend {
-				chunk := world.GetChunkBytesToSend(uint16(iC))
-				for _, addr := range addrsUdp {
+			addrsToUse := addrsUdp
+			sandmmo.GTouchedId = uint8(rand.Intn(256))
+			var chunks [][]byte = make([][]byte, len(chunksToSend))
+			for i, iC := range chunksToSend {
+				chunks[i] = world.GetChunkBytesToSend(uint16(iC))
+			}
+			m.Unlock()
+
+			for _, chunk := range chunks {
+				for _, addr := range addrsToUse {
 					if addr == nil {
 						continue
 					}

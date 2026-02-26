@@ -46,6 +46,7 @@ func GetHandlers() []Handler {
 							}
 							if (dx*dx + dy*dy) <= radius*radius/4 {
 								e.world.Set(uint16(x), uint16(y), sandmmo.NewCell(p.CellType, 10))
+
 							}
 						}
 					}
