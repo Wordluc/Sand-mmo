@@ -14,9 +14,10 @@ import (
 
 const W_BUTTONS_SIDE = 100
 const W_GAME = common.W_WINDOWS * common.SIZE_CELL
+const H_GAME = common.H_WINDOWS * common.SIZE_CELL
 
 func main() {
-	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, common.H_WINDOWS*common.SIZE_CELL, "")
+	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME, "")
 	w := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 	socket, err := net.Dial("tcp", ":8000")
 	if err != nil {
@@ -35,12 +36,16 @@ func main() {
 			return
 		}
 		//avoid to send same package twise
+		vec := rl.GetMousePosition()
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
-			vec := rl.GetMousePosition()
-			x := uint16(vec.X) / common.SIZE_CELL
-			y := uint16(vec.Y) / common.SIZE_CELL
-			chunkId := w.GetChunkId(x, y)
-			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y, cellType, brushType), socket)
+
+			if vec.X < W_GAME {
+				if vec.Y < H_GAME {
+					x := uint16(vec.X) / common.SIZE_CELL
+					y := uint16(vec.Y) / common.SIZE_CELL
+					common.SendToTcpSocket(chain.GetDrawCommand(x, y, cellType, brushType), socket)
+				}
+			}
 		}
 
 		rl.BeginDrawing()
@@ -54,19 +59,29 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 50, Width: 50, Height: 20}, "Smoke") {
 			cellType = sandmmo.SMOKE_CELL
 		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 75, Width: 50, Height: 20}, "Small Circle") {
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 75, Width: 50, Height: 20}, "Delete") {
+			cellType = sandmmo.DELETE_CELL
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 100, Width: 50, Height: 20}, "Small Circle") {
 			brushType = common.CIRCLE_SMALL
 		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 100, Width: 50, Height: 20}, "Big Circle") {
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 125, Width: 50, Height: 20}, "Big Circle") {
 			brushType = common.CIRCLE_BIG
 		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 125, Width: 50, Height: 20}, "Small Square") {
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 150, Width: 50, Height: 20}, "Small Square") {
 			brushType = common.SQUARE_SMALL
 		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 150, Width: 50, Height: 20}, "Big Square") {
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 175, Width: 50, Height: 20}, "Big Square") {
 			brushType = common.SQUARE_BIG
 		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 200, Width: 50, Height: 20}, "Stone") {
+			cellType = sandmmo.STONE_CELL
+		}
 		w.Draw()
+		size := common.GetSizeFromBrushType(brushType) - 1
+		if vec.X < W_GAME {
+			rl.DrawCircleLines(int32(vec.X), int32(vec.Y), float32(size*common.SIZE_CELL), rl.Black)
+		}
 		rl.EndDrawing()
 	}
 

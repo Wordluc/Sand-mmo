@@ -16,7 +16,7 @@ type World struct {
 	H            uint16
 	ChunkSize    uint16
 	cells        []Cell
-	activeChunks []uint8
+	activeChunks []uint16
 }
 
 var GTouchedId uint8 = 0
@@ -53,9 +53,7 @@ func (w *World) SetCellsByte(bytes []byte, idChunk uint16) {
 
 func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center *Cell) error) error {
 
-	chunkPerRow := w.W / w.ChunkSize
-	chunkY := idChunk / chunkPerRow
-	chunkX := idChunk % chunkPerRow
+	chunkX, chunkY := w.GetXYChunk(idChunk)
 	x := chunkX*w.ChunkSize + w.ChunkSize - 1
 	y := chunkY*w.ChunkSize + w.ChunkSize - 1
 	for {
@@ -84,17 +82,20 @@ func (w *World) Simulate(idChunk uint16) error {
 
 		return cell != nil && cell.IsEmpty()
 	}
-	simulateMovements := func(x, y int32, cell **Cell, groups [][]coordinate) bool {
+	simulateMovements := func(x, y int32, maxSpeed int32, cell **Cell, groups [][]coordinate) bool {
 		for _, g := range groups {
 			i := rand.IntN(len(g))
 			o := g[i]
-			if isFree(o.x+x, o.y+y) {
-				(*cell).Touched()
-				w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
-				w.Set(uint16(x), uint16(y), Cell{})
-				*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
+			for s := maxSpeed; s > 0; s-- {
+				o := coordinate{x: o.x * s, y: o.y * s}
+				if isFree(o.x+x, o.y+y) {
+					(*cell).Touched()
+					w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
+					w.Set(uint16(x), uint16(y), Cell{})
+					*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
 
-				return true
+					return true
+				}
 			}
 		}
 		return false
@@ -104,7 +105,7 @@ func (w *World) Simulate(idChunk uint16) error {
 			return nil
 		}
 		if center.forceTouched {
-			w.activeChunks = append(w.activeChunks, uint8(idChunk))
+			w.activeChunks = append(w.activeChunks, idChunk)
 			center.forceTouched = false
 		}
 		if center.IsEmpty() || center.IsTouched() {
@@ -114,7 +115,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		y := int32(_y)
 		switch center.CellType {
 		case SAND_CELL:
-			simulateMovements(x, y, &center, [][]coordinate{
+			simulateMovements(x, y, 1, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
 				}, {
@@ -122,8 +123,12 @@ func (w *World) Simulate(idChunk uint16) error {
 					{x: -1, y: 1},
 				},
 			})
+		case DELETE_CELL:
+			w.Set(_x, _y, Cell{})
+		case STONE_CELL:
+			center.Touched()
 		case WATER_CELL:
-			simulateMovements(x, y, &center, [][]coordinate{
+			simulateMovements(x, y, 2, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
 				}, {
@@ -140,7 +145,7 @@ func (w *World) Simulate(idChunk uint16) error {
 				return nil
 			}
 			center.RemainingLife -= 1
-			moved := simulateMovements(x, y, &center, [][]coordinate{
+			moved := simulateMovements(x, y, 2, &center, [][]coordinate{
 				{
 					{x: 0, y: -1},
 				}, {
@@ -153,7 +158,7 @@ func (w *World) Simulate(idChunk uint16) error {
 			})
 			if !moved {
 				center.Touched()
-				w.activeChunks = append(w.activeChunks, uint8(idChunk))
+				w.activeChunks = append(w.activeChunks, idChunk)
 			}
 		}
 
@@ -174,6 +179,9 @@ func (w *World) Draw() {
 			color = rl.Blue
 		case SMOKE_CELL:
 			color = rl.LightGray
+
+		case STONE_CELL:
+			color = rl.Gray
 		case NULL_CELL:
 			color = rl.SkyBlue
 		}
@@ -200,9 +208,9 @@ func (w *World) GetNumberChucks() uint16 {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
 }
 
-func (w *World) GetActiveChunksAndNeiboroud() (res []uint8) {
+func (w *World) GetActiveChunksAndNeiboroud() (res []uint16) {
 	chunks := slices.Compact(w.activeChunks)
-	w.activeChunks = []uint8{}
+	w.activeChunks = []uint16{}
 
 	chunkPerRow := int(w.W / w.ChunkSize)
 	totalChunks := chunkPerRow * int(w.H/w.ChunkSize)
@@ -224,17 +232,17 @@ func (w *World) GetActiveChunksAndNeiboroud() (res []uint8) {
 			if n < 0 || n >= totalChunks {
 				continue
 			}
-			res = append(res, uint8(n))
+			res = append(res, uint16(n))
 		}
 	}
-	slices.SortFunc(res, func(a, b uint8) int {
+	slices.SortFunc(res, func(a, b uint16) int {
 		return int(b) - int(a)
 
 	})
 	return slices.Compact(res)
 }
 
-func (w *World) GetChunksToSend() []uint8 {
+func (w *World) GetChunksToSend() []uint16 {
 	r := w.activeChunks
 	slices.Sort(r)
 	w.activeChunks = slices.Compact(r)
@@ -254,8 +262,9 @@ func (w *World) Set(x, y uint16, cell Cell) {
 	if y >= w.H {
 		return
 	}
-	w.activeChunks = append(w.activeChunks, uint8(w.GetChunkId(x, y)))
+	w.activeChunks = append(w.activeChunks, w.GetChunkId(x, y))
 	indexCell := x + (y * w.W)
+
 	w.cells[indexCell] = cell
 }
 
@@ -274,14 +283,18 @@ func (w *World) Get(x, y uint16) *Cell {
 	}
 	return &w.cells[x+(y*w.W)]
 }
-
-func (w *World) GetChunk(idChunk uint16) []uint32 {
-	var decoded []uint32
-
+func (w *World) GetXYChunk(idChunk uint16) (uint16, uint16) {
 	chunkPerRow := w.W / w.ChunkSize
 
 	chunkY := idChunk / chunkPerRow
 	chunkX := idChunk % chunkPerRow
+
+	return chunkX, chunkY
+}
+
+func (w *World) GetChunk(idChunk uint16) []uint32 {
+	var decoded []uint32
+	chunkX, chunkY := w.GetXYChunk(idChunk)
 
 	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
 	var i uint16

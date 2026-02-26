@@ -87,7 +87,6 @@ func UpdateClientWorlds(world *sandmmo.World) {
 			for _, iC := range chunksToSend {
 				world.Simulate(uint16(iC))
 			}
-			chunksToSend = world.GetChunksToSend()
 			addrsToUse := addrsUdp
 			t := uint8(rand.Intn(256))
 			for {
@@ -98,6 +97,7 @@ func UpdateClientWorlds(world *sandmmo.World) {
 				break
 			}
 			sandmmo.GTouchedId = t
+			chunksToSend = world.GetChunksToSend()
 			var chunks [][]byte = make([][]byte, len(chunksToSend))
 			//Could be this optimized ?,waitGroups?
 			for i, iC := range chunksToSend {

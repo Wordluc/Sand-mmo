@@ -26,7 +26,7 @@ func GetHandlers() []Handler {
 			},
 		},
 		{
-			p: GetDrawCommand(0, 0, 0, sandmmo.NULL_CELL, 0),
+			p: GetDrawCommand(0, 0, sandmmo.NULL_CELL, 0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				//	fmt.Printf("Draw %v %v\n", p.X, p.Y)
 				//TODO: to change, create a factory of cell
@@ -46,7 +46,6 @@ func GetHandlers() []Handler {
 							}
 							if (dx*dx + dy*dy) <= radius*radius/4 {
 								e.world.Set(uint16(x), uint16(y), sandmmo.NewCell(p.CellType, 10))
-
 							}
 						}
 					}
@@ -70,15 +69,12 @@ func GetHandlers() []Handler {
 						}
 					}
 				}
+				size := common.GetSizeFromBrushType(p.BrushType)
 				switch p.BrushType {
-				case common.CIRCLE_SMALL:
-					drawCircle(4)
-				case common.CIRCLE_BIG:
-					drawCircle(6)
-				case common.SQUARE_SMALL:
-					drawBox(4)
-				case common.SQUARE_BIG:
-					drawBox(6)
+				case common.CIRCLE_SMALL, common.CIRCLE_BIG:
+					drawCircle(size)
+				case common.SQUARE_SMALL, common.SQUARE_BIG:
+					drawBox(size)
 
 				}
 				return nil
