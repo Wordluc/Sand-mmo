@@ -226,7 +226,7 @@ func (w *World) GetActiveChunksAndNeiboroud() (res []uint8) {
 		}
 	}
 	slices.SortFunc(res, func(a, b uint8) int {
-		return int(a) - int(b)
+		return int(b) - int(a)
 
 	})
 	return slices.Compact(res)
