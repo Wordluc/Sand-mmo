@@ -79,7 +79,6 @@ func GetHandlers() []Handler {
 					drawBox(4)
 				case common.SQUARE_BIG:
 					drawBox(6)
-
 				}
 				return nil
 			},

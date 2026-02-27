@@ -133,6 +133,8 @@ func (w *World) Simulate(idChunk uint16) error {
 					{x: 1, y: 1},
 					{x: -1, y: 1},
 				}})
+		case DELETE_CELL:
+			w.Set(_x, _y, Cell{})
 		case WATER_CELL:
 			simulateMovements(x, y, &center, [][]coordinate{
 				{
@@ -187,6 +189,8 @@ func (w *World) Draw() {
 			color = rl.LightGray
 		case NULL_CELL:
 			color = rl.SkyBlue
+		case STONE_CELL:
+			color = rl.Gray
 		}
 		rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, color)
 		rl.DrawText(fmt.Sprint(y/common.SIZE_CELL), 0, int32(y), common.SIZE_CELL, rl.Black)

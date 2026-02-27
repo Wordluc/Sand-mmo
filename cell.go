@@ -9,6 +9,8 @@ const (
 	SAND_CELL
 	WATER_CELL
 	SMOKE_CELL
+	DELETE_CELL
+	STONE_CELL
 )
 
 type Cell struct {

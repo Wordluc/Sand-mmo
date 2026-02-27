@@ -75,6 +75,12 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 150, Width: 50, Height: 20}, "Big Square") {
 			brushType = common.SQUARE_BIG
 		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 175, Width: 50, Height: 20}, "Delete") {
+			cellType = sandmmo.DELETE_CELL
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 200, Width: 50, Height: 20}, "Stone") {
+			cellType = sandmmo.STONE_CELL
+		}
 		w.Draw()
 		rl.EndDrawing()
 	}
