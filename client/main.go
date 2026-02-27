@@ -78,6 +78,12 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 150, Width: 50, Height: 20}, "Big Square") {
 			brushType = common.SQUARE_BIG
 		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 175, Width: 50, Height: 20}, "Delete") {
+			cellType = sandmmo.DELETE_CELL
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 200, Width: 50, Height: 20}, "Stone") {
+			cellType = sandmmo.STONE_CELL
+		}
 		w.Draw()
 		rl.DrawText(fmt.Sprintf("x:%v\n y:%v\n c:%v", x, y, chunkId), W_GAME-30, 0, common.SIZE_CELL, rl.Black)
 		rl.EndDrawing()
