@@ -84,29 +84,35 @@ func (w *World) Simulate(idChunk uint16) error {
 
 		return cell != nil && cell.IsEmpty()
 	}
-	simulateMovements := func(x, y int32, cell **Cell, groups [][]coordinate) bool {
+	simulateMovements := func(x, y int32, maxSpeed int32, cell **Cell, groups [][]coordinate) bool {
+		var r = false
+		//TODO: to optimize
 		for _, g := range groups {
 			i := rand.IntN(len(g))
-			o := g[i]
-			r := isFree(o.x+x, o.y+y)
-			if !r {
-				i = 0
-				for {
-					if i >= len(g) || r {
-						break
-					}
-					o = g[i]
-					r = isFree(o.x+x, o.y+y)
-					i++
+			rand := true
+			for {
+				if i >= len(g) || r {
+					break
 				}
-			}
-			if r {
-				(*cell).Touched()
-				w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
-				w.Set(uint16(x), uint16(y), Cell{})
-				*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
+				o := g[i]
+				for s := maxSpeed; s > 0; s-- {
+					o = coordinate{x: g[i].x * s, y: g[i].y * s}
+					r = isFree(o.x+x, o.y+y)
+					if r {
+						(*cell).Touched()
+						w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
+						w.Set(uint16(x), uint16(y), Cell{})
+						*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
 
-				return true
+						return true
+					}
+				}
+				if rand {
+					i = 0
+					rand = false
+					continue
+				}
+				i++
 			}
 		}
 		return false
@@ -126,7 +132,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		y := int32(_y)
 		switch center.CellType {
 		case SAND_CELL:
-			simulateMovements(x, y, &center, [][]coordinate{
+			simulateMovements(x, y, 1, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
 				}, {
@@ -136,7 +142,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		case DELETE_CELL:
 			w.Set(_x, _y, Cell{})
 		case WATER_CELL:
-			simulateMovements(x, y, &center, [][]coordinate{
+			simulateMovements(x, y, 2, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
 				}, {
@@ -153,7 +159,7 @@ func (w *World) Simulate(idChunk uint16) error {
 				return nil
 			}
 			center.RemainingLife -= 1
-			moved := simulateMovements(x, y, &center, [][]coordinate{
+			moved := simulateMovements(x, y, 2, &center, [][]coordinate{
 				{
 					{x: 0, y: -1},
 				}, {
