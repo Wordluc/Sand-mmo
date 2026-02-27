@@ -28,6 +28,14 @@ func GetHandlers() []Handler {
 		{
 			p: GetDrawCommand(0, 0, 0, sandmmo.NULL_CELL, 0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
+				var lifeTime uint16
+				switch p.CellType {
+				case sandmmo.FIRE_CELL:
+					lifeTime = 5
+				default:
+					lifeTime = 15
+
+				}
 				//	fmt.Printf("Draw %v %v\n", p.X, p.Y)
 				//TODO: to change, create a factory of cell
 				drawCircle := func(radius int) {
@@ -45,7 +53,7 @@ func GetHandlers() []Handler {
 								continue
 							}
 							if (dx*dx + dy*dy) <= radius*radius/4 {
-								e.world.Set(uint16(x), uint16(y), sandmmo.NewCell(p.CellType, 10))
+								e.world.Set(uint16(x), uint16(y), sandmmo.NewCell(p.CellType, lifeTime))
 
 							}
 						}

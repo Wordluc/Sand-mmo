@@ -84,6 +84,12 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 200, Width: 50, Height: 20}, "Stone") {
 			cellType = sandmmo.STONE_CELL
 		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 225, Width: 50, Height: 20}, "Fire") {
+			cellType = sandmmo.FIRE_CELL
+		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 250, Width: 50, Height: 20}, "Wood") {
+			cellType = sandmmo.WOOD_CELL
+		}
 		w.Draw()
 		rl.DrawText(fmt.Sprintf("x:%v\n y:%v\n c:%v", x, y, chunkId), W_GAME-30, 0, common.SIZE_CELL, rl.Black)
 		rl.EndDrawing()

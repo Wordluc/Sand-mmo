@@ -84,7 +84,7 @@ func (w *World) Simulate(idChunk uint16) error {
 
 		return cell != nil && cell.IsEmpty()
 	}
-	simulateMovements := func(x, y int32, maxSpeed int32, cell **Cell, groups [][]coordinate) bool {
+	simulateCustomMovements := func(x, y int32, maxSpeed int32, cell **Cell, isFree func(x, y int32) bool, callbackAfter func(x, y int32), groups [][]coordinate) bool {
 		var r = false
 		//TODO: to optimize
 		for _, g := range groups {
@@ -101,8 +101,8 @@ func (w *World) Simulate(idChunk uint16) error {
 					if r {
 						(*cell).Touched()
 						w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
-						w.Set(uint16(x), uint16(y), Cell{})
 						*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
+						callbackAfter(x, y)
 
 						return true
 					}
@@ -117,6 +117,26 @@ func (w *World) Simulate(idChunk uint16) error {
 		}
 		return false
 	}
+	simulateSimpleMovements := func(x, y int32, maxSpeed int32, cell **Cell, groups [][]coordinate) bool {
+		removeOldCell := func(x, y int32) {
+			w.Set(uint16(x), uint16(y), Cell{})
+		}
+		return simulateCustomMovements(x, y, maxSpeed, cell, isFree, removeOldCell, groups)
+	}
+	simulateFireMovements := func(x, y int32, maxSpeed int32, cell **Cell, groups [][]coordinate) bool {
+		removeOldCell := func(x, y int32) {
+			cell := w.Get(uint16(x), uint16(y))
+			cell.Touched()
+			w.activeChunks = append(w.activeChunks, uint16(idChunk))
+			cell.DecreaseLife()
+		}
+		isFree := func(x, y int32) bool {
+			cell := w.Get(uint16(x), uint16(y))
+			return cell != nil && cell.CellType == WOOD_CELL
+		}
+		return simulateCustomMovements(x, y, maxSpeed, cell, isFree, removeOldCell, groups)
+	}
+
 	return w.forEachCell(idChunk, func(_x, _y uint16, center *Cell) error {
 		if center == nil {
 			return nil
@@ -132,7 +152,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		y := int32(_y)
 		switch center.CellType {
 		case SAND_CELL:
-			simulateMovements(x, y, 1, &center, [][]coordinate{
+			simulateSimpleMovements(x, y, 1, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
 				}, {
@@ -142,7 +162,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		case DELETE_CELL:
 			w.Set(_x, _y, Cell{})
 		case WATER_CELL:
-			simulateMovements(x, y, 2, &center, [][]coordinate{
+			simulateSimpleMovements(x, y, 2, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
 				}, {
@@ -158,8 +178,8 @@ func (w *World) Simulate(idChunk uint16) error {
 				w.Set(_x, _y, Cell{})
 				return nil
 			}
-			center.RemainingLife -= 1
-			moved := simulateMovements(x, y, 2, &center, [][]coordinate{
+			center.DecreaseLife()
+			moved := simulateSimpleMovements(x, y, 2, &center, [][]coordinate{
 				{
 					{x: 0, y: -1},
 				}, {
@@ -173,6 +193,24 @@ func (w *World) Simulate(idChunk uint16) error {
 			if !moved {
 				center.Touched()
 				w.activeChunks = append(w.activeChunks, uint16(idChunk))
+			}
+		case FIRE_CELL:
+			if center.RemainingLife <= 0 {
+				w.Set(_x, _y, NewCell(SMOKE_CELL, 10))
+				return nil
+			}
+			moved := simulateFireMovements(x, y, 1, &center, [][]coordinate{
+				{
+					{x: 0, y: 1},
+					{x: 0, y: -1},
+					{x: 1, y: 0},
+					{x: -1, y: 0},
+				},
+			})
+			if !moved {
+				center.Touched()
+				w.activeChunks = append(w.activeChunks, uint16(idChunk))
+				center.DecreaseLife()
 			}
 		}
 
@@ -197,6 +235,10 @@ func (w *World) Draw() {
 			color = rl.SkyBlue
 		case STONE_CELL:
 			color = rl.Gray
+		case FIRE_CELL:
+			color = rl.Red
+		case WOOD_CELL:
+			color = rl.Brown
 		}
 		rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, color)
 		rl.DrawText(fmt.Sprint(y/common.SIZE_CELL), 0, int32(y), common.SIZE_CELL, rl.Black)

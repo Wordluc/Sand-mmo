@@ -1,7 +1,5 @@
 package sandmmo
 
-import "sand-mmo/common"
-
 type CellType = uint8
 
 const (
@@ -11,6 +9,8 @@ const (
 	SMOKE_CELL
 	DELETE_CELL
 	STONE_CELL
+	WOOD_CELL
+	FIRE_CELL
 )
 
 type Cell struct {
@@ -25,12 +25,18 @@ type Cell struct {
 func NewCell(cellType CellType, initialLife uint16) (res Cell) {
 	res.CellType = cellType
 	res.InitialLifeSec = initialLife
-	res.RemainingLife = float32(res.InitialLifeSec * 1000 / common.SLEEP)
+	res.RemainingLife = float32(initialLife)
 	res.touchedId = GTouchedId - 1
 	res.forceTouched = true
 	return res
 
 }
+
+func (c *Cell) DecreaseLife() bool {
+	c.RemainingLife -= 1
+	return c.RemainingLife <= 0
+}
+
 func (c Cell) IsEmpty() bool {
 	return c.CellType == NULL_CELL
 }
