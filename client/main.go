@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
@@ -18,7 +19,15 @@ const W_GAME = common.W_WINDOWS * common.SIZE_CELL
 func main() {
 	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, common.H_WINDOWS*common.SIZE_CELL, "")
 	w := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
-	socket, err := net.Dial("tcp", ":8000")
+	var socket net.Conn
+	var err error
+	if len(os.Args) == 3 {
+		addServer := os.Args[1]
+		portServer := os.Args[2]
+		socket, err = net.Dial("tcp", addServer+":"+portServer)
+	} else {
+		socket, err = net.Dial("tcp", ":8000")
+	}
 	if err != nil {
 		panic(err)
 	}
