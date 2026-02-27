@@ -43,12 +43,12 @@ func main() {
 		if rl.WindowShouldClose() {
 			return
 		}
+		vec := rl.GetMousePosition()
+		x := uint16(vec.X) / common.SIZE_CELL
+		y := uint16(vec.Y) / common.SIZE_CELL
 		//avoid to send same package twise
+		chunkId := w.GetChunkId(x, y)
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
-			vec := rl.GetMousePosition()
-			x := uint16(vec.X) / common.SIZE_CELL
-			y := uint16(vec.Y) / common.SIZE_CELL
-			chunkId := w.GetChunkId(x, y)
 			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y, cellType, brushType), socket)
 		}
 
@@ -75,13 +75,8 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 150, Width: 50, Height: 20}, "Big Square") {
 			brushType = common.SQUARE_BIG
 		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 175, Width: 50, Height: 20}, "Delete") {
-			cellType = sandmmo.DELETE_CELL
-		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 200, Width: 50, Height: 20}, "Stone") {
-			cellType = sandmmo.STONE_CELL
-		}
 		w.Draw()
+		rl.DrawText(fmt.Sprintf("x:%v\n y:%v\n c:%v", x, y, chunkId), W_GAME-30, 0, common.SIZE_CELL, rl.Black)
 		rl.EndDrawing()
 	}
 
