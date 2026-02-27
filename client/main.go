@@ -15,9 +15,10 @@ import (
 
 const W_BUTTONS_SIDE = 100
 const W_GAME = common.W_WINDOWS * common.SIZE_CELL
+const H_GAME = common.H_WINDOWS * common.SIZE_CELL
 
 func main() {
-	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, common.H_WINDOWS*common.SIZE_CELL+common.SIZE_CELL, "")
+	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME+common.SIZE_CELL, "")
 	w := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 	var socket net.Conn
 	var err error
@@ -49,7 +50,9 @@ func main() {
 		//avoid to send same package twise
 		chunkId := w.GetChunkId(x, y)
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
-			common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y, cellType, brushType), socket)
+			if !(vec.X > W_GAME || vec.Y > H_GAME) {
+				common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y, cellType, brushType), socket)
+			}
 		}
 
 		rl.BeginDrawing()
