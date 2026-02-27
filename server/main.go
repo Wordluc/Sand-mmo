@@ -88,6 +88,7 @@ func UpdateClientWorlds(world *sandmmo.World) {
 				world.Simulate(uint16(iC))
 			}
 			chunksToSend = world.GetChunksToSend()
+			fmt.Println("To Send", chunksToSend)
 			addrsToUse := addrsUdp
 			t := uint8(rand.Intn(256))
 			for {
