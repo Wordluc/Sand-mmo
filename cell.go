@@ -14,12 +14,14 @@ const (
 )
 
 type Cell struct {
-	CellType       CellType
+	CellType CellType
+	//I can avoid to share the remained life, so i can reduce the package size
 	InitialLifeSec uint16
 	RemainingLife  float32
-	Extra          uint16
-	touchedId      uint8
-	forceTouched   bool
+	//I Could use extra to say what gradient of colors it is the material
+	Extra        uint16
+	touchedId    uint8
+	forceTouched bool
 }
 
 func NewCell(cellType CellType, initialLife uint16) (res Cell) {
