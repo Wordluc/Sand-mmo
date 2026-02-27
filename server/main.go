@@ -75,20 +75,17 @@ func handlerConnection(conn net.Conn) {
 	}
 }
 func UpdateClientWorlds(world *sandmmo.World) {
+	var waitG sync.WaitGroup
 	go func() {
 		for {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
 			m.Lock()
-			//Lock world to out communications
-			//Loop simulation
 			chunksToSend := world.GetActiveChunksAndNeiboroud()
-			//UnLock
 			for _, iC := range chunksToSend {
 				world.Simulate(uint16(iC))
 			}
 			chunksToSend = world.GetChunksToSend()
-			addrsToUse := addrsUdp
 			t := uint8(rand.Intn(256))
 			for {
 				if t == sandmmo.GTouchedId {
@@ -98,13 +95,19 @@ func UpdateClientWorlds(world *sandmmo.World) {
 				break
 			}
 			sandmmo.GTouchedId = t
-			var chunks [][]byte = make([][]byte, len(chunksToSend))
-			//Could be this optimized ?,waitGroups?
-			for i, iC := range chunksToSend {
-				chunks[i] = world.GetChunkBytesToSend(uint16(iC))
-			}
-			m.Unlock()
 
+			var chunks [][]byte = make([][]byte, len(chunksToSend))
+			waitG.Add(len(chunksToSend))
+			for i, iC := range chunksToSend {
+				go func() {
+					chunks[i] = world.GetChunkBytesToSend(uint16(iC))
+					waitG.Done()
+				}()
+			}
+			waitG.Wait()
+			addrsToUse := addrsUdp
+			m.Unlock()
+			//Does it make sense to paralize this too?
 			for _, chunk := range chunks {
 				for _, addr := range addrsToUse {
 					if addr == nil {
