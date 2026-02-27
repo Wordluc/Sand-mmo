@@ -88,7 +88,19 @@ func (w *World) Simulate(idChunk uint16) error {
 		for _, g := range groups {
 			i := rand.IntN(len(g))
 			o := g[i]
-			if isFree(o.x+x, o.y+y) {
+			r := isFree(o.x+x, o.y+y)
+			if !r {
+				i = 0
+				for {
+					if i >= len(g) || r {
+						break
+					}
+					o = g[i]
+					r = isFree(o.x+x, o.y+y)
+					i++
+				}
+			}
+			if r {
 				(*cell).Touched()
 				w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
 				w.Set(uint16(x), uint16(y), Cell{})
@@ -107,9 +119,9 @@ func (w *World) Simulate(idChunk uint16) error {
 			w.activeChunks = append(w.activeChunks, uint16(idChunk))
 			center.forceTouched = false
 		}
-		//		if center.IsEmpty() || center.IsTouched() {
-		//			return nil
-		//		}
+		if center.IsEmpty() || center.IsTouched() {
+			return nil
+		}
 		x := int32(_x)
 		y := int32(_y)
 		switch center.CellType {
@@ -120,8 +132,7 @@ func (w *World) Simulate(idChunk uint16) error {
 				}, {
 					{x: 1, y: 1},
 					{x: -1, y: 1},
-				},
-			})
+				}})
 		case WATER_CELL:
 			simulateMovements(x, y, &center, [][]coordinate{
 				{
@@ -156,7 +167,6 @@ func (w *World) Simulate(idChunk uint16) error {
 				w.activeChunks = append(w.activeChunks, uint16(idChunk))
 			}
 		}
-		fmt.Println(w.activeChunks)
 
 		return nil
 	})
@@ -202,6 +212,7 @@ func (w *World) GetNumberChucks() uint16 {
 }
 
 func (w *World) GetActiveChunksAndNeiboroud() (res []uint16) {
+	slices.Sort(w.activeChunks)
 	chunks := slices.Compact(w.activeChunks)
 	w.activeChunks = []uint16{}
 
@@ -236,7 +247,6 @@ func (w *World) GetActiveChunksAndNeiboroud() (res []uint16) {
 }
 
 func (w *World) GetChunksToSend() []uint16 {
-	fmt.Println("After Simulation", w.activeChunks)
 	r := w.activeChunks
 	slices.Sort(r)
 	w.activeChunks = slices.Compact(r)
