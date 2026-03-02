@@ -1,13 +1,14 @@
-package sandmmo
+package cell
+
+import "sand-mmo/common"
 
 type CellType = uint8
 
 const (
-	NULL_CELL CellType = iota
+	EMPTY_CELL CellType = iota
 	SAND_CELL
 	WATER_CELL
 	SMOKE_CELL
-	DELETE_CELL
 	STONE_CELL
 	WOOD_CELL
 	FIRE_CELL
@@ -22,31 +23,27 @@ type Cell struct {
 	forceTouched   bool
 }
 
-func NewCell(cellType CellType, initialLife uint16) (res Cell) {
-	res.CellType = cellType
-	res.InitialLifeSec = initialLife
-	res.RemainingLife = float32(initialLife)
-	res.touchedId = GTouchedId - 1
-	res.forceTouched = true
-	return res
-
-}
-
 func (c *Cell) DecreaseLife() bool {
 	c.RemainingLife -= 1
 	return c.RemainingLife <= 0
 }
 
 func (c Cell) IsEmpty() bool {
-	return c.CellType == NULL_CELL
+	return c.CellType == EMPTY_CELL
 }
 
 func (c *Cell) IsTouched() bool {
-	return c.touchedId == GTouchedId
+	return c.touchedId == common.GTouchedId
 }
 
 func (c *Cell) Touched() {
-	c.touchedId = GTouchedId
+	c.touchedId = common.GTouchedId
+}
+func (c *Cell) IsNew() bool {
+	defer func() {
+		c.forceTouched = false
+	}()
+	return c.forceTouched
 }
 
 func DecodeCell(input uint32) Cell {
@@ -54,7 +51,7 @@ func DecodeCell(input uint32) Cell {
 	c.CellType = CellType((input & 0xFF000000) >> (4 * 6))
 	c.InitialLifeSec = uint16((input & 0x00FFF000) >> (4 * 3))
 	c.Extra = uint16((input & 0x00000FFF))
-	c.touchedId = GTouchedId
+	c.touchedId = common.GTouchedId
 	return c
 }
 

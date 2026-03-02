@@ -1,23 +1,28 @@
 package sandmmo
 
 import (
+	"sand-mmo/cell"
 	"slices"
 	"testing"
 )
 
+func newCell_for_test(a, b int) cell.Cell {
+	return cell.Cell{}
+
+}
 func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
-	worldCells := []Cell{
-		NewCell(1, 10), NewCell(2, 20), NewCell(3, 30), NewCell(4, 40), NewCell(5, 50), NewCell(6, 60), NewCell(7, 70), NewCell(8, 80),
-		NewCell(9, 90), NewCell(10, 100), NewCell(11, 110), NewCell(12, 120), NewCell(13, 130), NewCell(14, 140), NewCell(15, 150), NewCell(16, 160),
+	worldCells := []cell.Cell{
+		newCell_for_test(1, 10), newCell_for_test(2, 20), newCell_for_test(3, 30), newCell_for_test(4, 40), newCell_for_test(5, 50), newCell_for_test(6, 60), newCell_for_test(7, 70), newCell_for_test(8, 80),
+		newCell_for_test(9, 90), newCell_for_test(10, 100), newCell_for_test(11, 110), newCell_for_test(12, 120), newCell_for_test(13, 130), newCell_for_test(14, 140), newCell_for_test(15, 150), newCell_for_test(16, 160),
 
-		NewCell(17, 170), NewCell(18, 180), NewCell(19, 190), NewCell(20, 200), NewCell(21, 210), NewCell(22, 220), NewCell(23, 230), NewCell(24, 240),
-		NewCell(25, 250), NewCell(26, 260), NewCell(27, 270), NewCell(28, 280), NewCell(29, 290), NewCell(30, 300), NewCell(31, 310), NewCell(32, 320),
+		newCell_for_test(17, 170), newCell_for_test(18, 180), newCell_for_test(19, 190), newCell_for_test(20, 200), newCell_for_test(21, 210), newCell_for_test(22, 220), newCell_for_test(23, 230), newCell_for_test(24, 240),
+		newCell_for_test(25, 250), newCell_for_test(26, 260), newCell_for_test(27, 270), newCell_for_test(28, 280), newCell_for_test(29, 290), newCell_for_test(30, 300), newCell_for_test(31, 310), newCell_for_test(32, 320),
 	}
 
 	var encoded []uint32
 	for _, c := range worldCells {
-		encoded = append(encoded, EncodeCell(c))
+		encoded = append(encoded, cell.EncodeCell(c))
 	}
 
 	// 8x4 world
@@ -26,32 +31,32 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
 	caseTest := []struct {
 		idChunk int
-		cell    []Cell
+		cell    []cell.Cell
 	}{
 		{
 			idChunk: 1,
-			cell: []Cell{
+			cell: []cell.Cell{
 				worldCells[2], worldCells[3],
 				worldCells[10], worldCells[11],
 			},
 		},
 		{
 			idChunk: 3,
-			cell: []Cell{
+			cell: []cell.Cell{
 				worldCells[6], worldCells[7],
 				worldCells[14], worldCells[15],
 			},
 		},
 		{
 			idChunk: 5,
-			cell: []Cell{
+			cell: []cell.Cell{
 				worldCells[18], worldCells[19],
 				worldCells[26], worldCells[27],
 			},
 		},
 		{
 			idChunk: 6,
-			cell: []Cell{
+			cell: []cell.Cell{
 				worldCells[20], worldCells[21],
 				worldCells[28], worldCells[29],
 			},
@@ -62,7 +67,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 		var want []uint32
 		for i := range c.cell {
 
-			want = append(want, EncodeCell(c.cell[i]))
+			want = append(want, cell.EncodeCell(c.cell[i]))
 		}
 		got := w.GetChunk(uint16(c.idChunk))
 
@@ -71,7 +76,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 		}
 
 		for i, v := range got {
-			if DecodeCell(v) != c.cell[i] {
+			if cell.DecodeCell(v) != c.cell[i] {
 				t.Fatalf("decode mismatch at %d", i)
 			}
 		}

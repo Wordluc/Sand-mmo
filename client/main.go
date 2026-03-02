@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	sandmmo "sand-mmo"
+	"sand-mmo/cell"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
 
@@ -38,7 +39,7 @@ func main() {
 	defer common.SendToTcpSocket(chain.GetENDCommand(), socket)
 	//Insert fps target
 	rl.SetTargetFPS(30)
-	var cellType sandmmo.CellType = sandmmo.SAND_CELL
+	var cellType cell.CellType = cell.SAND_CELL
 	var brushType common.BrushType = common.CIRCLE_SMALL
 	for {
 		if rl.WindowShouldClose() {
@@ -58,13 +59,13 @@ func main() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.SkyBlue)
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 0, Width: 50, Height: 20}, "Water") {
-			cellType = sandmmo.WATER_CELL
+			cellType = cell.WATER_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 25, Width: 50, Height: 20}, "Sand") {
-			cellType = sandmmo.SAND_CELL
+			cellType = cell.SAND_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 50, Width: 50, Height: 20}, "Smoke") {
-			cellType = sandmmo.SMOKE_CELL
+			cellType = cell.SMOKE_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 75, Width: 50, Height: 20}, "Small Circle") {
 			brushType = common.CIRCLE_SMALL
@@ -79,16 +80,16 @@ func main() {
 			brushType = common.SQUARE_BIG
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 175, Width: 50, Height: 20}, "Delete") {
-			cellType = sandmmo.DELETE_CELL
+			cellType = cell.EMPTY_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 200, Width: 50, Height: 20}, "Stone") {
-			cellType = sandmmo.STONE_CELL
+			cellType = cell.STONE_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 225, Width: 50, Height: 20}, "Fire") {
-			cellType = sandmmo.FIRE_CELL
+			cellType = cell.FIRE_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 250, Width: 50, Height: 20}, "Wood") {
-			cellType = sandmmo.WOOD_CELL
+			cellType = cell.WOOD_CELL
 		}
 		w.Draw()
 		rl.DrawText(fmt.Sprintf("x:%v\n y:%v\n c:%v", x, y, chunkId), W_GAME-30, 0, common.SIZE_CELL, rl.Black)

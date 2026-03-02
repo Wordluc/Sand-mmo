@@ -3,7 +3,7 @@ package responsibilityChain
 import (
 	"errors"
 	"fmt"
-	sandmmo "sand-mmo"
+	"sand-mmo/cell"
 	"sand-mmo/common"
 )
 
@@ -26,19 +26,9 @@ func GetHandlers() []Handler {
 			},
 		},
 		{
-			p: GetDrawCommand(0, 0, 0, sandmmo.NULL_CELL, 0),
+			p: GetDrawCommand(0, 0, 0, cell.EMPTY_CELL, 0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				var lifeTime uint16
-				switch p.CellType {
-				case sandmmo.FIRE_CELL:
-					lifeTime = 5
-				default:
-					lifeTime = 15
-
-				}
-				//	fmt.Printf("Draw %v %v\n", p.X, p.Y)
-				//TODO: to change, create a factory of cell
-				drawCircle := func(radius int) {
+				drawCircle := func(radius int) error {
 					for iy := range radius * 2 {
 						for ix := range radius * 2 {
 							dx := (radius - ix)
@@ -53,13 +43,19 @@ func GetHandlers() []Handler {
 								continue
 							}
 							if (dx*dx + dy*dy) <= radius*radius/4 {
-								e.world.Set(uint16(x), uint16(y), sandmmo.NewCell(p.CellType, lifeTime))
+								cell, err := cell.NewCell(p.CellType)
+								if err != nil {
+									return err
+								}
+								e.world.Set(uint16(x), uint16(y), cell)
 
 							}
 						}
+
 					}
+					return nil
 				}
-				drawBox := func(size int) {
+				drawBox := func(size int) error {
 					for iy := range size * 2 {
 						for ix := range size * 2 {
 							dx := (size - ix)
@@ -73,20 +69,24 @@ func GetHandlers() []Handler {
 							if y < 0 {
 								continue
 							}
-							cell := sandmmo.NewCell(p.CellType, 10)
+							cell, err := cell.NewCell(p.CellType)
+							if err != nil {
+								return err
+							}
 							e.world.Set(uint16(x), uint16(y), cell)
 						}
 					}
+					return nil
 				}
 				switch p.BrushType {
 				case common.CIRCLE_SMALL:
-					drawCircle(4)
+					return drawCircle(4)
 				case common.CIRCLE_BIG:
-					drawCircle(6)
+					return drawCircle(6)
 				case common.SQUARE_SMALL:
-					drawBox(4)
+					return drawBox(4)
 				case common.SQUARE_BIG:
-					drawBox(6)
+					return drawBox(6)
 				}
 				return nil
 			},

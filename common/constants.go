@@ -5,3 +5,5 @@ const W_WINDOWS = 120
 const H_WINDOWS = 70
 const SIZE_CELL = 10
 const CHUNK_SIZE = 10
+
+var GTouchedId uint8 = 0

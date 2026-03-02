@@ -1,7 +1,7 @@
 package responsibilityChain
 
 import (
-	sandmmo "sand-mmo"
+	"sand-mmo/cell"
 	"sand-mmo/common"
 )
 
@@ -27,7 +27,7 @@ func GetChunkCommand(chunkId uint32) (p common.Package) {
 		},
 	}
 }
-func GetDrawCommand(chunkId uint8, x uint16, y uint16, cellType sandmmo.CellType, brushType common.BrushType) (p common.Package) {
+func GetDrawCommand(chunkId uint8, x uint16, y uint16, cellType cell.CellType, brushType common.BrushType) (p common.Package) {
 	return common.Package{
 		Command: common.DRAW_IN,
 		BrushPackage: common.BrushPackage{

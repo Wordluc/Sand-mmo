@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
+	"sand-mmo/cell"
 	"sand-mmo/common"
 	"slices"
 
@@ -15,15 +16,13 @@ type World struct {
 	W            uint16
 	H            uint16
 	ChunkSize    uint16
-	cells        []Cell
+	cells        []cell.Cell
 	activeChunks []uint16
 }
 
-var GTouchedId uint8 = 0
-
 func NewWorld(w, h, chunkSize uint16) World {
 	world := World{}
-	world.cells = make([]Cell, w*h)
+	world.cells = make([]cell.Cell, w*h)
 	world.H = h
 	world.W = w
 	world.ChunkSize = chunkSize
@@ -33,7 +32,7 @@ func NewWorld(w, h, chunkSize uint16) World {
 func (w *World) SetCellsByte(bytes []byte, idChunk uint16) {
 	const u32Size = 4
 	var u32 uint32
-	var cell Cell
+	var c cell.Cell
 	chunkPerRow := w.W / w.ChunkSize
 
 	chunkY := idChunk / chunkPerRow
@@ -41,8 +40,8 @@ func (w *World) SetCellsByte(bytes []byte, idChunk uint16) {
 	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
 	for i := 0; i < len(bytes); i = i + u32Size {
 		u32 = binary.BigEndian.Uint32(bytes[i : i+u32Size])
-		cell = DecodeCell(u32)
-		w.cells[iCell] = cell
+		c = cell.DecodeCell(u32)
+		w.cells[iCell] = c
 		iCell += 1
 		if iCell%w.ChunkSize == 0 {
 			iCell += (w.W - w.ChunkSize)
@@ -51,7 +50,7 @@ func (w *World) SetCellsByte(bytes []byte, idChunk uint16) {
 
 }
 
-func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center *Cell) error) error {
+func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center *cell.Cell) error) error {
 
 	chunkPerRow := w.W / w.ChunkSize
 	chunkY := idChunk / chunkPerRow
@@ -84,7 +83,7 @@ func (w *World) Simulate(idChunk uint16) error {
 
 		return cell != nil && cell.IsEmpty()
 	}
-	simulateCustomMovements := func(x, y int32, maxSpeed int32, cell **Cell, isFree func(x, y int32) bool, callbackAfter func(x, y int32), groups [][]coordinate) bool {
+	simulateCustomMovements := func(x, y int32, maxSpeed int32, cell **cell.Cell, isFree func(x, y int32) bool, callbackAfter func(x, y int32) error, groups [][]coordinate) bool {
 		var r = false
 		//TODO: to optimize
 		for _, g := range groups {
@@ -117,33 +116,49 @@ func (w *World) Simulate(idChunk uint16) error {
 		}
 		return false
 	}
-	simulateSimpleMovements := func(x, y int32, maxSpeed int32, cell **Cell, groups [][]coordinate) bool {
-		removeOldCell := func(x, y int32) {
-			w.Set(uint16(x), uint16(y), Cell{})
+	simulateSimpleMovements := func(x, y int32, maxSpeed int32, c **cell.Cell, groups [][]coordinate) bool {
+		removeOldCell := func(x, y int32) error {
+			c, err := cell.NewCell(cell.EMPTY_CELL)
+			if err != nil {
+				return err
+			}
+			w.Set(uint16(x), uint16(y), c)
+			return nil
 		}
-		return simulateCustomMovements(x, y, maxSpeed, cell, isFree, removeOldCell, groups)
+		return simulateCustomMovements(x, y, maxSpeed, c, isFree, removeOldCell, groups)
 	}
-	simulateFireMovements := func(x, y int32, maxSpeed int32, cell **Cell, groups [][]coordinate) bool {
-		removeOldCell := func(x, y int32) {
+	simulateFireMovements := func(x, y int32, maxSpeed int32, c **cell.Cell, groups [][]coordinate) bool {
+		removeOldCell := func(x, y int32) error {
 			cell := w.Get(uint16(x), uint16(y))
 			cell.Touched()
 			w.activeChunks = append(w.activeChunks, uint16(idChunk))
 			cell.DecreaseLife()
+			return nil
 		}
 		isFree := func(x, y int32) bool {
-			cell := w.Get(uint16(x), uint16(y))
-			return cell != nil && cell.CellType == WOOD_CELL
+			tcell := w.Get(uint16(x), uint16(y))
+			if tcell == nil {
+				return false
+			}
+			if tcell.CellType == cell.WATER_CELL {
+				(*c).RemainingLife = 0
+			}
+			if tcell.CellType == cell.WOOD_CELL && (*c).RemainingLife != 0 {
+				(*c).RemainingLife = 3
+				return true
+			}
+			return false
 		}
-		return simulateCustomMovements(x, y, maxSpeed, cell, isFree, removeOldCell, groups)
+		return simulateCustomMovements(x, y, maxSpeed, c, isFree, removeOldCell, groups)
 	}
 
-	return w.forEachCell(idChunk, func(_x, _y uint16, center *Cell) error {
+	return w.forEachCell(idChunk, func(_x, _y uint16, center *cell.Cell) error {
 		if center == nil {
 			return nil
 		}
-		if center.forceTouched {
+
+		if center.IsNew() {
 			w.activeChunks = append(w.activeChunks, uint16(idChunk))
-			center.forceTouched = false
 		}
 		if center.IsEmpty() || center.IsTouched() {
 			return nil
@@ -151,7 +166,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		x := int32(_x)
 		y := int32(_y)
 		switch center.CellType {
-		case SAND_CELL:
+		case cell.SAND_CELL:
 			simulateSimpleMovements(x, y, 1, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
@@ -159,9 +174,13 @@ func (w *World) Simulate(idChunk uint16) error {
 					{x: 1, y: 1},
 					{x: -1, y: 1},
 				}})
-		case DELETE_CELL:
-			w.Set(_x, _y, Cell{})
-		case WATER_CELL:
+		case cell.EMPTY_CELL:
+			c, err := cell.NewCell(cell.EMPTY_CELL)
+			if err != nil {
+				return err
+			}
+			w.Set(_x, _y, c)
+		case cell.WATER_CELL:
 			simulateSimpleMovements(x, y, 2, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
@@ -173,9 +192,13 @@ func (w *World) Simulate(idChunk uint16) error {
 					{x: 1, y: 0},
 				},
 			})
-		case SMOKE_CELL:
+		case cell.SMOKE_CELL:
 			if center.RemainingLife <= 0 {
-				w.Set(_x, _y, Cell{})
+				c, err := cell.NewCell(cell.EMPTY_CELL)
+				if err != nil {
+					return err
+				}
+				w.Set(_x, _y, c)
 				return nil
 			}
 			center.DecreaseLife()
@@ -194,11 +217,7 @@ func (w *World) Simulate(idChunk uint16) error {
 				center.Touched()
 				w.activeChunks = append(w.activeChunks, uint16(idChunk))
 			}
-		case FIRE_CELL:
-			if center.RemainingLife <= 0 {
-				w.Set(_x, _y, NewCell(SMOKE_CELL, 10))
-				return nil
-			}
+		case cell.FIRE_CELL:
 			moved := simulateFireMovements(x, y, 1, &center, [][]coordinate{
 				{
 					{x: 0, y: 1},
@@ -207,6 +226,14 @@ func (w *World) Simulate(idChunk uint16) error {
 					{x: -1, y: 0},
 				},
 			})
+			if center.RemainingLife <= 0 {
+				c, err := cell.NewCell(cell.SMOKE_CELL)
+				if err != nil {
+					return err
+				}
+				w.Set(_x, _y, c)
+				return nil
+			}
 			if !moved {
 				center.Touched()
 				w.activeChunks = append(w.activeChunks, uint16(idChunk))
@@ -225,19 +252,19 @@ func (w *World) Draw() {
 		x = i % w.W * common.SIZE_CELL
 		y = i / w.W * common.SIZE_CELL
 		switch w.cells[i].CellType {
-		case SAND_CELL:
+		case cell.SAND_CELL:
 			color = rl.Yellow
-		case WATER_CELL:
+		case cell.WATER_CELL:
 			color = rl.Blue
-		case SMOKE_CELL:
+		case cell.SMOKE_CELL:
 			color = rl.LightGray
-		case NULL_CELL:
+		case cell.EMPTY_CELL:
 			color = rl.SkyBlue
-		case STONE_CELL:
+		case cell.STONE_CELL:
 			color = rl.Gray
-		case FIRE_CELL:
+		case cell.FIRE_CELL:
 			color = rl.Red
-		case WOOD_CELL:
+		case cell.WOOD_CELL:
 			color = rl.Brown
 		}
 		rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, color)
@@ -248,9 +275,9 @@ func (w *World) Draw() {
 
 // For test
 func (w *World) importCell(cells []uint32) {
-	w.cells = []Cell{}
+	w.cells = []cell.Cell{}
 	for i := range cells {
-		w.cells = append(w.cells, DecodeCell(cells[i]))
+		w.cells = append(w.cells, cell.DecodeCell(cells[i]))
 	}
 }
 
@@ -305,7 +332,7 @@ func (w *World) GetChunksToSend() []uint16 {
 
 	return w.activeChunks
 }
-func (w *World) Set(x, y uint16, cell Cell) {
+func (w *World) Set(x, y uint16, cell cell.Cell) {
 	if x < 0 {
 		return
 	}
@@ -323,7 +350,7 @@ func (w *World) Set(x, y uint16, cell Cell) {
 	w.cells[indexCell] = cell
 }
 
-func (w *World) Get(x, y uint16) *Cell {
+func (w *World) Get(x, y uint16) *cell.Cell {
 	if x < 0 {
 		return nil
 	}
@@ -351,8 +378,8 @@ func (w *World) GetChunk(idChunk uint16) []uint32 {
 	var i uint16
 	for range uint16(w.ChunkSize) {
 		i = 0
-		for _, cell := range w.cells[iCell : iCell+w.ChunkSize] {
-			decoded = append(decoded, EncodeCell(cell))
+		for _, c := range w.cells[iCell : iCell+w.ChunkSize] {
+			decoded = append(decoded, cell.EncodeCell(c))
 			i++
 		}
 		iCell += (w.W)

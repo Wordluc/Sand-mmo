@@ -69,7 +69,6 @@ func handlerConnection(conn net.Conn) {
 		err = engine.Run(r)
 		if err != nil {
 			fmt.Print(err.Error(), "\n\n")
-			continue
 		}
 		m.Unlock()
 	}
@@ -88,13 +87,13 @@ func UpdateClientWorlds(world *sandmmo.World) {
 			chunksToSend = world.GetChunksToSend()
 			t := uint8(rand.Intn(256))
 			for {
-				if t == sandmmo.GTouchedId {
+				if t == common.GTouchedId {
 					t = uint8(rand.Intn(256))
 					continue
 				}
 				break
 			}
-			sandmmo.GTouchedId = t
+			common.GTouchedId = t
 
 			var chunks [][]byte = make([][]byte, len(chunksToSend))
 			waitG.Add(len(chunksToSend))

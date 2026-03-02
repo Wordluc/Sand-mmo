@@ -1,4 +1,4 @@
-package sandmmo
+package cell
 
 import "testing"
 
