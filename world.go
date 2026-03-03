@@ -1,6 +1,7 @@
 package sandmmo
 
 import (
+	"cmp"
 	"encoding/binary"
 	"fmt"
 	"math"
@@ -12,12 +13,35 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+type orderList[t cmp.Ordered] []t
+
+func (a *orderList[t]) SortedInsert(newValue t) {
+	i, found := slices.BinarySearch(*a, newValue)
+	if found {
+		return
+	}
+	*a = slices.Insert(*a, i, newValue)
+}
+
+func (a *orderList[t]) GetReversSort() []t {
+	var res []t = make([]t, len(*a))
+	for i := range *a {
+		res[len(*a)-i-1] = (*a)[i]
+	}
+	return res
+}
+
+func (a *orderList[t]) Clean() {
+
+	*a = []t{}
+}
+
 type World struct {
 	W            uint16
 	H            uint16
 	ChunkSize    uint16
 	cells        []cell.Cell
-	activeChunks []uint16
+	activeChunks orderList[uint16]
 }
 
 func NewWorld(w, h, chunkSize uint16) World {
@@ -131,7 +155,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		removeOldCell := func(x, y int32) error {
 			cell := w.Get(uint16(x), uint16(y))
 			cell.Touched()
-			w.activeChunks = append(w.activeChunks, uint16(idChunk))
+			w.activeChunks.SortedInsert(idChunk)
 			cell.DecreaseLife()
 			return nil
 		}
@@ -158,7 +182,8 @@ func (w *World) Simulate(idChunk uint16) error {
 		}
 
 		if center.IsNew() {
-			w.activeChunks = append(w.activeChunks, uint16(idChunk))
+
+			w.activeChunks.SortedInsert(idChunk)
 		}
 		if center.IsEmpty() || center.IsTouched() {
 			return nil
@@ -215,7 +240,7 @@ func (w *World) Simulate(idChunk uint16) error {
 			})
 			if !moved {
 				center.Touched()
-				w.activeChunks = append(w.activeChunks, uint16(idChunk))
+				w.activeChunks.SortedInsert(idChunk)
 			}
 		case cell.FIRE_CELL:
 			moved := simulateFireMovements(x, y, 1, &center, [][]coordinate{
@@ -236,7 +261,7 @@ func (w *World) Simulate(idChunk uint16) error {
 			}
 			if !moved {
 				center.Touched()
-				w.activeChunks = append(w.activeChunks, uint16(idChunk))
+				w.activeChunks.SortedInsert(idChunk)
 				center.DecreaseLife()
 			}
 		}
@@ -290,10 +315,9 @@ func (w *World) GetNumberChucks() uint16 {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
 }
 
-func (w *World) GetActiveChunksAndNeiboroud() (res []uint16) {
-	slices.Sort(w.activeChunks)
-	chunks := slices.Compact(w.activeChunks)
-	w.activeChunks = []uint16{}
+func (w *World) GetActiveChunksAndNeiboroud() (res orderList[uint16]) {
+	chunks := w.activeChunks
+	w.activeChunks.Clean()
 
 	chunkPerRow := int(w.W / w.ChunkSize)
 	totalChunks := chunkPerRow * int(w.H/w.ChunkSize)
@@ -315,23 +339,16 @@ func (w *World) GetActiveChunksAndNeiboroud() (res []uint16) {
 			if n < 0 || n >= totalChunks {
 				continue
 			}
-			res = append(res, uint16(n))
+			res.SortedInsert(uint16(n))
 		}
 	}
-	slices.SortFunc(res, func(a, b uint16) int {
-		return int(b) - int(a)
-
-	})
-	return slices.Compact(res)
+	return res.GetReversSort()
 }
 
 func (w *World) GetChunksToSend() []uint16 {
-	r := w.activeChunks
-	slices.Sort(r)
-	w.activeChunks = slices.Compact(r)
-
 	return w.activeChunks
 }
+
 func (w *World) Set(x, y uint16, cell cell.Cell) {
 	if x < 0 {
 		return
@@ -345,7 +362,7 @@ func (w *World) Set(x, y uint16, cell cell.Cell) {
 	if y >= w.H {
 		return
 	}
-	w.activeChunks = append(w.activeChunks, w.GetChunkId(x, y))
+	w.activeChunks.SortedInsert(w.GetChunkId(x, y))
 	indexCell := x + (y * w.W)
 	w.cells[indexCell] = cell
 }
