@@ -20,7 +20,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 		newCell_for_test(25, 250), newCell_for_test(26, 260), newCell_for_test(27, 270), newCell_for_test(28, 280), newCell_for_test(29, 290), newCell_for_test(30, 300), newCell_for_test(31, 310), newCell_for_test(32, 320),
 	}
 
-	var encoded []uint32
+	var encoded []uint16
 	for _, c := range worldCells {
 		encoded = append(encoded, cell.EncodeCell(c))
 	}
@@ -64,7 +64,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 	}
 
 	for _, c := range caseTest {
-		var want []uint32
+		var want []uint16
 		for i := range c.cell {
 
 			want = append(want, cell.EncodeCell(c.cell[i]))

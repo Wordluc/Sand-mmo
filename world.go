@@ -30,8 +30,8 @@ func NewWorld(w, h, chunkSize uint16) World {
 }
 
 func (w *World) SetCellsByte(bytes []byte, idChunk uint16) {
-	const u32Size = 4
-	var u32 uint32
+	const u32Size = 2
+	var u16 uint16
 	var c cell.Cell
 	chunkPerRow := w.W / w.ChunkSize
 
@@ -39,8 +39,8 @@ func (w *World) SetCellsByte(bytes []byte, idChunk uint16) {
 	chunkX := idChunk % chunkPerRow
 	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
 	for i := 0; i < len(bytes); i = i + u32Size {
-		u32 = binary.BigEndian.Uint32(bytes[i : i+u32Size])
-		c = cell.DecodeCell(u32)
+		u16 = binary.BigEndian.Uint16(bytes[i : i+u32Size])
+		c = cell.DecodeCell(u16)
 		w.cells[iCell] = c
 		iCell += 1
 		if iCell%w.ChunkSize == 0 {
@@ -274,7 +274,7 @@ func (w *World) Draw() {
 }
 
 // For test
-func (w *World) importCell(cells []uint32) {
+func (w *World) importCell(cells []uint16) {
 	w.cells = []cell.Cell{}
 	for i := range cells {
 		w.cells = append(w.cells, cell.DecodeCell(cells[i]))
@@ -366,8 +366,8 @@ func (w *World) Get(x, y uint16) *cell.Cell {
 	return &w.cells[x+(y*w.W)]
 }
 
-func (w *World) GetChunk(idChunk uint16) []uint32 {
-	var decoded []uint32
+func (w *World) GetChunk(idChunk uint16) []uint16 {
+	var decoded []uint16
 
 	chunkPerRow := w.W / w.ChunkSize
 
@@ -392,7 +392,7 @@ func (w *World) GetChunkBytesToSend(idChunk uint16) []byte {
 	var bytes []byte
 	bytes = binary.BigEndian.AppendUint16(bytes, idChunk)
 	for i := range chunk {
-		bytes = binary.BigEndian.AppendUint32(bytes, chunk[i])
+		bytes = binary.BigEndian.AppendUint16(bytes, chunk[i])
 	}
 	return bytes
 }

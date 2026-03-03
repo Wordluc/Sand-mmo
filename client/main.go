@@ -114,8 +114,8 @@ func createDialUdp(tcp net.Conn) *net.UDPConn {
 func UpdateWorld(world *sandmmo.World, udp *net.UDPConn) {
 	go func() {
 		for {
-			//4->32bit
-			var bytes []byte = make([]byte, 4*world.ChunkSize*world.ChunkSize+2)
+			//2->16bit
+			var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
 			n, _, err := udp.ReadFrom(bytes)
 			if err != nil {
 				fmt.Println(err)

@@ -11,20 +11,20 @@ func NewCell(celltype CellType) (res Cell, err error) {
 	res.forceTouched = true
 	switch celltype {
 	case SAND_CELL:
-		res.InitialLifeSec = 30
+		res.initialLifeSec = 30
 	case SMOKE_CELL:
-		res.InitialLifeSec = 30
+		res.initialLifeSec = 30
 	case FIRE_CELL:
-		res.InitialLifeSec = 10
+		res.initialLifeSec = 10
 	case WATER_CELL:
-		res.InitialLifeSec = 10
+		res.initialLifeSec = 10
 	case EMPTY_CELL:
 	case WOOD_CELL:
 	case STONE_CELL:
 	default:
 		return res, fmt.Errorf("CellType not found %v", celltype)
 	}
-	res.RemainingLife = float32(res.InitialLifeSec)
+	res.RemainingLife = float32(res.initialLifeSec)
 	return res, nil
 
 }

@@ -15,10 +15,11 @@ const (
 )
 
 type Cell struct {
-	CellType       CellType
-	InitialLifeSec uint16
+	CellType CellType
+	Extra    uint8
+
+	initialLifeSec uint16
 	RemainingLife  float32
-	Extra          uint16
 	touchedId      uint8
 	forceTouched   bool
 }
@@ -46,21 +47,19 @@ func (c *Cell) IsNew() bool {
 	return c.forceTouched
 }
 
-func DecodeCell(input uint32) Cell {
+func DecodeCell(input uint16) Cell {
 	c := Cell{}
-	c.CellType = CellType((input & 0xFF000000) >> (4 * 6))
-	c.InitialLifeSec = uint16((input & 0x00FFF000) >> (4 * 3))
-	c.Extra = uint16((input & 0x00000FFF))
+	c.CellType = CellType((input & 0xFF00) >> (4 * 2))
+	c.Extra = uint8((input & 0x00FF))
 	c.touchedId = common.GTouchedId
 	return c
 }
 
-func EncodeCell(c Cell) uint32 {
-	var output uint32
+func EncodeCell(c Cell) uint16 {
+	var output uint16
 
-	output = output | (uint32(c.CellType))<<(4*6)
-	output = output | (uint32(c.InitialLifeSec))<<(4*3)
-	output = output | (uint32(c.Extra))
+	output = output | (uint16(c.CellType))<<(4*2)
+	output = output | (uint16(c.Extra))
 
 	return output
 }
