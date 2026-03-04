@@ -52,7 +52,7 @@ func main() {
 		chunkId := w.GetChunkId(x, y)
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 			if !(vec.X > W_GAME || vec.Y > H_GAME) {
-				common.SendToTcpSocket(chain.GetDrawCommand(uint8(chunkId), x, y, cellType, brushType), socket)
+				common.SendToTcpSocket(chain.GetDrawCommand(x, y, cellType, brushType), socket)
 			}
 		}
 

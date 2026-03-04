@@ -26,7 +26,7 @@ func GetHandlers() []Handler {
 			},
 		},
 		{
-			p: GetDrawCommand(0, 0, 0, cell.EMPTY_CELL, 0),
+			p: GetDrawCommand(0, 0, cell.EMPTY_CELL, 0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				drawCircle := func(radius int) error {
 					for iy := range radius * 2 {
