@@ -103,7 +103,7 @@ func (w *World) Simulate(idChunk uint16) error {
 
 		return cell != nil && cell.IsEmpty()
 	}
-	simulateCustomMovements := func(pos common.Vec2, maxSpeed int32, cell **cell.Cell, isFree func(vec common.Vec2) bool, callbackAfter func(x, y int32) error, groups [][]common.Vec2) bool {
+	simulateCustomMovements := func(pos common.Vec2, maxSpeed int32, cell **cell.Cell, isFree func(vec common.Vec2) bool, callbackAfter func(x, y int32) error, groups []common.Vec2) bool {
 		oldx, oldy := pos.Get()
 		move := func(v common.Vec2) {
 			pos.Add(v)
@@ -116,30 +116,23 @@ func (w *World) Simulate(idChunk uint16) error {
 		}
 
 		for _, g := range groups {
-			i := 0
-			for {
-				if i >= len(g) {
-					break
-				}
-				for s := maxSpeed; s > 0; s-- {
-					o := g[i].Copy()
-					o.MultConst(s)
-					nPos := pos.Copy()
-					nPos.Add(o)
-					if isFree(nPos) {
-						(*cell).Velocity.Set(o.Get())
-						move(*(*cell).Velocity)
-						return true
+			for s := maxSpeed; s > 0; s-- {
+				o := g.Copy()
+				o.MultConst(s)
+				nPos := pos.Copy()
+				nPos.Add(o)
+				if isFree(nPos) {
+					(*cell).Velocity.Set(o.Get())
+					move(*(*cell).Velocity)
+					return true
 
-					}
 				}
-				i++
 			}
 		}
 		return false
 	}
 
-	simulateSimpleMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups [][]common.Vec2) bool {
+	simulateSimpleMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		removeOldCell := func(x, y int32) error {
 			c, err := cell.NewCell(cell.EMPTY_CELL)
 			if err != nil {
@@ -151,7 +144,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		return simulateCustomMovements(pos, maxSpeed, c, isFree, removeOldCell, groups)
 	}
 
-	simulateFireMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups [][]common.Vec2) bool {
+	simulateFireMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		removeOldCell := func(x, y int32) error {
 			cell := w.Get(uint16(x), uint16(y))
 			cell.Touched()
@@ -192,13 +185,11 @@ func (w *World) Simulate(idChunk uint16) error {
 		pos := common.NewVec2(int32(_x), int32(_y))
 		switch center.CellType {
 		case cell.SAND_CELL:
-			simulateSimpleMovements(pos, 1, &center, [][]common.Vec2{
-				{
-					common.NewVec2(0, 1),
-				}, {
-					common.NewVec2(1, 1),
-					common.NewVec2(-1, 1),
-				}})
+			simulateSimpleMovements(pos, 1, &center, []common.Vec2{
+				common.NewVec2(0, 1),
+				common.NewVec2(1, 1),
+				common.NewVec2(-1, 1),
+			})
 		case cell.EMPTY_CELL:
 			c, err := cell.NewCell(cell.EMPTY_CELL)
 			if err != nil {
@@ -206,16 +197,12 @@ func (w *World) Simulate(idChunk uint16) error {
 			}
 			w.Set(_x, _y, c)
 		case cell.WATER_CELL:
-			simulateSimpleMovements(pos, 2, &center, [][]common.Vec2{
-				{
-					common.NewVec2(0, 1),
-				}, {
-					common.NewVec2(1, 1),
-					common.NewVec2(-1, 1),
-				}, {
-					common.NewVec2(-1, 0),
-					common.NewVec2(1, 0),
-				},
+			simulateSimpleMovements(pos, 2, &center, []common.Vec2{
+				common.NewVec2(0, 1),
+				common.NewVec2(1, 1),
+				common.NewVec2(-1, 1),
+				common.NewVec2(-1, 0),
+				common.NewVec2(1, 0),
 			})
 		case cell.SMOKE_CELL:
 			if center.RemainingLife <= 0 {
@@ -227,29 +214,23 @@ func (w *World) Simulate(idChunk uint16) error {
 				return nil
 			}
 			center.DecreaseLife()
-			moved := simulateSimpleMovements(pos, 2, &center, [][]common.Vec2{
-				{
-					common.NewVec2(0, -1),
-				}, {
-					common.NewVec2(1, -1),
-					common.NewVec2(-1, -1),
-				}, {
-					common.NewVec2(-1, 0),
-					common.NewVec2(1, 0),
-				},
+			moved := simulateSimpleMovements(pos, 2, &center, []common.Vec2{
+				common.NewVec2(0, -1),
+				common.NewVec2(1, -1),
+				common.NewVec2(-1, -1),
+				common.NewVec2(-1, 0),
+				common.NewVec2(1, 0),
 			})
 			if !moved {
 				center.Touched()
 				w.activeChunks.SortedInsert(idChunk)
 			}
 		case cell.FIRE_CELL:
-			moved := simulateFireMovements(pos, 1, &center, [][]common.Vec2{
-				{
-					common.NewVec2(0, 1),
-					common.NewVec2(0, -1),
-					common.NewVec2(1, 0),
-					common.NewVec2(-1, 0),
-				},
+			moved := simulateFireMovements(pos, 1, &center, []common.Vec2{
+				common.NewVec2(0, 1),
+				common.NewVec2(0, -1),
+				common.NewVec2(1, 0),
+				common.NewVec2(-1, 0),
 			})
 			if center.RemainingLife <= 0 {
 				c, err := cell.NewCell(cell.SMOKE_CELL)

@@ -1,9 +1,9 @@
 package common
 
 const SLEEP = 50
-const W_WINDOWS = 120
-const H_WINDOWS = 70
-const SIZE_CELL = 10
-const CHUNK_SIZE = 10
+const W_WINDOWS = 240
+const H_WINDOWS = 120
+const SIZE_CELL = 5
+const CHUNK_SIZE = 5
 
 var GTouchedId uint8 = 0
