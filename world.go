@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
-	"math/rand/v2"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	"slices"
@@ -98,49 +97,49 @@ func (w *World) forEachCell(idChunk uint16, f func(x, y uint16, center *cell.Cel
 
 func (w *World) Simulate(idChunk uint16) error {
 
-	type coordinate struct {
-		x int32
-		y int32
-	}
-	isFree := func(x, y int32) bool {
+	isFree := func(pos common.Vec2) bool {
+		x, y := pos.Get()
 		cell := w.Get(uint16(x), uint16(y))
 
 		return cell != nil && cell.IsEmpty()
 	}
-	simulateCustomMovements := func(x, y int32, maxSpeed int32, cell **cell.Cell, isFree func(x, y int32) bool, callbackAfter func(x, y int32) error, groups [][]coordinate) bool {
-		var r = false
-		//TODO: to optimize
+	simulateCustomMovements := func(pos common.Vec2, maxSpeed int32, cell **cell.Cell, isFree func(vec common.Vec2) bool, callbackAfter func(x, y int32) error, groups [][]common.Vec2) bool {
+		oldx, oldy := pos.Get()
+		move := func(v common.Vec2) {
+			pos.Add(v)
+			x, y := pos.Get()
+			(*cell).Touched()
+			w.Set(uint16(x), uint16(y), *(*cell))
+
+			*cell = w.Get(uint16(x), uint16(y))
+			callbackAfter(oldx, oldy)
+		}
+
 		for _, g := range groups {
-			i := rand.IntN(len(g))
-			rand := true
+			i := 0
 			for {
-				if i >= len(g) || r {
+				if i >= len(g) {
 					break
 				}
-				o := g[i]
 				for s := maxSpeed; s > 0; s-- {
-					o = coordinate{x: g[i].x * s, y: g[i].y * s}
-					r = isFree(o.x+x, o.y+y)
-					if r {
-						(*cell).Touched()
-						w.Set(uint16(o.x+x), uint16(o.y+y), *(*cell))
-						*cell = w.Get(uint16(o.x+x), uint16(o.y+y))
-						callbackAfter(x, y)
-
+					o := g[i].Copy()
+					o.MultConst(s)
+					nPos := pos.Copy()
+					nPos.Add(o)
+					if isFree(nPos) {
+						(*cell).Velocity.Set(o.Get())
+						move(*(*cell).Velocity)
 						return true
+
 					}
-				}
-				if rand {
-					i = 0
-					rand = false
-					continue
 				}
 				i++
 			}
 		}
 		return false
 	}
-	simulateSimpleMovements := func(x, y int32, maxSpeed int32, c **cell.Cell, groups [][]coordinate) bool {
+
+	simulateSimpleMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups [][]common.Vec2) bool {
 		removeOldCell := func(x, y int32) error {
 			c, err := cell.NewCell(cell.EMPTY_CELL)
 			if err != nil {
@@ -149,9 +148,10 @@ func (w *World) Simulate(idChunk uint16) error {
 			w.Set(uint16(x), uint16(y), c)
 			return nil
 		}
-		return simulateCustomMovements(x, y, maxSpeed, c, isFree, removeOldCell, groups)
+		return simulateCustomMovements(pos, maxSpeed, c, isFree, removeOldCell, groups)
 	}
-	simulateFireMovements := func(x, y int32, maxSpeed int32, c **cell.Cell, groups [][]coordinate) bool {
+
+	simulateFireMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups [][]common.Vec2) bool {
 		removeOldCell := func(x, y int32) error {
 			cell := w.Get(uint16(x), uint16(y))
 			cell.Touched()
@@ -159,7 +159,8 @@ func (w *World) Simulate(idChunk uint16) error {
 			cell.DecreaseLife()
 			return nil
 		}
-		isFree := func(x, y int32) bool {
+		isFree := func(pos common.Vec2) bool {
+			x, y := pos.Get()
 			tcell := w.Get(uint16(x), uint16(y))
 			if tcell == nil {
 				return false
@@ -173,7 +174,7 @@ func (w *World) Simulate(idChunk uint16) error {
 			}
 			return false
 		}
-		return simulateCustomMovements(x, y, maxSpeed, c, isFree, removeOldCell, groups)
+		return simulateCustomMovements(pos, maxSpeed, c, isFree, removeOldCell, groups)
 	}
 
 	return w.forEachCell(idChunk, func(_x, _y uint16, center *cell.Cell) error {
@@ -188,16 +189,15 @@ func (w *World) Simulate(idChunk uint16) error {
 		if center.IsEmpty() || center.IsTouched() {
 			return nil
 		}
-		x := int32(_x)
-		y := int32(_y)
+		pos := common.NewVec2(int32(_x), int32(_y))
 		switch center.CellType {
 		case cell.SAND_CELL:
-			simulateSimpleMovements(x, y, 1, &center, [][]coordinate{
+			simulateSimpleMovements(pos, 1, &center, [][]common.Vec2{
 				{
-					{x: 0, y: 1},
+					common.NewVec2(0, 1),
 				}, {
-					{x: 1, y: 1},
-					{x: -1, y: 1},
+					common.NewVec2(1, 1),
+					common.NewVec2(-1, 1),
 				}})
 		case cell.EMPTY_CELL:
 			c, err := cell.NewCell(cell.EMPTY_CELL)
@@ -206,15 +206,15 @@ func (w *World) Simulate(idChunk uint16) error {
 			}
 			w.Set(_x, _y, c)
 		case cell.WATER_CELL:
-			simulateSimpleMovements(x, y, 2, &center, [][]coordinate{
+			simulateSimpleMovements(pos, 2, &center, [][]common.Vec2{
 				{
-					{x: 0, y: 1},
+					common.NewVec2(0, 1),
 				}, {
-					{x: 1, y: 1},
-					{x: -1, y: 1},
+					common.NewVec2(1, 1),
+					common.NewVec2(-1, 1),
 				}, {
-					{x: -1, y: 0},
-					{x: 1, y: 0},
+					common.NewVec2(-1, 0),
+					common.NewVec2(1, 0),
 				},
 			})
 		case cell.SMOKE_CELL:
@@ -227,15 +227,15 @@ func (w *World) Simulate(idChunk uint16) error {
 				return nil
 			}
 			center.DecreaseLife()
-			moved := simulateSimpleMovements(x, y, 2, &center, [][]coordinate{
+			moved := simulateSimpleMovements(pos, 2, &center, [][]common.Vec2{
 				{
-					{x: 0, y: -1},
+					common.NewVec2(0, -1),
 				}, {
-					{x: 1, y: -1},
-					{x: -1, y: -1},
+					common.NewVec2(1, -1),
+					common.NewVec2(-1, -1),
 				}, {
-					{x: -1, y: 0},
-					{x: 1, y: 0},
+					common.NewVec2(-1, 0),
+					common.NewVec2(1, 0),
 				},
 			})
 			if !moved {
@@ -243,12 +243,12 @@ func (w *World) Simulate(idChunk uint16) error {
 				w.activeChunks.SortedInsert(idChunk)
 			}
 		case cell.FIRE_CELL:
-			moved := simulateFireMovements(x, y, 1, &center, [][]coordinate{
+			moved := simulateFireMovements(pos, 1, &center, [][]common.Vec2{
 				{
-					{x: 0, y: 1},
-					{x: 0, y: -1},
-					{x: 1, y: 0},
-					{x: -1, y: 0},
+					common.NewVec2(0, 1),
+					common.NewVec2(0, -1),
+					common.NewVec2(1, 0),
+					common.NewVec2(-1, 0),
 				},
 			})
 			if center.RemainingLife <= 0 {

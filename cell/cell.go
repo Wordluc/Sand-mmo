@@ -17,6 +17,7 @@ const (
 type Cell struct {
 	CellType CellType
 	Extra    uint8
+	Velocity *common.Vec2
 
 	initialLifeSec uint16
 	RemainingLife  float32
@@ -40,6 +41,7 @@ func (c *Cell) IsTouched() bool {
 func (c *Cell) Touched() {
 	c.touchedId = common.GTouchedId
 }
+
 func (c *Cell) IsNew() bool {
 	defer func() {
 		c.forceTouched = false
