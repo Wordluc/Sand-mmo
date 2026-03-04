@@ -184,7 +184,7 @@ func (w *World) Simulate(idChunk uint16) error {
 		pos := common.NewVec2(int32(_x), int32(_y))
 		switch center.CellType {
 		case cell.SAND_CELL:
-			simulateSimpleMovements(pos, 1, &center, []common.Vec2{
+			simulateSimpleMovements(pos, 2, &center, []common.Vec2{
 				common.NewVec2(0, 1),
 				common.NewVec2(1, 1),
 				common.NewVec2(-1, 1),
@@ -225,7 +225,7 @@ func (w *World) Simulate(idChunk uint16) error {
 				w.activeChunks.SortedInsert(idChunk)
 			}
 		case cell.FIRE_CELL:
-			moved := simulateFireMovements(pos, 1, &center, []common.Vec2{
+			moved := simulateFireMovements(pos, 2, &center, []common.Vec2{
 				common.NewVec2(0, 1),
 				common.NewVec2(0, -1),
 				common.NewVec2(1, 0),
