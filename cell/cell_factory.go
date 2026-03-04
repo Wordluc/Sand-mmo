@@ -11,12 +11,11 @@ func NewCell(celltype CellType) (res Cell, err error) {
 	res.forceTouched = true
 	res.Velocity = new(common.NewVec2(0, 0))
 	switch celltype {
-	case SAND_CELL:
-		res.initialLifeSec = 30
 	case SMOKE_CELL:
 		res.initialLifeSec = 30
 	case FIRE_CELL:
 		res.initialLifeSec = 10
+	case SAND_CELL:
 	case WATER_CELL:
 	case EMPTY_CELL:
 	case WOOD_CELL:
