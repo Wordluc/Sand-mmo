@@ -32,7 +32,6 @@ func main() {
 	fmt.Println("Server setup ...")
 	fmt.Printf("Tcp: %v, Udp: %v\n", n.Addr(), udp.LocalAddr())
 
-	UpdateClientWorlds(world)
 	for {
 		conn, err := n.Accept()
 		if err != nil {
@@ -45,6 +44,9 @@ func main() {
 }
 func callbackAddUdp(tcp, udp net.Addr) {
 	addrsUdp[tcp] = udp
+	if len(addrsUdp) == 1 {
+		go UpdateClientWorlds()
+	}
 }
 func callbackRemoveUdp(tcp net.Addr) {
 	delete(addrsUdp, tcp)
@@ -73,13 +75,17 @@ func handlerConnection(conn net.Conn) {
 		m.Unlock()
 	}
 }
-func UpdateClientWorlds(world *sandmmo.World) {
+func UpdateClientWorlds() {
 	var waitG sync.WaitGroup
 	go func() {
 		for {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
 			m.Lock()
+			if len(addrsUdp) == 0 {
+				m.Unlock()
+				return
+			}
 			chunksToSend := world.GetActiveChunksAndNeiboroud()
 			for _, iC := range chunksToSend {
 				world.Simulate(uint16(iC))
