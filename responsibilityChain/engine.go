@@ -34,6 +34,9 @@ func (pm *ResponsibilityChain) SetCallbackRemoveUdp(callback func(net.Addr)) {
 }
 
 func (pm *ResponsibilityChain) Run(p common.Package) error {
+	defer func() {
+		pm.i = 0
+	}()
 	if pm.i >= len(pm.ps) {
 		return fmt.Errorf("Handler not found for: %x", p.Code)
 	}
@@ -43,7 +46,6 @@ func (pm *ResponsibilityChain) Run(p common.Package) error {
 	}
 
 	err := pm.ps[pm.i].run(p, pm)
-	pm.i = 0
 	return err
 }
 

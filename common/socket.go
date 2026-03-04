@@ -2,13 +2,14 @@ package common
 
 import (
 	"encoding/binary"
+	"io"
 	"net"
 )
 
 // TODO: create the udp version
 func ReadFromTcpSocket(socket net.Conn) (res Package, err error) {
 	var brush []byte = make([]byte, 8)
-	n, err := socket.Read(brush)
+	n, err := io.ReadFull(socket, brush)
 	if err != nil {
 		return res, err
 	}
