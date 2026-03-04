@@ -1,6 +1,9 @@
 package cell
 
-import "sand-mmo/common"
+import (
+	"math/rand"
+	"sand-mmo/common"
+)
 
 type CellType = uint8
 
@@ -26,7 +29,7 @@ type Cell struct {
 }
 
 func (c *Cell) DecreaseLife() bool {
-	c.RemainingLife -= 1
+	c.RemainingLife -= float32(rand.Intn(3))
 	return c.RemainingLife <= 0
 }
 
