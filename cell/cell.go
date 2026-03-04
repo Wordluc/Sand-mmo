@@ -20,7 +20,6 @@ const (
 type Cell struct {
 	CellType CellType
 	Extra    uint8
-	Velocity *common.Vec2
 
 	initialLifeSec uint16
 	RemainingLife  float32

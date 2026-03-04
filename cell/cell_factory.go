@@ -9,7 +9,6 @@ func NewCell(celltype CellType) (res Cell, err error) {
 	res.CellType = celltype
 	res.touchedId = common.GTouchedId - 1
 	res.forceTouched = true
-	res.Velocity = new(common.NewVec2(0, 0))
 	switch celltype {
 	case SMOKE_CELL:
 		res.initialLifeSec = 30

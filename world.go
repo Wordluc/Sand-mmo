@@ -122,8 +122,7 @@ func (w *World) Simulate(idChunk uint16) error {
 				nPos := pos.Copy()
 				nPos.Add(o)
 				if isFree(nPos) {
-					(*cell).Velocity.Set(o.Get())
-					move(*(*cell).Velocity)
+					move(o)
 					return true
 
 				}
