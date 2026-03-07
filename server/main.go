@@ -1,10 +1,15 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+
+	"github.com/gorilla/websocket"
+	ws "github.com/gorilla/websocket"
+
 	"io"
 	"math/rand"
-	"net"
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
@@ -13,50 +18,45 @@ import (
 )
 
 var world *sandmmo.World
-var addrsUdp map[net.Addr]net.Addr = map[net.Addr]net.Addr{}
-var udp *net.UDPConn
 var m sync.Mutex
+var webSockets map[string]*ws.Conn = map[string]*ws.Conn{}
+
+var upgrader = ws.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	add := r.RemoteAddr
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		fmt.Println("Failed establishing connection with ", add)
+		return
+	}
+	m.Lock()
+	webSockets[add] = conn
+	m.Unlock()
+	go handlerConnection(conn)
+
+}
 
 func main() {
-	n, err := net.Listen("tcp", ":8000")
-	if err != nil {
-		panic(err)
-	}
-	addrUdp, _ := net.ResolveUDPAddr("udp", ":8000")
-	udp, err = net.ListenUDP("udp", addrUdp)
-	if err != nil {
-		panic(err)
-	}
+	http.HandleFunc("/ws", handler)
 	t := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 	world = &t
-	fmt.Println("Server setup ...")
-	fmt.Printf("Tcp: %v, Udp: %v\n", n.Addr(), udp.LocalAddr())
-
-	for {
-		conn, err := n.Accept()
-		if err != nil {
-			fmt.Printf("Error connecting %e", err)
-			continue
-		}
-		go handlerConnection(conn)
+	go UpdateClientWorlds()
+	err := http.ListenAndServe(":8000", nil)
+	if err != nil {
+		panic(err)
 	}
 
 }
-func callbackAddUdp(tcp, udp net.Addr) {
-	addrsUdp[tcp] = udp
-	if len(addrsUdp) == 1 {
-		go UpdateClientWorlds()
-	}
-}
-func callbackRemoveUdp(tcp net.Addr) {
-	delete(addrsUdp, tcp)
-}
-func handlerConnection(conn net.Conn) {
-	fmt.Printf("New tcp connection with %v\n", conn.RemoteAddr())
+
+func handlerConnection(conn *ws.Conn) {
 	defer conn.Close()
-	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn, udp)
-	engine.SetCallbackAddUdp(callbackAddUdp)
-	engine.SetCallbackRemoveUdp(callbackRemoveUdp)
+	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn)
+
 	for {
 		r, err := common.ReadFromTcpSocket(conn)
 		if err != nil {
@@ -69,10 +69,14 @@ func handlerConnection(conn net.Conn) {
 		}
 		m.Lock()
 		err = engine.Run(r)
+		m.Unlock()
 		if err != nil {
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				delete(webSockets, conn.RemoteAddr().String())
+				return
+			}
 			fmt.Print(err.Error(), "\n\n")
 		}
-		m.Unlock()
 	}
 }
 func UpdateClientWorlds() {
@@ -82,10 +86,6 @@ func UpdateClientWorlds() {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
 			m.Lock()
-			if len(addrsUdp) == 0 {
-				m.Unlock()
-				return
-			}
 			chunksToSend := world.GetActiveChunksAndNeiboroud()
 			for _, iC := range chunksToSend {
 				world.Simulate(uint16(iC))
@@ -110,15 +110,13 @@ func UpdateClientWorlds() {
 				}()
 			}
 			waitG.Wait()
-			addrsToUse := addrsUdp
 			m.Unlock()
-			//Does it make sense to paralize this too?
 			for _, chunk := range chunks {
-				for _, addr := range addrsToUse {
-					if addr == nil {
+				for _, ws := range webSockets {
+					if ws == nil {
 						continue
 					}
-					_, err := udp.WriteTo(chunk, addr.(*net.UDPAddr))
+					err := ws.WriteMessage(websocket.TextMessage, chunk)
 					if err != nil {
 						fmt.Println(err)
 					}

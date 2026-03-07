@@ -2,18 +2,14 @@ package common
 
 import (
 	"encoding/binary"
-	"io"
-	"net"
+
+	ws "github.com/gorilla/websocket"
 )
 
 // TODO: create the udp version
-func ReadFromTcpSocket(socket net.Conn) (res Package, err error) {
-	var brush []byte = make([]byte, 8)
-	n, err := io.ReadFull(socket, brush)
+func ReadFromTcpSocket(socket *ws.Conn) (res Package, err error) {
+	_, brush, err := socket.ReadMessage()
 	if err != nil {
-		return res, err
-	}
-	if n != 8 {
 		return res, err
 	}
 	t := binary.BigEndian.Uint64(brush)
@@ -21,11 +17,11 @@ func ReadFromTcpSocket(socket net.Conn) (res Package, err error) {
 }
 
 // TODO: create the udp version
-func SendToTcpSocket(p Package, socket net.Conn) error {
+func SendToTcpSocket(p Package, socket *ws.Conn) error {
 	u64 := Encode(p)
 	var toSend []byte = make([]byte, 8)
 	binary.BigEndian.PutUint64(toSend, u64)
-	_, err := socket.Write([]byte(toSend))
+	err := socket.WriteMessage(ws.TextMessage, toSend)
 
 	return err
 }

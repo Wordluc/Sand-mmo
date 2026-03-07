@@ -2,35 +2,24 @@ package responsibilityChain
 
 import (
 	"fmt"
-	"net"
 	sandmmo "sand-mmo"
 	"sand-mmo/common"
+
+	ws "github.com/gorilla/websocket"
 )
 
 type ResponsibilityChain struct {
-	ps                []Handler
-	i                 int
-	world             *sandmmo.World
-	tcpConn           net.Conn
-	udpConn           *net.UDPConn
-	callbackAddUdp    func(net.Addr, net.Addr)
-	callbackRemoveUdp func(net.Addr)
+	ps      []Handler
+	i       int
+	world   *sandmmo.World
+	tcpConn *ws.Conn
 }
 
-func NewResponsibilityChainEngine(world *sandmmo.World, ps []Handler, tcpConn net.Conn, udpConn *net.UDPConn) (res ResponsibilityChain) {
+func NewResponsibilityChainEngine(world *sandmmo.World, ps []Handler, tcpConn *ws.Conn) (res ResponsibilityChain) {
 	res.ps = ps
 	res.world = world
 	res.tcpConn = tcpConn
-	res.udpConn = udpConn
 	return res
-}
-
-func (pm *ResponsibilityChain) SetCallbackAddUdp(callback func(net.Addr, net.Addr)) {
-	pm.callbackAddUdp = callback
-}
-
-func (pm *ResponsibilityChain) SetCallbackRemoveUdp(callback func(net.Addr)) {
-	pm.callbackRemoveUdp = callback
 }
 
 func (pm *ResponsibilityChain) Run(p common.Package) error {

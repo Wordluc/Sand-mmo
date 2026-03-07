@@ -3,8 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
-	"net"
-	"os"
+	"net/url"
 	sandmmo "sand-mmo"
 	"sand-mmo/cell"
 	"sand-mmo/common"
@@ -12,6 +11,7 @@ import (
 
 	ru "github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
+	ws "github.com/gorilla/websocket"
 )
 
 const W_BUTTONS_SIDE = 100
@@ -21,22 +21,17 @@ const H_GAME = common.H_WINDOWS * common.SIZE_CELL
 func main() {
 	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME+common.SIZE_CELL, "")
 	w := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
-	var socket net.Conn
-	var err error
-	if len(os.Args) == 3 {
-		addServer := os.Args[1]
-		portServer := os.Args[2]
-		socket, err = net.Dial("tcp", addServer+":"+portServer)
-	} else {
-		socket, err = net.Dial("tcp", ":8000")
-	}
+
+	conn, err := createWebSocket()
 	if err != nil {
 		panic(err)
 	}
-	udp := createDialUdp(socket)
-	UpdateWorld(&w, udp)
-	defer udp.Close()
-	defer common.SendToTcpSocket(chain.GetENDCommand(), socket)
+
+	go UpdateWorld(&w, conn)
+
+	defer common.SendToTcpSocket(chain.GetENDCommand(), conn)
+	defer conn.Close()
+
 	//Insert fps target
 	rl.SetTargetFPS(30)
 	var cellType cell.CellType = cell.SAND_CELL
@@ -52,7 +47,10 @@ func main() {
 		chunkId := w.GetChunkId(x, y)
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 			if !(vec.X > W_GAME || vec.Y > H_GAME) {
-				common.SendToTcpSocket(chain.GetDrawCommand(x, y, cellType, brushType), socket)
+				err := common.SendToTcpSocket(chain.GetDrawCommand(x, y, cellType, brushType), conn)
+				if err != nil {
+					fmt.Println(err.Error())
+				}
 			}
 		}
 
@@ -98,34 +96,32 @@ func main() {
 
 }
 
-func createDialUdp(tcp net.Conn) *net.UDPConn {
-	addTo, _ := net.ResolveUDPAddr("udp", fmt.Sprint(tcp.RemoteAddr().(*net.TCPAddr).IP, ":", 8000))
-	udpConn, err := net.DialUDP("udp", nil, addTo)
+func createWebSocket() (*ws.Conn, error) {
+	u := url.URL{Scheme: "ws", Host: ":8000", Path: "/ws"}
+	conn, _, err := ws.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	common.SendToTcpSocket(chain.GetInitCommand(8000), tcp)
-	udpConn.Write([]byte("ping"))
-	println("Udp connection ", udpConn.LocalAddr().String())
+	err = common.SendToTcpSocket(chain.GetInitCommand(8000), conn)
+	if err != nil {
+		return nil, err
+	}
+	println("WebSocket connected ", conn.RemoteAddr().String())
 
-	return udpConn
+	return conn, nil
 }
 
-func UpdateWorld(world *sandmmo.World, udp *net.UDPConn) {
-	go func() {
-		for {
-			//2->16bit
-			var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
-			n, _, err := udp.ReadFrom(bytes)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			if n <= 0 {
-				continue
-			}
-			idChunk := binary.BigEndian.Uint16(bytes[0:2])
-			world.SetCellsByte(bytes[2:], idChunk)
+func UpdateWorld(world *sandmmo.World, udp *ws.Conn) {
+	for {
+		//2->16bit
+		//		var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
+		_, bytes, err := udp.ReadMessage()
+		fmt.Println("ciao")
+		if err != nil {
+			fmt.Println(err)
+			continue
 		}
-	}()
+		idChunk := binary.BigEndian.Uint16(bytes[0:2])
+		world.SetCellsByte(bytes[2:], idChunk)
+	}
 }

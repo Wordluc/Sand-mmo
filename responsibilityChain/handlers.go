@@ -1,10 +1,12 @@
 package responsibilityChain
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"sand-mmo/cell"
 	"sand-mmo/common"
+
+	ws "github.com/gorilla/websocket"
 )
 
 func GetHandlers() []Handler {
@@ -14,12 +16,9 @@ func GetHandlers() []Handler {
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				bytes := e.world.GetChunkBytesToSend(uint16(p.Arg))
 				//			fmt.Printf("Sending.. %v\n", len(bytes))
-				n, err := e.udpConn.Write(bytes)
+				err := e.tcpConn.WriteMessage(0, bytes)
 				if err != nil {
 					return err
-				}
-				if n <= 0 {
-					return errors.New("Error sending cells")
 				}
 				//		fmt.Println("ReturnChunk")
 				return err
@@ -94,13 +93,9 @@ func GetHandlers() []Handler {
 		{
 			p: GetInitCommand(0),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				t := make([]byte, 4)
-				_, addr, _ := e.udpConn.ReadFromUDP(t)
-				e.callbackAddUdp(e.tcpConn.RemoteAddr(), addr)
-				fmt.Println("Init udp connection with", addr)
-
+				fmt.Println("Init bidirectional connection ", e.tcpConn.RemoteAddr())
 				for i := range e.world.GetNumberChucks() {
-					e.udpConn.WriteToUDP(e.world.GetChunkBytesToSend(i), addr)
+					e.tcpConn.WriteMessage(ws.TextMessage, e.world.GetChunkBytesToSend(i))
 				}
 				return nil
 			},
@@ -109,8 +104,7 @@ func GetHandlers() []Handler {
 			p: GetENDCommand(),
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				fmt.Println("End ", e.tcpConn.RemoteAddr())
-				e.callbackRemoveUdp(e.tcpConn.RemoteAddr())
-				return nil
+				return io.ErrUnexpectedEOF
 			},
 		},
 	}
