@@ -34,6 +34,8 @@ func (w *ClientWorld) Draw() {
 		case cell.STONE_CELL:
 			color = rl.Gray
 		case cell.FIRE_CELL:
+			color = rl.Orange
+		case cell.LAVA_CELL:
 			color = rl.Red
 		case cell.WOOD_CELL:
 			color = rl.Brown

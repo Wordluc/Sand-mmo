@@ -87,6 +87,11 @@ func (w *world) GetNumberChucks() uint16 {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
 }
 
+func (w *world) SetVec(pos common.Vec2, cell cell.Cell) {
+	x, y := pos.Get()
+	w.Set(uint16(x), uint16(y), cell)
+}
+
 func (w *world) Set(x, y uint16, cell cell.Cell) {
 	if x >= w.W {
 		return

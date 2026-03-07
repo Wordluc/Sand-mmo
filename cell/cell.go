@@ -15,6 +15,7 @@ const (
 	STONE_CELL
 	WOOD_CELL
 	FIRE_CELL
+	LAVA_CELL
 )
 
 type Cell struct {

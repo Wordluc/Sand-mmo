@@ -15,6 +15,7 @@ func NewCell(celltype CellType) (res Cell, err error) {
 	case FIRE_CELL:
 		res.initialLifeSec = 10
 	case SAND_CELL:
+	case LAVA_CELL:
 	case WATER_CELL:
 	case EMPTY_CELL:
 	case WOOD_CELL:

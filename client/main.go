@@ -76,6 +76,9 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 250, Width: 50, Height: 20}, "Wood") {
 			cellType = cell.WOOD_CELL
 		}
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 275, Width: 50, Height: 20}, "Lava") {
+			cellType = cell.LAVA_CELL
+		}
 		w.Draw()
 		vec := rl.GetMousePosition()
 		x := uint16(vec.X) / common.SIZE_CELL
