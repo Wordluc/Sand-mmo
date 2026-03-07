@@ -177,8 +177,8 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 			if tcell == nil {
 				return false
 			}
-			if tcell.CellType == cell.LAVA_CELL {
-				smoke, _ := cell.NewCell(cell.SMOKE_CELL)
+			if tcell.CellType == cell.LAVA_CELL || tcell.CellType == cell.FIRE_CELL {
+				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 3)
 				w.SetVec(pos, smoke)
 				return false
 			}
@@ -226,7 +226,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 				return false
 			}
 			if tcell.CellType == cell.WATER_CELL {
-				smoke, _ := cell.NewCell(cell.SMOKE_CELL)
+				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 3)
 				w.SetVec(pos, smoke)
 				return false
 			}
