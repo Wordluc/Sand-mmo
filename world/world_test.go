@@ -1,4 +1,4 @@
-package sandmmo
+package world
 
 import (
 	"sand-mmo/cell"
@@ -26,7 +26,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 	}
 
 	// 8x4 world
-	w := NewWorld(8, 4, 2)
+	w := newWorld(8, 4, 2)
 	w.importCell(encoded)
 
 	caseTest := []struct {
@@ -69,7 +69,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
 			want = append(want, cell.EncodeCell(c.cell[i]))
 		}
-		got := w.GetChunk(uint16(c.idChunk))
+		got := w.GetChunkBytes(uint16(c.idChunk))
 
 		if !slices.Equal(got, want) {
 			t.Fatalf("GetChunk(%v) failed\n got: %v\nwant: %v", c.idChunk, got, want)

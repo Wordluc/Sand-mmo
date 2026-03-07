@@ -10,14 +10,14 @@ import (
 
 	"io"
 	"math/rand"
-	sandmmo "sand-mmo"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
+	"sand-mmo/world"
 	"sync"
 	"time"
 )
 
-var world *sandmmo.World
+var w *world.ServerWorld
 var m sync.Mutex
 var webSockets map[string]*ws.Conn = map[string]*ws.Conn{}
 
@@ -43,8 +43,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/ws", handler)
-	t := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
-	world = &t
+	w = new(world.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE))
 	go UpdateClientWorlds()
 	err := http.ListenAndServe(":8000", nil)
 	if err != nil {
@@ -55,7 +54,7 @@ func main() {
 
 func handlerConnection(conn *ws.Conn) {
 	defer conn.Close()
-	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn)
+	engine := chain.NewResponsibilityChainEngine(w, chain.GetHandlers(), conn)
 
 	for {
 		r, err := common.ReadFromWebSocketPackage(conn)
@@ -82,15 +81,15 @@ func UpdateClientWorlds() {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
 			m.Lock()
-			err := world.ApplyGenerators()
+			err := w.ApplyGenerators()
 			if err != nil {
 				fmt.Println(err)
 			}
-			chunksToSend := world.GetActiveChunksAndNeiboroud()
+			chunksToSend := w.GetActiveChunksAndNeiboroud()
 			for _, iC := range chunksToSend {
-				world.Simulate(uint16(iC))
+				w.Simulate(uint16(iC))
 			}
-			chunksToSend = world.GetChunksToSend()
+			chunksToSend = w.GetChunksToSend()
 			t := uint8(rand.Intn(256))
 			for {
 				if t == common.GTouchedId {
@@ -105,7 +104,7 @@ func UpdateClientWorlds() {
 			waitG.Add(len(chunksToSend))
 			for i, iC := range chunksToSend {
 				go func() {
-					chunks[i] = world.GetChunkBytesToSend(uint16(iC))
+					chunks[i] = w.GetChunkBytesToSend(uint16(iC))
 					waitG.Done()
 				}()
 			}

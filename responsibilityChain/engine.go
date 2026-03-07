@@ -2,8 +2,8 @@ package responsibilityChain
 
 import (
 	"fmt"
-	sandmmo "sand-mmo"
 	"sand-mmo/common"
+	"sand-mmo/world"
 
 	ws "github.com/gorilla/websocket"
 )
@@ -11,12 +11,12 @@ import (
 type ResponsibilityChain struct {
 	ps          []Handler
 	i           int
-	world       *sandmmo.World
+	world       *world.ServerWorld
 	tcpConn     *ws.Conn
 	LastCommand common.Command
 }
 
-func NewResponsibilityChainEngine(world *sandmmo.World, ps []Handler, tcpConn *ws.Conn) (res ResponsibilityChain) {
+func NewResponsibilityChainEngine(world *world.ServerWorld, ps []Handler, tcpConn *ws.Conn) (res ResponsibilityChain) {
 	res.ps = ps
 	res.world = world
 	res.tcpConn = tcpConn

@@ -1,0 +1,2 @@
+Use webSocket to allow future wasm/js integration
+Use n mutext for n chunks, to allow parallizations

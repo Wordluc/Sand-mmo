@@ -4,10 +4,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net/url"
-	sandmmo "sand-mmo"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
+	"sand-mmo/world"
 
 	ru "github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -20,7 +20,7 @@ const H_GAME = common.H_WINDOWS * common.SIZE_CELL
 
 func main() {
 	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME+common.SIZE_CELL, "")
-	w := sandmmo.NewWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
+	w := world.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 
 	conn, err := createWebSocket()
 	if err != nil {
@@ -117,7 +117,7 @@ func createWebSocket() (*ws.Conn, error) {
 	return conn, nil
 }
 
-func UpdateWorld(world *sandmmo.World, udp *ws.Conn) {
+func UpdateWorld(world *world.ClientWorld, udp *ws.Conn) {
 	for {
 		//2->16bit
 		//		var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
