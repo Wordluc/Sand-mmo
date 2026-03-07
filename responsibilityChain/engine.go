@@ -9,10 +9,11 @@ import (
 )
 
 type ResponsibilityChain struct {
-	ps      []Handler
-	i       int
-	world   *sandmmo.World
-	tcpConn *ws.Conn
+	ps          []Handler
+	i           int
+	world       *sandmmo.World
+	tcpConn     *ws.Conn
+	LastCommand common.Command
 }
 
 func NewResponsibilityChainEngine(world *sandmmo.World, ps []Handler, tcpConn *ws.Conn) (res ResponsibilityChain) {
@@ -35,16 +36,17 @@ func (pm *ResponsibilityChain) Run(p common.Package) error {
 	}
 
 	err := pm.ps[pm.i].run(p, pm)
+	pm.LastCommand = p.Command
 	return err
 }
 
 type Handler struct {
-	p       common.Package
+	p       common.Command
 	handler func(p common.Package, e *ResponsibilityChain) error
 }
 
 func (ph Handler) check(p common.Package) bool {
-	if ph.p.Command != p.Command {
+	if ph.p != p.Command {
 		return false
 	}
 	return true

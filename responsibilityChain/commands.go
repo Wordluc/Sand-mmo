@@ -18,6 +18,15 @@ func GetENDCommand() (p common.Package) {
 		Command: common.END,
 	}
 }
+
+func GetGeneratorCommand(brush common.Package) (res []common.Package) {
+	res = append(res, common.Package{
+		Command: common.ADD_GENERATOR,
+	})
+	res = append(res, brush)
+	return res
+}
+
 func GetChunkCommand(chunkId uint32) (p common.Package) {
 	return common.Package{
 		Command: common.GET,

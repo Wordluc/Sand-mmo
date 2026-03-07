@@ -29,8 +29,8 @@ func main() {
 
 	go UpdateWorld(&w, conn)
 
-	defer common.SendToTcpSocket(chain.GetENDCommand(), conn)
 	defer conn.Close()
+	defer common.SendToWebSocketPackages(conn, chain.GetENDCommand())
 
 	//Insert fps target
 	rl.SetTargetFPS(30)
@@ -39,19 +39,6 @@ func main() {
 	for {
 		if rl.WindowShouldClose() {
 			return
-		}
-		vec := rl.GetMousePosition()
-		x := uint16(vec.X) / common.SIZE_CELL
-		y := uint16(vec.Y) / common.SIZE_CELL
-		//avoid to send same package twise
-		chunkId := w.GetChunkId(x, y)
-		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
-			if !(vec.X > W_GAME || vec.Y > H_GAME) {
-				err := common.SendToTcpSocket(chain.GetDrawCommand(x, y, cellType, brushType), conn)
-				if err != nil {
-					fmt.Println(err.Error())
-				}
-			}
 		}
 
 		rl.BeginDrawing()
@@ -90,6 +77,25 @@ func main() {
 			cellType = cell.WOOD_CELL
 		}
 		w.Draw()
+		vec := rl.GetMousePosition()
+		x := uint16(vec.X) / common.SIZE_CELL
+		y := uint16(vec.Y) / common.SIZE_CELL
+		//avoid to send same package twise
+		chunkId := w.GetChunkId(x, y)
+		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
+			if !(vec.X > W_GAME || vec.Y > H_GAME) {
+				err := common.SendToWebSocketPackages(conn, chain.GetDrawCommand(x, y, cellType, brushType))
+				if err != nil {
+					fmt.Println(err.Error())
+				}
+			}
+		}
+		if rl.IsKeyDown(rl.KeyR) {
+			err := common.SendToWebSocketPackages(conn, chain.GetGeneratorCommand(chain.GetDrawCommand(x, y, cellType, brushType))...)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}
 		rl.DrawText(fmt.Sprintf("x:%v\n y:%v\n c:%v", x, y, chunkId), W_GAME-30, 0, common.SIZE_CELL, rl.Black)
 		rl.EndDrawing()
 	}
@@ -102,7 +108,7 @@ func createWebSocket() (*ws.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = common.SendToTcpSocket(chain.GetInitCommand(8000), conn)
+	err = common.SendToWebSocketPackages(conn, chain.GetInitCommand(8000))
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +122,6 @@ func UpdateWorld(world *sandmmo.World, udp *ws.Conn) {
 		//2->16bit
 		//		var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
 		_, bytes, err := udp.ReadMessage()
-		fmt.Println("ciao")
 		if err != nil {
 			fmt.Println(err)
 			continue

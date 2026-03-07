@@ -7,7 +7,7 @@ import (
 )
 
 // TODO: create the udp version
-func ReadFromTcpSocket(socket *ws.Conn) (res Package, err error) {
+func ReadFromWebSocketPackage(socket *ws.Conn) (res Package, err error) {
 	_, brush, err := socket.ReadMessage()
 	if err != nil {
 		return res, err
@@ -17,11 +17,16 @@ func ReadFromTcpSocket(socket *ws.Conn) (res Package, err error) {
 }
 
 // TODO: create the udp version
-func SendToTcpSocket(p Package, socket *ws.Conn) error {
-	u64 := Encode(p)
-	var toSend []byte = make([]byte, 8)
-	binary.BigEndian.PutUint64(toSend, u64)
-	err := socket.WriteMessage(ws.TextMessage, toSend)
+func SendToWebSocketPackages(socket *ws.Conn, ps ...Package) error {
+	for _, p := range ps {
+		u64 := Encode(p)
+		var toSend []byte = make([]byte, 8)
+		binary.BigEndian.PutUint64(toSend, u64)
+		err := socket.WriteMessage(ws.TextMessage, toSend)
+		if err != nil {
+			return err
+		}
+	}
 
-	return err
+	return nil
 }

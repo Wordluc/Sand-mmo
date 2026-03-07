@@ -58,12 +58,8 @@ func handlerConnection(conn *ws.Conn) {
 	engine := chain.NewResponsibilityChainEngine(world, chain.GetHandlers(), conn)
 
 	for {
-		r, err := common.ReadFromTcpSocket(conn)
+		r, err := common.ReadFromWebSocketPackage(conn)
 		if err != nil {
-			if err == io.EOF {
-				fmt.Printf("Closing tcp connection with %v\n", conn.RemoteAddr())
-				return
-			}
 			fmt.Printf("Error receiving %s\n", err.Error())
 			continue
 		}
@@ -86,6 +82,10 @@ func UpdateClientWorlds() {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
 			m.Lock()
+			err := world.ApplyGenerators()
+			if err != nil {
+				fmt.Println(err)
+			}
 			chunksToSend := world.GetActiveChunksAndNeiboroud()
 			for _, iC := range chunksToSend {
 				world.Simulate(uint16(iC))

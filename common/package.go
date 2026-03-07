@@ -1,13 +1,14 @@
 package common
 
-type command = uint16
+type Command = uint16
 
 // <16 brush
 // <=16 commands
 const (
 	DRAW_IN         = iota
-	GET     command = 16 + iota
+	GET     Command = 16 + iota
 	INIT
+	ADD_GENERATOR
 	END
 )
 
