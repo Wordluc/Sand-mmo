@@ -12,14 +12,14 @@ type ResponsibilityChain struct {
 	ps          []Handler
 	i           int
 	world       *world.ServerWorld
-	tcpConn     *ws.Conn
+	webSocket   *ws.Conn
 	LastCommand common.Command
 }
 
 func NewResponsibilityChainEngine(world *world.ServerWorld, ps []Handler, tcpConn *ws.Conn) (res ResponsibilityChain) {
 	res.ps = ps
 	res.world = world
-	res.tcpConn = tcpConn
+	res.webSocket = tcpConn
 	return res
 }
 

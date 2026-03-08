@@ -36,6 +36,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	m.Lock()
 	webSockets[add] = conn
+	if len(webSockets) == 1 {
+		go UpdateClientWorlds()
+	}
 	m.Unlock()
 	go handlerConnection(conn)
 
@@ -44,7 +47,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/ws", handler)
 	w = new(world.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE))
-	go UpdateClientWorlds()
 	err := http.ListenAndServe(":8000", nil)
 	if err != nil {
 		panic(err)
@@ -81,6 +83,10 @@ func UpdateClientWorlds() {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
 			m.Lock()
+			if len(webSockets) == 0 {
+				m.Unlock()
+				return
+			}
 			err := w.ApplyGenerators()
 			if err != nil {
 				fmt.Println(err)
