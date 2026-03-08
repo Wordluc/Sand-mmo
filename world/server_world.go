@@ -52,8 +52,7 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 					continue
 				}
 				if (dx*dx + dy*dy) <= radius*radius/4 {
-					cell := cell.NewCell(p.CellType)
-					w.Set(uint16(x), uint16(y), cell)
+					w.Set(uint16(x), uint16(y), cell.NewCell(p.CellType))
 
 				}
 			}
@@ -75,8 +74,7 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 				if y < 0 {
 					continue
 				}
-				cell := cell.NewCell(p.CellType)
-				w.Set(uint16(x), uint16(y), cell)
+				w.Set(uint16(x), uint16(y), cell.NewCell(p.CellType))
 			}
 		}
 		return nil
@@ -146,8 +144,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 
 	simulateSimpleMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		afterMoving := func(x, y int32) error {
-			c := cell.NewCell(cell.EMPTY_CELL)
-			w.Set(uint16(x), uint16(y), c)
+			w.Set(uint16(x), uint16(y), cell.NewCell(cell.EMPTY_CELL))
 			return nil
 		}
 		return simulateCustomMovements(pos, maxSpeed, c, isFree, afterMoving, groups)
@@ -155,8 +152,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 
 	simulateWaterMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		afterMoving := func(x, y int32) error {
-			c := cell.NewCell(cell.EMPTY_CELL)
-			w.Set(uint16(x), uint16(y), c)
+			w.Set(uint16(x), uint16(y), cell.NewCell(cell.EMPTY_CELL))
 			return nil
 		}
 		beforeMoving := func(posToCheck common.Vec2) bool {
@@ -180,8 +176,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 	}
 	simulateLeafMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		afterMoving := func(x, y int32) error {
-			c := cell.NewCell(cell.EMPTY_CELL)
-			w.Set(uint16(x), uint16(y), c)
+			w.Set(uint16(x), uint16(y), cell.NewCell(cell.EMPTY_CELL))
 			return nil
 		}
 		beforeMoving := func(posToCheck common.Vec2) bool {
@@ -211,8 +206,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 				return false
 			}
 			if !isFree(pos) && tcell.CellType != cell.VACUUM_CELL {
-				fire := cell.NewCell(cell.EMPTY_CELL)
-				w.SetVec(pos, fire)
+				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
 			}
 			return false
 		}
@@ -246,8 +240,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 			c := w.Get(x, y)
 			c.Touched()
 			w.activeChunks.SortedInsert(idChunk)
-			empty := cell.NewCell(cell.EMPTY_CELL)
-			w.Set(uint16(x), uint16(y), empty)
+			w.Set(uint16(x), uint16(y), cell.NewCell(cell.EMPTY_CELL))
 			return nil
 		}
 		isFree := func(pos common.Vec2) bool {
@@ -262,8 +255,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 				return false
 			}
 			if tcell.CellType == cell.WOOD_CELL {
-				fire := cell.NewCell(cell.FIRE_CELL)
-				w.Set(uint16(x), uint16(y), fire)
+				w.Set(uint16(x), uint16(y), cell.NewCell(cell.FIRE_CELL))
 				return false
 			}
 			return isFree(pos)
@@ -289,11 +281,6 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 				common.NewVec2(1, 1),
 				common.NewVec2(-1, 1),
 			})
-		case cell.EMPTY_CELL:
-			c := cell.NewCell(cell.EMPTY_CELL)
-
-			w.Set(_x, _y, c)
-
 		case cell.LAVA_CELL:
 			simulateLavaMovements(pos, 1, &center, []common.Vec2{
 				common.NewVec2(0, 1),
@@ -318,8 +305,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 			})
 		case cell.VACUUM_CELL:
 			if center.RemainingLife <= 0 {
-				c := cell.NewCell(cell.EMPTY_CELL)
-				w.Set(_x, _y, c)
+				w.Set(_x, _y, cell.NewCell(cell.EMPTY_CELL))
 				return nil
 			}
 			center.DecreaseLife()
@@ -335,8 +321,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 			}
 		case cell.SMOKE_CELL:
 			if center.RemainingLife <= 0 {
-				c := cell.NewCell(cell.EMPTY_CELL)
-				w.Set(_x, _y, c)
+				w.Set(_x, _y, cell.NewCell(cell.EMPTY_CELL))
 				return nil
 			}
 			center.DecreaseLife()
