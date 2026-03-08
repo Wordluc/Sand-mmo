@@ -22,7 +22,7 @@ func SendToWebSocketPackages(socket *ws.Conn, ps ...Package) error {
 		u64 := Encode(p)
 		var toSend []byte = make([]byte, 8)
 		binary.BigEndian.PutUint64(toSend, u64)
-		err := socket.WriteMessage(ws.TextMessage, toSend)
+		err := socket.WriteMessage(ws.BinaryMessage, toSend)
 		if err != nil {
 			return err
 		}

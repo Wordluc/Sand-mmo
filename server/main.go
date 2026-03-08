@@ -115,7 +115,7 @@ func UpdateClientWorlds() {
 					if ws == nil {
 						continue
 					}
-					err := ws.WriteMessage(websocket.TextMessage, chunk)
+					err := ws.WriteMessage(websocket.BinaryMessage, chunk)
 					if err != nil {
 						fmt.Println(err)
 					}

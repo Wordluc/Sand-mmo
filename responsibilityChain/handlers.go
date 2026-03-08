@@ -14,7 +14,7 @@ func GetHandlers() []Handler {
 			p: common.GET,
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				bytes := e.world.GetChunkBytesToSend(uint16(p.Arg))
-				err := e.tcpConn.WriteMessage(ws.TextMessage, bytes)
+				err := e.tcpConn.WriteMessage(ws.BinaryMessage, bytes)
 				if err != nil {
 					return err
 				}
@@ -36,7 +36,7 @@ func GetHandlers() []Handler {
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				fmt.Println("Init bidirectional connection ", e.tcpConn.RemoteAddr())
 				for i := range e.world.GetNumberChucks() {
-					e.tcpConn.WriteMessage(ws.TextMessage, e.world.GetChunkBytesToSend(i))
+					e.tcpConn.WriteMessage(ws.BinaryMessage, e.world.GetChunkBytesToSend(i))
 				}
 				return nil
 			},
