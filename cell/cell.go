@@ -16,6 +16,8 @@ const (
 	WOOD_CELL
 	FIRE_CELL
 	LAVA_CELL
+	LEAF_CELL
+	VACUUM_CELL
 )
 
 type Cell struct {

@@ -16,10 +16,13 @@ func NewCell(celltype CellType) (res Cell, err error) {
 		res.initialLifeSec = 10
 	case SAND_CELL:
 	case LAVA_CELL:
+	case LEAF_CELL:
 	case WATER_CELL:
 	case EMPTY_CELL:
 	case WOOD_CELL:
 	case STONE_CELL:
+	case VACUUM_CELL:
+		res.initialLifeSec = 10
 	default:
 		return res, fmt.Errorf("CellType not found %v", celltype)
 	}
