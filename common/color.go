@@ -8,8 +8,8 @@ func NewColor(R, G, B, A uint8) Color {
 	return Color{R: R, G: G, B: B, A: A}
 }
 
-func (c Color) Get() (uint8, uint8, uint8) {
-	return c.R, c.G, c.B
+func (c Color) Get() (uint8, uint8, uint8, uint8) {
+	return c.R, c.G, c.B, c.A
 }
 
 var (

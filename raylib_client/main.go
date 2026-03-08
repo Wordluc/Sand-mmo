@@ -123,16 +123,26 @@ func createWebSocket() (*ws.Conn, error) {
 	return conn, nil
 }
 
-func UpdateWorld(world *world.ClientWorld, udp *ws.Conn) {
+func UpdateWorld(world *world.ClientWorld, webSocket *ws.Conn) {
 	for {
 		//2->16bit
 		//		var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
-		_, bytes, err := udp.ReadMessage()
+		_, bytes, err := webSocket.ReadMessage()
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 		idChunk := binary.BigEndian.Uint16(bytes[0:2])
 		world.SetCellsByte(bytes[2:], idChunk)
+	}
+}
+func Draw(w world.ClientWorld) {
+	var i, x, y uint16
+	for _, c := range w.GetCells() {
+		x = i % w.W * common.SIZE_CELL
+		y = i / w.W * common.SIZE_CELL
+		rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, rl.NewColor(w.GetColor(c.CellType).Get()))
+		rl.DrawText(fmt.Sprint(y/common.SIZE_CELL), 0, int32(y), common.SIZE_CELL, rl.Black)
+		i++
 	}
 }
