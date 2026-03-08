@@ -6,12 +6,12 @@ import (
 )
 
 // NewCellByChance generates a cell with type "typeCell" with a probability of chance/10.
-// chance must be between 0 and 10.
+// chance must be between 0 and 100.
 func NewCellByChance(typeCell cell.CellType, chance int) (cell.Cell, bool) {
-	if rand.Intn(10) < chance {
-		c, _ := cell.NewCell(typeCell)
+	if rand.Intn(100) < chance {
+		c := cell.NewCell(typeCell)
 		return c, true
 	}
-	c, _ := cell.NewCell(cell.EMPTY_CELL)
+	c := cell.NewCell(cell.EMPTY_CELL)
 	return c, false
 }

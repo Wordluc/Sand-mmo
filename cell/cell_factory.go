@@ -1,11 +1,10 @@
 package cell
 
 import (
-	"fmt"
 	"sand-mmo/common"
 )
 
-func NewCell(celltype CellType) (res Cell, err error) {
+func NewCell(celltype CellType) (res Cell) {
 	res.CellType = celltype
 	res.touchedId = common.GTouchedId - 1
 	res.forceTouched = true
@@ -14,19 +13,10 @@ func NewCell(celltype CellType) (res Cell, err error) {
 		res.initialLifeSec = 30
 	case FIRE_CELL:
 		res.initialLifeSec = 10
-	case SAND_CELL:
-	case LAVA_CELL:
-	case LEAF_CELL:
-	case WATER_CELL:
-	case EMPTY_CELL:
-	case WOOD_CELL:
-	case STONE_CELL:
 	case VACUUM_CELL:
 		res.initialLifeSec = 10
-	default:
-		return res, fmt.Errorf("CellType not found %v", celltype)
 	}
 	res.RemainingLife = float32(res.initialLifeSec)
-	return res, nil
+	return res
 
 }
