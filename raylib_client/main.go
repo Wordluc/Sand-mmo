@@ -82,7 +82,7 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 300, Width: 50, Height: 20}, "Foglia") {
 			cellType = cell.LEAF_CELL
 		}
-		w.Draw()
+		Draw(w)
 		vec := rl.GetMousePosition()
 		x := uint16(vec.X) / common.SIZE_CELL
 		y := uint16(vec.Y) / common.SIZE_CELL
