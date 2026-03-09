@@ -9,13 +9,12 @@ RUN ldconfig
 
 COPY . .
 
-RUN go build -o server/ server/main.go
+WORKDIR server 
+
+RUN go build -o . main.go
 
 EXPOSE 8000/tcp
 EXPOSE 8000/udp
 
 # Run the application
-CMD ["server/main"]
-
-
-
+CMD ["./main"]

@@ -9,13 +9,11 @@ RUN ldconfig
 
 COPY . .
 
-RUN GOOS=js GOARCH=wasm go build -o wasm_client/main.wasm wasm_client/main.go
+WORKDIR wasm_client
+
+RUN GOOS=js GOARCH=wasm go build -o main.wasm main.go
 
 EXPOSE 8080/tcp
 
-WORKDIR wasm_client
 
 CMD ["python3", "-m", "http.server", "8080"]
-
-
-
