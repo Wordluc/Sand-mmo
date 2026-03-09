@@ -1,11 +1,12 @@
 package responsibilityChain
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sand-mmo/common"
 
-	ws "github.com/gorilla/websocket"
+	ws "github.com/coder/websocket"
 )
 
 func GetHandlers() []Handler {
@@ -14,7 +15,7 @@ func GetHandlers() []Handler {
 			p: common.GET,
 			handler: func(p common.Package, e *ResponsibilityChain) error {
 				bytes := e.world.GetChunkBytesToSend(uint16(p.Arg))
-				err := e.webSocket.WriteMessage(ws.BinaryMessage, bytes)
+				err := e.webSocket.Write(context.Background(), ws.MessageBinary, bytes)
 				if err != nil {
 					return err
 				}
@@ -34,9 +35,9 @@ func GetHandlers() []Handler {
 		{
 			p: common.INIT,
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				fmt.Println("Init bidirectional connection ", e.webSocket.RemoteAddr())
+				fmt.Println("Init bidirectional connection ")
 				for i := range e.world.GetNumberChucks() {
-					e.webSocket.WriteMessage(ws.BinaryMessage, e.world.GetChunkBytesToSend(i))
+					e.webSocket.Write(context.Background(), ws.MessageBinary, e.world.GetChunkBytesToSend(i))
 				}
 				return nil
 			},
@@ -50,7 +51,7 @@ func GetHandlers() []Handler {
 		{
 			p: common.END,
 			handler: func(p common.Package, e *ResponsibilityChain) error {
-				fmt.Println("End ", e.webSocket.RemoteAddr())
+				fmt.Println("End ")
 				return io.ErrUnexpectedEOF
 			},
 		},

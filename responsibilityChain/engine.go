@@ -5,7 +5,7 @@ import (
 	"sand-mmo/common"
 	"sand-mmo/world"
 
-	ws "github.com/gorilla/websocket"
+	ws "github.com/coder/websocket"
 )
 
 type ResponsibilityChain struct {

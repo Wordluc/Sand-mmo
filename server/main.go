@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/websocket"
-	ws "github.com/gorilla/websocket"
+	"github.com/coder/websocket"
+	ws "github.com/coder/websocket"
 
 	"io"
 	"math/rand"
@@ -21,26 +22,21 @@ var w *world.ServerWorld
 var m sync.Mutex
 var webSockets map[string]*ws.Conn = map[string]*ws.Conn{}
 
-var upgrader = ws.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
 func handler(w http.ResponseWriter, r *http.Request) {
-	add := r.RemoteAddr
-	conn, err := upgrader.Upgrade(w, r, nil)
+	c, err := ws.Accept(w, r, &ws.AcceptOptions{
+		InsecureSkipVerify: true, // allow all origins for dev
+	})
 	if err != nil {
-		fmt.Println("Failed establishing connection with ", add)
-		return
+		fmt.Println(err)
 	}
 	m.Lock()
-	webSockets[add] = conn
+	addr := r.RemoteAddr
+	webSockets[addr] = c
+	m.Unlock()
 	if len(webSockets) == 1 {
 		go UpdateClientWorlds()
 	}
-	m.Unlock()
-	go handlerConnection(conn)
+	go handlerConnection(c, addr)
 
 }
 
@@ -54,8 +50,8 @@ func main() {
 
 }
 
-func handlerConnection(conn *ws.Conn) {
-	defer conn.Close()
+func handlerConnection(conn *ws.Conn, addr string) {
+	defer conn.CloseNow()
 	engine := chain.NewResponsibilityChainEngine(w, chain.GetHandlers(), conn)
 
 	for {
@@ -69,7 +65,7 @@ func handlerConnection(conn *ws.Conn) {
 		m.Unlock()
 		if err != nil {
 			if errors.Is(err, io.ErrUnexpectedEOF) {
-				delete(webSockets, conn.RemoteAddr().String())
+				delete(webSockets, addr)
 				return
 			}
 			fmt.Print(err.Error(), "\n\n")
@@ -121,7 +117,7 @@ func UpdateClientWorlds() {
 					if ws == nil {
 						continue
 					}
-					err := ws.WriteMessage(websocket.BinaryMessage, chunk)
+					err := ws.Write(context.Background(), websocket.MessageBinary, chunk)
 					if err != nil {
 						fmt.Println(err)
 					}

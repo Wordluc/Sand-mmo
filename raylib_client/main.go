@@ -1,17 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
-	"net/url"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
 	"sand-mmo/world"
 
+	ws "github.com/coder/websocket"
 	ru "github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
-	ws "github.com/gorilla/websocket"
 )
 
 const W_BUTTONS_SIDE = 100
@@ -29,7 +29,7 @@ func main() {
 
 	go UpdateWorld(&w, conn)
 
-	defer conn.Close()
+	defer conn.CloseNow()
 	defer common.SendToWebSocketPackages(conn, chain.GetENDCommand())
 
 	//Insert fps target
@@ -109,8 +109,7 @@ func main() {
 }
 
 func createWebSocket() (*ws.Conn, error) {
-	u := url.URL{Scheme: "ws", Host: ":8000", Path: "/ws"}
-	conn, _, err := ws.DefaultDialer.Dial(u.String(), nil)
+	conn, _, err := ws.Dial(context.Background(), "ws://localhost:8000/ws", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +117,7 @@ func createWebSocket() (*ws.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	println("WebSocket connected ", conn.RemoteAddr().String())
+	println("WebSocket connected ")
 
 	return conn, nil
 }
@@ -127,7 +126,7 @@ func UpdateWorld(world *world.ClientWorld, webSocket *ws.Conn) {
 	for {
 		//2->16bit
 		//		var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
-		_, bytes, err := webSocket.ReadMessage()
+		_, bytes, err := webSocket.Read(context.Background())
 		if err != nil {
 			fmt.Println(err)
 			continue
