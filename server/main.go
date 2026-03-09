@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/coder/websocket"
 	ws "github.com/coder/websocket"
@@ -58,7 +59,11 @@ func handlerConnection(conn *ws.Conn, addr string) {
 		r, err := common.ReadFromWebSocketPackage(conn)
 		if err != nil {
 			fmt.Printf("Error receiving %s\n", err.Error())
-			continue
+			if strings.Contains(err.Error(), "EOF") {
+				fmt.Println("End " + addr)
+				delete(webSockets, addr)
+			}
+			return
 		}
 		m.Lock()
 		err = engine.Run(r)

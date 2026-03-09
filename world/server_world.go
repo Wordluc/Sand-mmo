@@ -186,7 +186,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 				return false
 			}
 			if tcell.CellType == cell.LAVA_CELL || tcell.CellType == cell.FIRE_CELL {
-				fire, _ := NewCellByChance(cell.FIRE_CELL, 3)
+				fire := cell.NewCell(cell.FIRE_CELL)
 				w.SetVec(pos, fire)
 				return false
 			}

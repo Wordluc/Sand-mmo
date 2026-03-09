@@ -2,9 +2,12 @@ package main
 
 import (
 	"encoding/binary"
+	"sand-mmo/cell"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
 	"sand-mmo/world"
+	"strings"
+	"sync"
 	"syscall/js"
 	"time"
 )
@@ -40,23 +43,129 @@ func Draw(w world.ClientWorld) {
 	)
 	ctx.Call("putImageData", imageData, 0, 0)
 }
+
+var mouse common.Vec2
+var pressed bool
+var m sync.Mutex
+var brushType common.BrushType
+var cellType cell.CellType
+var addGenerator bool
+
+// Button definitions
+type ButtonDef struct {
+	label     string
+	isBrush   bool
+	cellType  cell.CellType
+	brushType common.BrushType
+}
+
+var buttons = []ButtonDef{
+	{label: "Water", isBrush: false, cellType: cell.WATER_CELL},
+	{label: "Sand", isBrush: false, cellType: cell.SAND_CELL},
+	{label: "Smoke", isBrush: false, cellType: cell.SMOKE_CELL},
+	{label: "Small Circle", isBrush: true, brushType: common.CIRCLE_SMALL},
+	{label: "Big Circle", isBrush: true, brushType: common.CIRCLE_BIG},
+	{label: "Small Square", isBrush: true, brushType: common.SQUARE_SMALL},
+	{label: "Big Square", isBrush: true, brushType: common.SQUARE_BIG},
+	{label: "Buco nero", isBrush: false, cellType: cell.VACUUM_CELL},
+	{label: "Stone", isBrush: false, cellType: cell.STONE_CELL},
+	{label: "Fire", isBrush: false, cellType: cell.FIRE_CELL},
+	{label: "Wood", isBrush: false, cellType: cell.WOOD_CELL},
+	{label: "Lava", isBrush: false, cellType: cell.LAVA_CELL},
+	{label: "Foglia", isBrush: false, cellType: cell.LEAF_CELL},
+}
+
+// Render buttons using HTML DOM
+func renderButtons(buttons []ButtonDef, cellType *cell.CellType, brushType *common.BrushType) {
+	js.Global().Get("document").Call("getElementById", "buttons")
+
+	for _, btn := range buttons {
+		b := btn // capture
+		el := js.Global().Get("document").Call("createElement", "button")
+		el.Set("textContent", b.label)
+
+		el.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			if b.isBrush {
+				*brushType = b.brushType
+			} else {
+				*cellType = b.cellType
+			}
+			return nil
+		}))
+
+		js.Global().Get("document").Call("getElementById", "buttons").Call("appendChild", el)
+	}
+}
+
+func registryMouseMovement(document js.Value) {
+
+	document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) any {
+		m.Lock()
+		event := args[0]
+		if event.Get("key").String() == "r" {
+			addGenerator = true
+		}
+		m.Unlock()
+		return nil
+	}))
+	document.Call("addEventListener", "keyup", js.FuncOf(func(this js.Value, args []js.Value) any {
+		m.Lock()
+		event := args[0]
+		if event.Get("key").String() == "r" {
+			addGenerator = false
+		}
+		m.Unlock()
+		return nil
+	}))
+	document.Call("addEventListener", "mousemove", js.FuncOf(func(this js.Value, args []js.Value) any {
+		m.Lock()
+		event := args[0]
+		mouse.Set(int32(event.Get("clientX").Int()), int32(event.Get("clientY").Int()))
+		m.Unlock()
+		return nil
+	}))
+	document.Call("addEventListener", "mousedown", js.FuncOf(func(this js.Value, args []js.Value) any {
+		m.Lock()
+		pressed = true
+		m.Unlock()
+		return nil
+	}))
+	document.Call("addEventListener", "mouseup", js.FuncOf(func(this js.Value, args []js.Value) any {
+		m.Lock()
+		pressed = false
+		m.Unlock()
+		return nil
+	}))
+
+}
 func main() {
 	doc := js.Global().Get("document")
 	div := doc.Call("getElementById", "GAME_WINDOW")
 	div.Set("width", common.SIZE_CELL*common.W_WINDOWS)
 	div.Set("height", common.SIZE_CELL*common.H_WINDOWS)
 	ctx = div.Call("getContext", "2d")
-
+	registryMouseMovement(doc)
+	renderButtons(buttons, &cellType, &brushType)
 	w := world.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
-	ws = js.Global().Get("WebSocket").New("ws://localhost:8000/ws")
+
+	loc := js.Global().Get("location")
+	host, _, _ := strings.Cut(loc.Get("host").String(), ":")
+	protocol := "ws"
+	if loc.Get("protocol").String() == "https:" {
+		protocol = "wss"
+	}
+
+	wsURL := protocol + "://" + host + ":8000" + "/ws"
+	ws = js.Global().Get("WebSocket").New(wsURL)
+
 	ws.Set("binaryType", "arraybuffer")
 
 	ws.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {
-		send(common.Encode(chain.GetInitCommand(8000)))
+		send(chain.GetInitCommand(8000))
 		return nil
 	}))
 	js.Global().Get("window").Call("addEventListener", "beforeunload", js.FuncOf(func(this js.Value, args []js.Value) any {
-		send(common.Encode(chain.GetENDCommand()))
+		send(chain.GetENDCommand())
 		ws.Call("close")
 		return nil
 	}))
@@ -86,17 +195,33 @@ func main() {
 	sleepFor := 1000.0 / 30.0
 	go func() {
 		for {
+
 			time.Sleep(time.Duration(sleepFor) * time.Millisecond)
+			m.Lock()
+			x, y := mouse.Get()
+			x = x / common.SIZE_CELL
+			y = y / common.SIZE_CELL
+			//avoid to send same package twise
+			if addGenerator {
+				send(chain.GetGeneratorCommand(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
+			}
+			if pressed {
+				send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
+
+			}
+			m.Unlock()
 			Draw(w)
 		}
 	}()
 	select {}
 }
 
-func send(encoded uint64) {
-	buf := make([]byte, 8)
-	binary.BigEndian.PutUint64(buf, encoded)
-	dst := js.Global().Get("Uint8Array").New(8)
-	js.CopyBytesToJS(dst, buf)
-	ws.Call("send", dst)
+func send(ps ...common.Package) {
+	for i := range ps {
+		buf := make([]byte, 8)
+		binary.BigEndian.PutUint64(buf, common.Encode(ps[i]))
+		dst := js.Global().Get("Uint8Array").New(8)
+		js.CopyBytesToJS(dst, buf)
+		ws.Call("send", dst)
+	}
 }
