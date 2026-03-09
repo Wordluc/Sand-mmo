@@ -11,8 +11,6 @@ COPY . .
 
 RUN go build -o server/ server/main.go
 
-# Tell ldconfig we have new libraries to look at
-
 EXPOSE 8000/tcp
 EXPOSE 8000/udp
 
