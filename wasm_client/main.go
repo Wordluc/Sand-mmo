@@ -83,7 +83,7 @@ func main() {
 		println("WebSocket error")
 		return nil
 	}))
-	sleepFor := 1000 / 30
+	sleepFor := 1000.0 / 30.0
 	go func() {
 		for {
 			time.Sleep(time.Duration(sleepFor) * time.Millisecond)
