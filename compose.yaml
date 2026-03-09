@@ -1,0 +1,15 @@
+services:
+  server-simulator:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+
+    ports:
+      - "8000:8000"
+  web:
+    build:
+      context: .
+      dockerfile: wasm_client/Dockerfile
+
+    ports:
+      - "8080:8080"
