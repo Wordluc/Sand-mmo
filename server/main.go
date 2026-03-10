@@ -118,7 +118,7 @@ func UpdateClientWorlds() {
 			waitG.Add(len(webSockets))
 			for addr, ws := range webSockets {
 				go func() {
-					ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+					ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
 					defer cancel()
 					var err error
 					defer func() {
