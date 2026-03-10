@@ -61,7 +61,6 @@ func handlerConnection(conn *ws.Conn, addr string) {
 			fmt.Printf("Error receiving %s\n", err.Error())
 			if strings.Contains(err.Error(), "EOF") {
 				fmt.Println("End " + addr)
-				delete(webSockets, addr)
 			}
 			return
 		}
@@ -70,7 +69,6 @@ func handlerConnection(conn *ws.Conn, addr string) {
 		m.Unlock()
 		if err != nil {
 			if errors.Is(err, io.ErrUnexpectedEOF) {
-				delete(webSockets, addr)
 				return
 			}
 			fmt.Print(err.Error(), "\n\n")
@@ -117,17 +115,32 @@ func UpdateClientWorlds() {
 			}
 			waitG.Wait()
 			m.Unlock()
-			for _, chunk := range chunks {
-				for _, ws := range webSockets {
-					if ws == nil {
-						continue
+			waitG.Add(len(webSockets))
+			for addr, ws := range webSockets {
+				go func() {
+					ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+					defer cancel()
+					var err error
+					defer func() {
+						waitG.Done()
+						if err != nil {
+							delete(webSockets, addr)
+							return
+						}
+					}()
+					for _, chunk := range chunks {
+						if ws == nil {
+							continue
+						}
+						err = ws.Write(ctx, websocket.MessageBinary, chunk)
+						if err != nil {
+							fmt.Println(err)
+							return
+						}
 					}
-					err := ws.Write(context.Background(), websocket.MessageBinary, chunk)
-					if err != nil {
-						fmt.Println(err)
-					}
-				}
+				}()
 			}
+			waitG.Wait()
 		}
 	}()
 }

@@ -175,7 +175,6 @@ func main() {
 
 		buf := make([]byte, data.Get("byteLength").Int())
 		js.CopyBytesToGo(buf, js.Global().Get("Uint8Array").New(data))
-
 		chunkId := binary.BigEndian.Uint16(buf[0:2])
 		cells := js.Global().Get("Uint8Array").New(len(buf) - 2)
 		js.CopyBytesToJS(cells, buf[2:])
@@ -224,4 +223,9 @@ func send(ps ...common.Package) {
 		js.CopyBytesToJS(dst, buf)
 		ws.Call("send", dst)
 	}
+}
+func sendRaw(bytes []byte) {
+	dst := js.Global().Get("Uint8Array").New(8)
+	js.CopyBytesToJS(dst, bytes)
+	ws.Call("send", dst)
 }
