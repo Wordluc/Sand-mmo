@@ -358,8 +358,9 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 		return nil
 	})
 }
-func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res common.OrderList[uint16]) {
-	chunks := w.activeChunks
+func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []uint16) {
+	l := common.NewOrderList[uint16]()
+	chunks := w.activeChunks.Get()
 	w.activeChunks.Clean()
 
 	chunkPerRow := int(w.W / w.ChunkSize)
@@ -382,12 +383,12 @@ func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res common.OrderList[uint16
 			if n < 0 || n >= totalChunks {
 				continue
 			}
-			res.SortedInsert(uint16(n))
+			l.SortedInsert(uint16(n))
 		}
 	}
-	return res.GetReversSort()
+	return l.GetReversSort()
 }
 
 func (w *ServerWorld) GetChunksToSend() []uint16 {
-	return w.activeChunks
+	return w.activeChunks.Get()
 }

@@ -8,6 +8,15 @@
                 go.run(result.instance);
             });
         </script>
+		<script>
+			function loop() { 
+				if (window.goFrame!=null){
+					window.goFrame();
+				}
+				requestAnimationFrame(loop); 
+			}
+			requestAnimationFrame(loop);
+		</script>
     </head>
     <body>
 	<canvas id="GAME_WINDOW" >

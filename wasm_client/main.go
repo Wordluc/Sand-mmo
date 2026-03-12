@@ -9,15 +9,29 @@ import (
 	"strings"
 	"sync"
 	"syscall/js"
-	"time"
+
+	"wasm/utils"
 )
 
 var ws js.Value
 var ctx js.Value
 
+var frameBuf []byte
+var jsDst js.Value
+var jsImageData js.Value
+var canvasW, canvasH int
+
+func initDrawBuffers() {
+	size := int(common.W_WINDOWS) * int(common.H_WINDOWS) * int(common.SIZE_CELL) * int(common.SIZE_CELL) * 4
+	frameBuf = make([]byte, size)
+	jsDst = js.Global().Get("Uint8ClampedArray").New(size)
+	jsImageData = js.Global().Get("ImageData")
+	canvasW = int(common.W_WINDOWS) * int(common.SIZE_CELL)
+	canvasH = int(common.H_WINDOWS) * int(common.SIZE_CELL)
+}
+
 func Draw(w world.ClientWorld) {
 	// 4 bytes per pixel (RGBA)
-	buf := make([]byte, common.W_WINDOWS*common.H_WINDOWS*common.SIZE_CELL*common.SIZE_CELL*4)
 
 	var i uint16
 	for _, c := range w.GetCells() {
@@ -29,19 +43,17 @@ func Draw(w world.ClientWorld) {
 		for dy := range common.SIZE_CELL {
 			for dx := range common.SIZE_CELL {
 				px := ((y+dy)*common.W_WINDOWS*common.SIZE_CELL + (x + dx)) * 4 //?
-				buf[px], buf[px+1], buf[px+2], buf[px+3] = w.GetColor(c.CellType).Get()
+				frameBuf[px], frameBuf[px+1], frameBuf[px+2], frameBuf[px+3] = w.GetColor(c.CellType).Get()
 			}
 		}
 	}
 
 	// copy entire buffer to JS in ONE call
-	dst := js.Global().Get("Uint8ClampedArray").New(len(buf))
-	js.CopyBytesToJS(dst, buf)
-	imageData := js.Global().Get("ImageData").New(dst,
-		common.W_WINDOWS*common.SIZE_CELL,
-		common.H_WINDOWS*common.SIZE_CELL,
-	)
+	js.CopyBytesToJS(jsDst, frameBuf)
+	imageData := jsImageData.New(jsDst, canvasW, canvasH)
+
 	ctx.Call("putImageData", imageData, 0, 0)
+
 }
 
 var mouse common.Vec2
@@ -139,6 +151,7 @@ func registryMouseMovement(document js.Value) {
 
 }
 func main() {
+	initDrawBuffers()
 	doc := js.Global().Get("document")
 	div := doc.Call("getElementById", "GAME_WINDOW")
 	div.Set("width", common.SIZE_CELL*common.W_WINDOWS)
@@ -160,6 +173,8 @@ func main() {
 
 	ws.Set("binaryType", "arraybuffer")
 
+	var bufferByte utils.Buffer = utils.NewBuffer()
+
 	ws.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {
 		send(chain.GetInitCommand(8000))
 		return nil
@@ -176,9 +191,7 @@ func main() {
 		buf := make([]byte, data.Get("byteLength").Int())
 		js.CopyBytesToGo(buf, js.Global().Get("Uint8Array").New(data))
 		chunkId := binary.BigEndian.Uint16(buf[0:2])
-		cells := js.Global().Get("Uint8Array").New(len(buf) - 2)
-		js.CopyBytesToJS(cells, buf[2:])
-		w.SetCellsByte(buf[2:], chunkId)
+		bufferByte.Append(chunkId, buf[2:])
 		return nil
 	}))
 
@@ -191,27 +204,30 @@ func main() {
 		println("WebSocket error")
 		return nil
 	}))
-	sleepFor := 1000.0 / 30.0
-	go func() {
-		for {
+	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
+		x, y := mouse.Get()
+		x = x / common.SIZE_CELL
+		y = y / common.SIZE_CELL
 
-			time.Sleep(time.Duration(sleepFor) * time.Millisecond)
-			m.Lock()
-			x, y := mouse.Get()
-			x = x / common.SIZE_CELL
-			y = y / common.SIZE_CELL
-			//avoid to send same package twise
-			if addGenerator {
-				send(chain.GetGeneratorCommand(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
-			}
-			if pressed {
-				send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
+		m.Lock()
+		isPressed := pressed
+		isGenerator := addGenerator
+		m.Unlock()
 
-			}
-			m.Unlock()
-			Draw(w)
+		if isGenerator {
+			send(chain.GetGeneratorCommand(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
 		}
-	}()
+		if isPressed {
+			send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
+		}
+
+		for _, idChunk := range bufferByte.GetChunks() {
+			w.SetCellsByte(bufferByte.GetLast(idChunk), idChunk)
+		}
+		Draw(w)
+		return nil
+	}))
+
 	select {}
 }
 

@@ -21,6 +21,7 @@ func newWorld(w, h, chunkSize uint16) world {
 	world.H = h
 	world.W = w
 	world.ChunkSize = chunkSize
+	world.activeChunks = common.NewOrderList[uint16]()
 	return world
 }
 

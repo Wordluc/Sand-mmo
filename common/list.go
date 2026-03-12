@@ -3,27 +3,47 @@ package common
 import (
 	"cmp"
 	"slices"
+	"sync"
 )
 
-type OrderList[t cmp.Ordered] []t
+type OrderList[t cmp.Ordered] struct {
+	list []t
+	*sync.Mutex
+}
+
+func NewOrderList[t cmp.Ordered]() OrderList[t] {
+	return OrderList[t]{
+		list:  make([]t, 0),
+		Mutex: &sync.Mutex{},
+	}
+}
 
 func (a *OrderList[t]) SortedInsert(newValue t) {
-	i, found := slices.BinarySearch(*a, newValue)
+	a.Mutex.Lock()
+	defer a.Mutex.Unlock()
+	i, found := slices.BinarySearch(a.list, newValue)
 	if found {
 		return
 	}
-	*a = slices.Insert(*a, i, newValue)
+	a.list = slices.Insert(a.list, i, newValue)
+}
+
+func (a *OrderList[t]) Get() []t {
+	return slices.Clone(a.list)
 }
 
 func (a *OrderList[t]) GetReversSort() []t {
-	var res []t = make([]t, len(*a))
-	for i := range *a {
-		res[len(*a)-i-1] = (*a)[i]
+	a.Lock()
+	var res []t = make([]t, len(a.list))
+	for i := range a.list {
+		res[len(a.list)-i-1] = (a.list)[i]
 	}
+	a.Unlock()
 	return res
 }
 
 func (a *OrderList[t]) Clean() {
-
-	*a = []t{}
+	a.Lock()
+	a.list = make([]t, 0)
+	a.Unlock()
 }
