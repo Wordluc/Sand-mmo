@@ -358,7 +358,7 @@ func (w *ServerWorld) Simulate(idChunk uint16) error {
 		return nil
 	})
 }
-func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res orderList[uint16]) {
+func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res common.OrderList[uint16]) {
 	chunks := w.activeChunks
 	w.activeChunks.Clean()
 

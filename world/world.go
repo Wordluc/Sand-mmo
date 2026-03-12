@@ -1,42 +1,17 @@
 package world
 
 import (
-	"cmp"
 	"encoding/binary"
 	"sand-mmo/cell"
 	"sand-mmo/common"
-	"slices"
 )
-
-type orderList[t cmp.Ordered] []t
-
-func (a *orderList[t]) SortedInsert(newValue t) {
-	i, found := slices.BinarySearch(*a, newValue)
-	if found {
-		return
-	}
-	*a = slices.Insert(*a, i, newValue)
-}
-
-func (a *orderList[t]) GetReversSort() []t {
-	var res []t = make([]t, len(*a))
-	for i := range *a {
-		res[len(*a)-i-1] = (*a)[i]
-	}
-	return res
-}
-
-func (a *orderList[t]) Clean() {
-
-	*a = []t{}
-}
 
 type world struct {
 	W            uint16
 	H            uint16
 	ChunkSize    uint16
 	cells        []cell.Cell
-	activeChunks orderList[uint16]
+	activeChunks common.OrderList[uint16]
 	generators   []common.BrushPackage
 }
 
