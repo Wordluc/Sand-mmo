@@ -49,8 +49,7 @@ func (w *world) SetCellsByte(bytes []byte, idChunk uint16) {
 func (w *world) ImportCells(cells []uint16) {
 	w.cells = []cell.Cell{}
 	for i := range cells {
-		cell := cell.DecodeCell(cells[i])
-		w.cells = append(w.cells, cell)
+		w.cells = append(w.cells, cell.DecodeCell(cells[i]))
 	}
 
 	for i := range w.GetNumberChucks() {
