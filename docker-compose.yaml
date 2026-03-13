@@ -1,6 +1,9 @@
 services:
   server-simulator:
     image: wordluc/sand-mmo-server:latest
+    depends_on:
+      redis:
+        condition: service_started
     build:
       context: .
       dockerfile: server/Dockerfile
