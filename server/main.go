@@ -11,7 +11,6 @@ import (
 	ws "github.com/coder/websocket"
 
 	"io"
-	"math/rand"
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
 	"sand-mmo/world"
@@ -86,18 +85,10 @@ func UpdateClientWorlds() {
 			}
 			chunksToSend := w.GetActiveChunksAndNeiboroud()
 			for _, iC := range chunksToSend {
-				w.Simulate(uint16(iC))
+				w.SimulateChunk(uint16(iC))
 			}
 			chunksToSend = w.GetChunksToSend()
-			t := uint8(rand.Intn(256))
-			for {
-				if t == common.GTouchedId {
-					t = uint8(rand.Intn(256))
-					continue
-				}
-				break
-			}
-			common.GTouchedId = t
+			common.UntouchEverything()
 
 			var chunks [][]byte = make([][]byte, len(chunksToSend))
 			waitG.Add(len(chunksToSend))

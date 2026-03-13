@@ -140,7 +140,7 @@ func (w *ServerWorld) ApplyGenerators() error {
 	return nil
 }
 
-func (w *ServerWorld) Simulate(idChunk uint16) error {
+func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 
 	isFree := func(pos common.Vec2) bool {
 		x, y := pos.Get()
