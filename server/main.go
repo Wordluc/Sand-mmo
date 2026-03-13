@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/coder/websocket"
 	ws "github.com/coder/websocket"
+	"github.com/joho/godotenv"
 
 	"io"
 	"math/rand"
@@ -17,6 +19,8 @@ import (
 	"sand-mmo/world"
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var w *world.ServerWorld
@@ -36,10 +40,30 @@ func handler(write http.ResponseWriter, r *http.Request) {
 
 }
 
+func getRedisClient() (*redis.Client, error) {
+	println("Redis: ", fmt.Sprintf("%v:%v", os.Getenv("redis_address"), os.Getenv("redis_port")))
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%v:%v", os.Getenv("redis_address"), os.Getenv("redis_port")),
+		Password: "", // no password
+		DB:       0,  // use default DB
+		Protocol: 2,
+	})
+	if client == nil {
+		return nil, errors.New("Error creating redis client")
+	}
+	return client, nil
+}
+
 func main() {
+	godotenv.Load(".env")
+	redis, err := getRedisClient()
+	if err != nil {
+		panic(err)
+	}
+
 	http.HandleFunc("/ws", handler)
-	w = new(world.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE))
-	err := http.ListenAndServe(":8000", nil)
+	w = new(world.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE, redis))
+	err = http.ListenAndServe(":8000", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -77,6 +101,7 @@ func UpdateClientWorlds() {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
 			if w.GetLenSockets() == 0 {
+				w.SaveSnapshot()
 				return
 			}
 			m.Lock()

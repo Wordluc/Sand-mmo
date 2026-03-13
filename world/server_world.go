@@ -1,26 +1,61 @@
 package world
 
 import (
+	"context"
+	"encoding/binary"
+	"fmt"
 	"maps"
 	"math"
 	"sand-mmo/cell"
 	"sand-mmo/common"
+	"strings"
 	"sync"
+	"time"
 
 	ws "github.com/coder/websocket"
+	"github.com/redis/go-redis/v9"
 )
 
 type ServerWorld struct {
 	world
 	webSockets     map[string]*ws.Conn
 	webSocketMutex *sync.Mutex
+	redis          *redis.Client
 }
 
-func NewServerWorld(w, h, chunkSize uint16) (res ServerWorld) {
+func NewServerWorld(w, h, chunkSize uint16, redisClient *redis.Client) (res ServerWorld) {
 	res.world = newWorld(w, h, chunkSize)
 	res.webSockets = map[string]*ws.Conn{}
 	res.webSocketMutex = &sync.Mutex{}
+	res.redis = redisClient
+	ctx, p := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
+	defer p()
+	wStr, err := res.redis.Get(ctx, "world").Result()
+	switch err {
+	case redis.Nil:
+		return
+	case nil:
+		bytes := []byte(wStr)
+		var u16World []uint16
+		for i := 0; i < len(bytes); i += 2 {
+			u16World = append(u16World, binary.BigEndian.Uint16(bytes[i:i+2]))
+		}
+		res.ImportCells(u16World)
+
+	default:
+		panic(err)
+	}
+
 	return res
+}
+
+func (w *ServerWorld) SaveSnapshot() {
+	var res strings.Builder
+	for _, r := range w.GetAllMap() {
+		res.WriteString(string(binary.BigEndian.AppendUint16(make([]byte, 2), r)))
+	}
+	fmt.Println(res.String())
+	go w.redis.SAdd(context.Background(), "world", res.String())
 }
 
 func (w *ServerWorld) AddClient(addr string, conn *ws.Conn) int {
