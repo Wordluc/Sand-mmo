@@ -60,9 +60,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	w = new(world.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE, redis))
 
 	http.HandleFunc("/ws", handler)
-	w = new(world.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE, redis))
 	err = http.ListenAndServe(":8000", nil)
 	if err != nil {
 		panic(err)
@@ -102,6 +102,7 @@ func UpdateClientWorlds() {
 
 			if w.GetLenSockets() == 0 {
 				w.SaveSnapshot()
+
 				return
 			}
 			m.Lock()

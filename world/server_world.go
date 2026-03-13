@@ -3,12 +3,10 @@ package world
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"maps"
 	"math"
 	"sand-mmo/cell"
 	"sand-mmo/common"
-	"strings"
 	"sync"
 	"time"
 
@@ -50,12 +48,9 @@ func NewServerWorld(w, h, chunkSize uint16, redisClient *redis.Client) (res Serv
 }
 
 func (w *ServerWorld) SaveSnapshot() {
-	var res strings.Builder
-	for _, r := range w.GetAllMap() {
-		res.WriteString(string(binary.BigEndian.AppendUint16(make([]byte, 2), r)))
-	}
-	fmt.Println(res.String())
-	go w.redis.SAdd(context.Background(), "world", res.String())
+	res := w.GetAllMap()
+	w.redis.Set(context.Background(), "world", string(res), 0)
+	println("World Saved")
 }
 
 func (w *ServerWorld) AddClient(addr string, conn *ws.Conn) int {
