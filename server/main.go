@@ -20,24 +20,19 @@ import (
 )
 
 var w *world.ServerWorld
-var m sync.Mutex
-var webSockets map[string]*ws.Conn = map[string]*ws.Conn{}
+var m *sync.Mutex = &sync.Mutex{}
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	c, err := ws.Accept(w, r, &ws.AcceptOptions{
+func handler(write http.ResponseWriter, r *http.Request) {
+	c, err := ws.Accept(write, r, &ws.AcceptOptions{
 		InsecureSkipVerify: true, // allow all origins for dev
 	})
 	if err != nil {
 		fmt.Println(err)
 	}
-	m.Lock()
-	addr := r.RemoteAddr
-	webSockets[addr] = c
-	m.Unlock()
-	if len(webSockets) == 1 {
+	if w.AddClient(r.RemoteAddr, c) == 1 {
 		go UpdateClientWorlds()
 	}
-	go handlerConnection(c, addr)
+	go handlerConnection(c, r.RemoteAddr)
 
 }
 
@@ -81,11 +76,10 @@ func UpdateClientWorlds() {
 		for {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
-			m.Lock()
-			if len(webSockets) == 0 {
-				m.Unlock()
+			if w.GetLenSockets() == 0 {
 				return
 			}
+			m.Lock()
 			err := w.ApplyGenerators()
 			if err != nil {
 				fmt.Println(err)
@@ -115,8 +109,8 @@ func UpdateClientWorlds() {
 			}
 			waitG.Wait()
 			m.Unlock()
-			waitG.Add(len(webSockets))
-			for addr, ws := range webSockets {
+			waitG.Add(w.GetLenSockets())
+			for addr, ws := range w.GetClients() {
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
 					defer cancel()
@@ -124,7 +118,7 @@ func UpdateClientWorlds() {
 					defer func() {
 						waitG.Done()
 						if err != nil {
-							delete(webSockets, addr)
+							w.RemoveClient(addr)
 							return
 						}
 					}()

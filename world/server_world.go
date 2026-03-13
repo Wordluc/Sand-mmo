@@ -1,18 +1,52 @@
 package world
 
 import (
+	"maps"
 	"math"
 	"sand-mmo/cell"
 	"sand-mmo/common"
+	"sync"
+
+	ws "github.com/coder/websocket"
 )
 
 type ServerWorld struct {
 	world
+	webSockets     map[string]*ws.Conn
+	webSocketMutex *sync.Mutex
 }
 
 func NewServerWorld(w, h, chunkSize uint16) (res ServerWorld) {
 	res.world = newWorld(w, h, chunkSize)
+	res.webSockets = map[string]*ws.Conn{}
+	res.webSocketMutex = &sync.Mutex{}
 	return res
+}
+
+func (w *ServerWorld) AddClient(addr string, conn *ws.Conn) int {
+	w.webSocketMutex.Lock()
+	defer w.webSocketMutex.Unlock()
+	w.webSockets[addr] = conn
+	return len(w.webSockets)
+}
+
+func (w *ServerWorld) RemoveClient(addr string) {
+	w.webSocketMutex.Lock()
+	defer w.webSocketMutex.Unlock()
+	delete(w.webSockets, addr)
+}
+
+func (w *ServerWorld) GetLenSockets() int {
+	w.webSocketMutex.Lock()
+	defer w.webSocketMutex.Unlock()
+	return len(w.webSockets)
+}
+
+func (w *ServerWorld) GetClients() (conns map[string]*ws.Conn) {
+	w.webSocketMutex.Lock()
+	conns = maps.Clone(w.webSockets)
+	w.webSocketMutex.Unlock()
+	return conns
 }
 
 func (w *ServerWorld) forEachCell(idChunk uint16, f func(x, y uint16, center *cell.Cell) error) error {
@@ -391,4 +425,39 @@ func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []uint16) {
 
 func (w *ServerWorld) GetChunksToSend() []uint16 {
 	return w.activeChunks.Get()
+}
+
+func (w *world) SetVec(pos common.Vec2, cell cell.Cell) {
+	x, y := pos.Get()
+	w.Set(uint16(x), uint16(y), cell)
+}
+
+func (w *world) Set(x, y uint16, cell cell.Cell) {
+	if x >= w.W {
+		return
+	}
+	if y >= w.H {
+		return
+	}
+	w.activeChunks.SortedInsert(w.GetChunkId(x, y))
+	indexCell := x + (y * w.W)
+	w.cells[indexCell] = cell
+}
+
+func (w *world) Get(_x, _y int32) *cell.Cell {
+	if _x < 0 {
+		return nil
+	}
+	if _y < 0 {
+		return nil
+	}
+	x := uint16(_x)
+	y := uint16(_y)
+	if x >= w.W {
+		return nil
+	}
+	if y >= w.H {
+		return nil
+	}
+	return &w.cells[x+(y*w.W)]
 }

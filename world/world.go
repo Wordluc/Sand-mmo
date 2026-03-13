@@ -63,41 +63,6 @@ func (w *world) GetNumberChucks() uint16 {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
 }
 
-func (w *world) SetVec(pos common.Vec2, cell cell.Cell) {
-	x, y := pos.Get()
-	w.Set(uint16(x), uint16(y), cell)
-}
-
-func (w *world) Set(x, y uint16, cell cell.Cell) {
-	if x >= w.W {
-		return
-	}
-	if y >= w.H {
-		return
-	}
-	w.activeChunks.SortedInsert(w.GetChunkId(x, y))
-	indexCell := x + (y * w.W)
-	w.cells[indexCell] = cell
-}
-
-func (w *world) Get(_x, _y int32) *cell.Cell {
-	if _x < 0 {
-		return nil
-	}
-	if _y < 0 {
-		return nil
-	}
-	x := uint16(_x)
-	y := uint16(_y)
-	if x >= w.W {
-		return nil
-	}
-	if y >= w.H {
-		return nil
-	}
-	return &w.cells[x+(y*w.W)]
-}
-
 func (w *world) GetChunkBytes(idChunk uint16) []uint16 {
 	var decoded []uint16
 
