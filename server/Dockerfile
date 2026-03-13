@@ -9,9 +9,7 @@ RUN ldconfig
 
 COPY . .
 
-WORKDIR server 
-
-RUN go build -o . main.go
+RUN go build -o . server/main.go
 
 EXPOSE 8000/tcp
 EXPOSE 8000/udp
