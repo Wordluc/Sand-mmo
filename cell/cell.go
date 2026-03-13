@@ -59,6 +59,7 @@ func DecodeCell(input uint16) Cell {
 	c.CellType = CellType((input & 0xFF00) >> (4 * 2))
 	c.Extra = uint8((input & 0x00FF))
 	c.touchedId = common.GTouchedId
+	c.forceTouched = true
 	return c
 }
 

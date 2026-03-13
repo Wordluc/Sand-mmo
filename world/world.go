@@ -46,12 +46,25 @@ func (w *world) SetCellsByte(bytes []byte, idChunk uint16) {
 
 }
 
-// For test
-func (w *world) importCell(cells []uint16) {
+func (w *world) ImportCells(cells []uint16) {
 	w.cells = []cell.Cell{}
 	for i := range cells {
-		w.cells = append(w.cells, cell.DecodeCell(cells[i]))
+		cell := cell.DecodeCell(cells[i])
+		w.cells = append(w.cells, cell)
 	}
+
+	for i := range w.GetNumberChucks() {
+		w.activeChunks.SortedInsert(i)
+	}
+
+}
+
+func (w *world) GetAllMap() []byte {
+	var decoded []byte
+	for _, c := range w.cells {
+		decoded = binary.BigEndian.AppendUint16(decoded, cell.EncodeCell(c))
+	}
+	return decoded
 }
 
 func (w *world) GetChunkId(x, y uint16) uint16 {
