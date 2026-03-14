@@ -68,6 +68,9 @@ func (w *ServerWorld) LoadSnapshot() error {
 }
 
 func (w *ServerWorld) SaveSnapshot() {
+	if w.redis == nil {
+		return
+	}
 	worldBytes := w.GetWorldBytes()
 	w.redis.Set(context.Background(), REDIS_KEY_BYTES_BYTES, string(worldBytes), 0)
 	generatorsBytes := w.GetGeneratorsBytes()
@@ -273,7 +276,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 				return false
 			}
 			if tcell.CellType == cell.LAVA_CELL || tcell.CellType == cell.FIRE_CELL {
-				smoke, isSmoke := NewCellByChance(cell.SMOKE_CELL, 1)
+				smoke, isSmoke := NewCellByChance(cell.SMOKE_CELL, 10)
 				if !isSmoke {
 					tcell.RemainingLife = 0
 					return false
@@ -361,11 +364,11 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 				return false
 			}
 			if tcell.CellType == cell.WATER_CELL {
-				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 5)
+				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 10)
 				w.SetVec(pos, smoke)
 				return false
 			}
-			if tcell.CellType == cell.WOOD_CELL {
+			if tcell.CellType == cell.WOOD_CELL || tcell.CellType == cell.LEAF_CELL {
 				w.Set(uint16(x), uint16(y), cell.NewCell(cell.FIRE_CELL))
 				return false
 			}
@@ -455,7 +458,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 				common.NewVec2(-1, 0),
 			})
 			if center.RemainingLife <= 0 {
-				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 5)
+				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 20)
 				w.Set(_x, _y, smoke)
 				return nil
 			}
