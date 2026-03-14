@@ -113,7 +113,7 @@ func createWebSocket() (*ws.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = common.SendToWebSocketPackages(conn, chain.GetInitCommand(8000))
+	err = common.SendToWebSocketPackages(conn, chain.GetInitCommand())
 	if err != nil {
 		return nil, err
 	}

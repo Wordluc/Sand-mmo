@@ -5,12 +5,9 @@ import (
 	"sand-mmo/common"
 )
 
-func GetInitCommand(port uint32) (p common.Package) {
+func GetInitCommand() (p common.Package) {
 	return common.Package{
 		Command: common.INIT,
-		CommandPackage: common.CommandPackage{
-			Arg: port,
-		},
 	}
 }
 func GetENDCommand() (p common.Package) {
