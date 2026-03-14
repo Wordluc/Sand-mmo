@@ -61,7 +61,7 @@ var pressed bool
 var m sync.Mutex
 var brushType common.BrushType
 var cellType cell.CellType
-var addGenerator bool
+var addGenerator int
 
 // Button definitions
 type ButtonDef struct {
@@ -114,8 +114,8 @@ func registryMouseMovement(document js.Value) {
 	document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) any {
 		m.Lock()
 		event := args[0]
-		if event.Get("key").String() == "r" {
-			addGenerator = true
+		if event.Get("key").String() == "r" && addGenerator == 0 {
+			addGenerator = 1
 		}
 		m.Unlock()
 		return nil
@@ -124,7 +124,7 @@ func registryMouseMovement(document js.Value) {
 		m.Lock()
 		event := args[0]
 		if event.Get("key").String() == "r" {
-			addGenerator = false
+			addGenerator = 0
 		}
 		m.Unlock()
 		return nil
@@ -176,7 +176,7 @@ func main() {
 	var bufferByte utils.Buffer = utils.NewBuffer()
 
 	ws.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {
-		send(chain.GetInitCommand(8000))
+		send(chain.GetInitCommand())
 		return nil
 	}))
 	js.Global().Get("window").Call("addEventListener", "beforeunload", js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -211,11 +211,11 @@ func main() {
 
 		m.Lock()
 		isPressed := pressed
-		isGenerator := addGenerator
 		m.Unlock()
 
-		if isGenerator {
+		if addGenerator == 1 {
 			send(chain.GetGeneratorCommand(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
+			addGenerator = -1
 		}
 		if isPressed {
 			send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
