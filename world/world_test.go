@@ -1,13 +1,14 @@
 package world
 
 import (
+	"encoding/binary"
 	"sand-mmo/cell"
 	"slices"
 	"testing"
 )
 
 func newCell_for_test(a, b int) cell.Cell {
-	return cell.Cell{}
+	return cell.NewCell(0)
 
 }
 func TestWorld_GetChunk_FirstChunk(t *testing.T) {
@@ -20,13 +21,13 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 		newCell_for_test(25, 250), newCell_for_test(26, 260), newCell_for_test(27, 270), newCell_for_test(28, 280), newCell_for_test(29, 290), newCell_for_test(30, 300), newCell_for_test(31, 310), newCell_for_test(32, 320),
 	}
 
-	var encoded []uint16
+	var encoded []byte
 	for _, c := range worldCells {
-		encoded = append(encoded, cell.EncodeCell(c))
+		encoded = binary.BigEndian.AppendUint16(encoded, cell.EncodeCell(c))
 	}
 
 	// 8x4 world
-	w := newWorld(8, 4, 2)
+	w := NewServerWorld(8, 4, 2, nil)
 	w.ImportCells(encoded)
 
 	caseTest := []struct {
@@ -77,7 +78,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
 		for i, v := range got {
 			if cell.DecodeCell(v) != c.cell[i] {
-				t.Fatalf("decode mismatch at %d", i)
+				t.Fatalf("decode mismatch %+v != %+v", cell.DecodeCell(v), c.cell[i])
 			}
 		}
 	}

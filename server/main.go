@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/coder/websocket"
 	ws "github.com/coder/websocket"
@@ -70,16 +69,14 @@ func main() {
 }
 
 func handlerConnection(conn *ws.Conn, addr string) {
+
 	defer conn.CloseNow()
 	engine := chain.NewResponsibilityChainEngine(w, chain.GetHandlers(), conn)
 
 	for {
 		r, err := common.ReadFromWebSocketPackage(conn)
 		if err != nil {
-			fmt.Printf("Error receiving %s\n", err.Error())
-			if strings.Contains(err.Error(), "EOF") {
-				fmt.Println("End " + addr)
-			}
+			fmt.Println("Error ", addr, ": ", err.Error())
 			return
 		}
 		m.Lock()
@@ -89,19 +86,20 @@ func handlerConnection(conn *ws.Conn, addr string) {
 			if errors.Is(err, io.ErrUnexpectedEOF) {
 				return
 			}
-			fmt.Print(err.Error(), "\n\n")
+			fmt.Println(err.Error())
 		}
 	}
 }
 func UpdateClientWorlds() {
 	var waitG sync.WaitGroup
+	timer := common.NewTimer(time.Minute, w.SaveSnapshot)
 	go func() {
+		timer.Start()
+		defer timer.Stop()
 		for {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
 			if w.GetLenSockets() == 0 {
-				w.SaveSnapshot()
-
 				return
 			}
 			m.Lock()
@@ -135,6 +133,7 @@ func UpdateClientWorlds() {
 					defer func() {
 						waitG.Done()
 						if err != nil {
+							fmt.Println("Removing for :", err.Error())
 							w.RemoveClient(addr)
 							return
 						}
@@ -145,7 +144,6 @@ func UpdateClientWorlds() {
 						}
 						err = ws.Write(ctx, websocket.MessageBinary, chunk)
 						if err != nil {
-							fmt.Println(err)
 							return
 						}
 					}

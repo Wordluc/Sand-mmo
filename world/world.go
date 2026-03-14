@@ -46,22 +46,20 @@ func (w *world) SetCellsByte(bytes []byte, idChunk uint16) {
 
 }
 
-func (w *world) ImportCells(cells []uint16) {
-	w.cells = []cell.Cell{}
-	for i := range cells {
-		w.cells = append(w.cells, cell.DecodeCell(cells[i]))
-	}
-
-	for i := range w.GetNumberChucks() {
-		w.activeChunks.SortedInsert(i)
-	}
-
-}
-
-func (w *world) GetAllMap() []byte {
+func (w *world) GetWorldBytes() []byte {
 	var decoded []byte
 	for _, c := range w.cells {
 		decoded = binary.BigEndian.AppendUint16(decoded, cell.EncodeCell(c))
+	}
+	return decoded
+}
+
+func (w *world) GetGeneratorsBytes() []byte {
+	var decoded []byte
+	var mockPackage common.Package
+	for _, c := range w.generators {
+		mockPackage.BrushPackage = c
+		decoded = binary.BigEndian.AppendUint64(decoded, common.Encode(mockPackage))
 	}
 	return decoded
 }

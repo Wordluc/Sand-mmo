@@ -3,6 +3,7 @@ package world
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"maps"
 	"math"
 	"sand-mmo/cell"
@@ -21,35 +22,56 @@ type ServerWorld struct {
 	redis          *redis.Client
 }
 
+const REDIS_KEY_BYTES_BYTES = "world:bytes"
+const REDIS_KEY_BYTES_GENERATOR = "world:generator"
+
 func NewServerWorld(w, h, chunkSize uint16, redisClient *redis.Client) (res ServerWorld) {
 	res.world = newWorld(w, h, chunkSize)
 	res.webSockets = map[string]*ws.Conn{}
 	res.webSocketMutex = &sync.Mutex{}
 	res.redis = redisClient
-	ctx, p := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
-	defer p()
-	wStr, err := res.redis.Get(ctx, "world").Result()
-	switch err {
-	case redis.Nil:
-		return
-	case nil:
-		bytes := []byte(wStr)
-		var u16World []uint16
-		for i := 0; i < len(bytes); i += 2 {
-			u16World = append(u16World, binary.BigEndian.Uint16(bytes[i:i+2]))
-		}
-		res.ImportCells(u16World)
-
-	default:
-		panic(err)
+	err := res.LoadSnapshot()
+	if err != nil {
+		fmt.Println("Falling loading world")
+		res.redis = nil
 	}
-
 	return res
 }
 
+func (w *ServerWorld) LoadSnapshot() error {
+	get := func(key string) ([]byte, error) {
+		ctx, p := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
+		defer p()
+		worldBytes, err := w.redis.Get(ctx, key).Result()
+		if err == nil {
+			return []byte(worldBytes), nil
+		}
+		switch err {
+		case redis.Nil:
+			return []byte{}, nil
+		default:
+			return []byte{}, err
+		}
+	}
+	worldBytes, err := get(REDIS_KEY_BYTES_BYTES)
+	if err != nil {
+		return err
+	}
+	w.ImportCells(worldBytes)
+
+	generatorBytes, err := get(REDIS_KEY_BYTES_GENERATOR)
+	if err != nil {
+		return err
+	}
+	w.ImportGenerators(generatorBytes)
+	return nil
+}
+
 func (w *ServerWorld) SaveSnapshot() {
-	res := w.GetAllMap()
-	w.redis.Set(context.Background(), "world", string(res), 0)
+	worldBytes := w.GetWorldBytes()
+	w.redis.Set(context.Background(), REDIS_KEY_BYTES_BYTES, string(worldBytes), 0)
+	generatorsBytes := w.GetGeneratorsBytes()
+	w.redis.Set(context.Background(), REDIS_KEY_BYTES_GENERATOR, string(generatorsBytes), 0)
 	println("World Saved")
 }
 
@@ -154,6 +176,31 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 		return drawBox(6)
 	}
 	return nil
+}
+
+func (w *ServerWorld) ImportGenerators(gen []byte) {
+	var u64Generator []uint64
+	for i := 0; i < len(gen); i += 8 {
+		u64Generator = append(u64Generator, binary.BigEndian.Uint64(gen[i:i+8]))
+	}
+	for i := range u64Generator {
+		w.generators = append(w.generators, common.Decode(u64Generator[i]).BrushPackage)
+	}
+}
+
+func (w *ServerWorld) ImportCells(cells []byte) {
+	var u16World []uint16
+	for i := 0; i < len(cells); i += 2 {
+		u16World = append(u16World, binary.BigEndian.Uint16(cells[i:i+2]))
+	}
+	for i := range u16World {
+		w.cells[i] = cell.DecodeCell(u16World[i])
+	}
+
+	for i := range w.GetNumberChucks() {
+		w.activeChunks.SortedInsert(i)
+	}
+
 }
 
 func (w *ServerWorld) AddGenerator(brush common.BrushPackage) {
