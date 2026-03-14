@@ -30,6 +30,23 @@ type Cell struct {
 	forceTouched   bool
 }
 
+func NewCell(celltype CellType) (res Cell) {
+	res.CellType = celltype
+	res.touchedId = common.GTouchedId - 1
+	res.forceTouched = true
+	switch celltype {
+	case SMOKE_CELL:
+		res.initialLifeSec = 30
+	case FIRE_CELL:
+		res.initialLifeSec = 10
+	case VACUUM_CELL:
+		res.initialLifeSec = 10
+	}
+	res.RemainingLife = float32(res.initialLifeSec)
+	return res
+
+}
+
 func (c *Cell) DecreaseLife() bool {
 	c.RemainingLife -= float32(rand.Intn(3))
 	return c.RemainingLife <= 0
@@ -58,7 +75,7 @@ func DecodeCell(input uint16) Cell {
 	c := Cell{}
 	c.CellType = CellType((input & 0xFF00) >> (4 * 2))
 	c.Extra = uint8((input & 0x00FF))
-	c.touchedId = common.GTouchedId
+	c.touchedId = common.GTouchedId - 1
 	c.forceTouched = true
 	return c
 }
