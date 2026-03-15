@@ -1,9 +1,8 @@
 services:
   server-simulator:
     image: wordluc/sand-mmo-server:latest
-    depends_on:
-      redis:
-        condition: service_started
+    deploy:
+      mode: global
     build:
       context: .
       dockerfile: server/Dockerfile
@@ -11,6 +10,9 @@ services:
     ports:
       - "8000:8000"
   web:
+    deploy:
+      mode: replicated
+      replicas: 2
     image: wordluc/sand-mmo-web:latest
     build:
       context: .
@@ -19,6 +21,8 @@ services:
     ports:
       - "8080:8080"
   redis:
+    deploy:
+      mode: global
     image: redis
     ports:
       - "6000:6379"

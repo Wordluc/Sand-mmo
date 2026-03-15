@@ -34,6 +34,7 @@ func handler(write http.ResponseWriter, r *http.Request) {
 	if w.AddClient(r.RemoteAddr, c) == 1 {
 		go UpdateClientWorlds()
 	}
+	fmt.Println("N: ", w.GetLenClients())
 	go handlerConnection(c, r.RemoteAddr)
 
 }
@@ -69,8 +70,8 @@ func main() {
 }
 
 func handlerConnection(conn *ws.Conn, addr string) {
-
 	defer conn.CloseNow()
+	defer w.RemoveClient(addr)
 	engine := chain.NewResponsibilityChainEngine(w, chain.GetHandlers(), conn)
 
 	for {
@@ -99,7 +100,7 @@ func UpdateClientWorlds() {
 		for {
 			time.Sleep(common.SLEEP * time.Millisecond)
 
-			if w.GetLenSockets() == 0 {
+			if w.GetLenClients() == 0 {
 				return
 			}
 			m.Lock()
@@ -124,7 +125,7 @@ func UpdateClientWorlds() {
 			}
 			waitG.Wait()
 			m.Unlock()
-			waitG.Add(w.GetLenSockets())
+			waitG.Add(w.GetLenClients())
 			for addr, ws := range w.GetClients() {
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)

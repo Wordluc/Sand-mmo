@@ -91,7 +91,7 @@ func (w *ServerWorld) RemoveClient(addr string) {
 	delete(w.webSockets, addr)
 }
 
-func (w *ServerWorld) GetLenSockets() int {
+func (w *ServerWorld) GetLenClients() int {
 	w.webSocketMutex.Lock()
 	defer w.webSocketMutex.Unlock()
 	return len(w.webSockets)
