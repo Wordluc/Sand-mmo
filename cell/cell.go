@@ -21,8 +21,8 @@ const (
 )
 
 type Cell struct {
-	CellType CellType
-	Extra    uint8
+	CellType   CellType
+	SpirteType uint8
 
 	initialLifeSec uint16
 	RemainingLife  float32
@@ -34,6 +34,7 @@ func NewCell(celltype CellType) (res Cell) {
 	res.CellType = celltype
 	res.touchedId = common.GTouchedId - 1
 	res.forceTouched = true
+	_, res.SpirteType = res.NewColor(false)
 	switch celltype {
 	case SMOKE_CELL:
 		res.initialLifeSec = 30
@@ -74,7 +75,7 @@ func (c *Cell) IsNew() bool {
 func DecodeCell(input uint16) Cell {
 	c := Cell{}
 	c.CellType = CellType((input & 0xFF00) >> (4 * 2))
-	c.Extra = uint8((input & 0x00FF))
+	c.SpirteType = uint8((input & 0x00FF))
 	c.touchedId = common.GTouchedId - 1
 	c.forceTouched = true
 	return c
@@ -84,7 +85,7 @@ func EncodeCell(c Cell) uint16 {
 	var output uint16
 
 	output = output | (uint16(c.CellType))<<(4*2)
-	output = output | (uint16(c.Extra))
+	output = output | (uint16(c.SpirteType))
 
 	return output
 }

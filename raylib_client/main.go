@@ -140,7 +140,7 @@ func Draw(w world.ClientWorld) {
 	for _, c := range w.GetCells() {
 		x = i % w.W * common.SIZE_CELL
 		y = i / w.W * common.SIZE_CELL
-		rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, rl.NewColor(w.GetColor(c.CellType).Get()))
+		rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, rl.NewColor(c.GetColor().Get()))
 		rl.DrawText(fmt.Sprint(y/common.SIZE_CELL), 0, int32(y), common.SIZE_CELL, rl.Black)
 		i++
 	}

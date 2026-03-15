@@ -12,16 +12,16 @@ func TestDecodeCell_Golden(t *testing.T) {
 			name: "mixed",
 			in:   0xA123,
 			want: Cell{
-				CellType: CellType(0xA1),
-				Extra:    0x23,
+				CellType:   CellType(0xA1),
+				SpirteType: 0x23,
 			},
 		},
 		{
 			name: "all max",
 			in:   0xFFFF,
 			want: Cell{
-				CellType: 0xFF,
-				Extra:    0xFF,
+				CellType:   0xFF,
+				SpirteType: 0xFF,
 			},
 		},
 		{

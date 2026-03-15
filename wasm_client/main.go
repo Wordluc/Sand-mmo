@@ -43,7 +43,7 @@ func Draw(w world.ClientWorld) {
 		for dy := range common.SIZE_CELL {
 			for dx := range common.SIZE_CELL {
 				px := ((y+dy)*common.W_WINDOWS*common.SIZE_CELL + (x + dx)) * 4 //?
-				frameBuf[px], frameBuf[px+1], frameBuf[px+2], frameBuf[px+3] = w.GetColor(c.CellType).Get()
+				frameBuf[px], frameBuf[px+1], frameBuf[px+2], frameBuf[px+3] = c.GetColor().Get()
 			}
 		}
 	}
