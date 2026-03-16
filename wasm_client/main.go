@@ -6,7 +6,6 @@ import (
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
 	"sand-mmo/world"
-	"strings"
 	"sync"
 	"syscall/js"
 
@@ -25,18 +24,18 @@ func initDrawBuffers() {
 	size := int(common.W_WINDOWS) * int(common.H_WINDOWS) * int(common.SIZE_CELL) * int(common.SIZE_CELL) * 4
 	frameBuf = make([]byte, size)
 	jsDst = js.Global().Get("Uint8ClampedArray").New(size)
-	jsImageData = js.Global().Get("ImageData")
 	canvasW = int(common.W_WINDOWS) * int(common.SIZE_CELL)
 	canvasH = int(common.H_WINDOWS) * int(common.SIZE_CELL)
+	jsImageData = js.Global().Get("ImageData").New(jsDst, canvasW, canvasH)
 }
 
 func Draw(w world.ClientWorld, chunksId []uint16) {
-	var dx, dy, px int
+	var dx, dy, px, x, y int
 	var color common.Color
 	for _, chunkId := range chunksId {
 		w.ForEachCell(chunkId, func(xUint16, yUint16 uint16, center *cell.Cell) error {
-			x := int(xUint16 * common.SIZE_CELL)
-			y := int(yUint16 * common.SIZE_CELL)
+			x = int(xUint16 * common.SIZE_CELL)
+			y = int(yUint16 * common.SIZE_CELL)
 			color = center.GetColor()
 			for dy = range common.SIZE_CELL {
 				for dx = range common.SIZE_CELL {
@@ -50,7 +49,7 @@ func Draw(w world.ClientWorld, chunksId []uint16) {
 
 	js.CopyBytesToJS(jsDst, frameBuf)
 
-	ctx.Call("putImageData", jsImageData.New(jsDst, canvasW, canvasH), 0, 0)
+	ctx.Call("putImageData", jsImageData, 0, 0)
 
 }
 
@@ -158,14 +157,14 @@ func main() {
 	w := world.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 
 	loc := js.Global().Get("location")
-	host, _, _ := strings.Cut(loc.Get("host").String(), ":")
+	//host, _, _ := strings.Cut(loc.Get("host").String(), ":")
 	protocol := "ws"
 	if loc.Get("protocol").String() == "https:" {
 		protocol = "wss"
 	}
 
-	wsURL := protocol + "://" + host + ":8000" + "/ws"
-	//wsURL := protocol + "://" + "www.wordluc.it" + ":8000" + "/ws"
+	//wsURL := protocol + "://" + host + ":8000" + "/ws"
+	wsURL := protocol + "://" + "www.wordluc.it" + ":8000" + "/ws"
 	ws = js.Global().Get("WebSocket").New(wsURL)
 
 	ws.Set("binaryType", "arraybuffer")
@@ -214,6 +213,9 @@ func main() {
 			send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
 		}
 		chunks := bufferByte.GetChunks()
+		if len(chunks) == 0 {
+			return nil
+		}
 		for _, idChunk = range chunks {
 			w.SetCellsByte(bufferByte.GetLast(idChunk), idChunk)
 		}
