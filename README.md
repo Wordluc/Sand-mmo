@@ -9,7 +9,7 @@ An MMO sand simulator in Go. Players share the same map in real time, placing sa
 
 <img width="1184" height="594" alt="Screenshot 2026-03-16 at 22 05 37" src="https://github.com/user-attachments/assets/9ac78600-94ba-4669-b167-dbc6c99a6c00" />
 
-www.wordluc.it:8080/
+http://www.wordluc.it:8080/
 
 
 ## Features
