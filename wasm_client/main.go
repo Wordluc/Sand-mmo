@@ -6,6 +6,7 @@ import (
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
 	"sand-mmo/world"
+	"strings"
 	"sync"
 	"syscall/js"
 
@@ -157,14 +158,14 @@ func main() {
 	w := world.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 
 	loc := js.Global().Get("location")
-	//host, _, _ := strings.Cut(loc.Get("host").String(), ":")
+	host, _, _ := strings.Cut(loc.Get("host").String(), ":")
 	protocol := "ws"
 	if loc.Get("protocol").String() == "https:" {
 		protocol = "wss"
 	}
 
-	//wsURL := protocol + "://" + host + ":8000" + "/ws"
-	wsURL := protocol + "://" + "www.wordluc.it" + ":8000" + "/ws"
+	wsURL := protocol + "://" + host + ":8000" + "/ws"
+	//wsURL := protocol + "://" + "www.wordluc.it" + ":8000" + "/ws"
 	ws = js.Global().Get("WebSocket").New(wsURL)
 
 	ws.Set("binaryType", "arraybuffer")
