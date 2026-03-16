@@ -6,6 +6,7 @@ import (
 	"sand-mmo/common"
 	chain "sand-mmo/responsibilityChain"
 	"sand-mmo/world"
+	"strings"
 	"sync"
 	"syscall/js"
 
@@ -29,23 +30,22 @@ func initDrawBuffers() {
 	canvasH = int(common.H_WINDOWS) * int(common.SIZE_CELL)
 }
 
-func Draw(w world.ClientWorld) {
-	var x, y, dx, dy, px int
-	var i uint16
+func Draw(w world.ClientWorld, chunksId []uint16) {
+	var dx, dy, px int
 	var color common.Color
-	for _, c := range w.GetCells() {
-		x = int(i%w.W) * common.SIZE_CELL
-		y = int(i/w.W) * common.SIZE_CELL
-		color = c.GetColor()
-		i++
-
-		// fill SIZE_CELL x SIZE_CELL pixels
-		for dy = range common.SIZE_CELL {
-			for dx = range common.SIZE_CELL {
-				px = ((y+dy)*common.W_WINDOWS*common.SIZE_CELL + (x + dx)) * 4
-				frameBuf[px], frameBuf[px+1], frameBuf[px+2], frameBuf[px+3] = color.Get()
+	for _, chunkId := range chunksId {
+		w.ForEachCell(chunkId, func(xUint16, yUint16 uint16, center *cell.Cell) error {
+			x := int(xUint16 * common.SIZE_CELL)
+			y := int(yUint16 * common.SIZE_CELL)
+			color = center.GetColor()
+			for dy = range common.SIZE_CELL {
+				for dx = range common.SIZE_CELL {
+					px = ((y+dy)*common.W_WINDOWS*common.SIZE_CELL + (x + dx)) * 4
+					frameBuf[px], frameBuf[px+1], frameBuf[px+2], frameBuf[px+3] = color.Get()
+				}
 			}
-		}
+			return nil
+		})
 	}
 
 	js.CopyBytesToJS(jsDst, frameBuf)
@@ -158,14 +158,14 @@ func main() {
 	w := world.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 
 	loc := js.Global().Get("location")
-	//host, _, _ := strings.Cut(loc.Get("host").String(), ":")
+	host, _, _ := strings.Cut(loc.Get("host").String(), ":")
 	protocol := "ws"
 	if loc.Get("protocol").String() == "https:" {
 		protocol = "wss"
 	}
 
-	//wsURL := protocol + "://" + host + ":8000" + "/ws"
-	wsURL := protocol + "://" + "www.wordluc.it" + ":8000" + "/ws"
+	wsURL := protocol + "://" + host + ":8000" + "/ws"
+	//wsURL := protocol + "://" + "www.wordluc.it" + ":8000" + "/ws"
 	ws = js.Global().Get("WebSocket").New(wsURL)
 
 	ws.Set("binaryType", "arraybuffer")
@@ -213,11 +213,11 @@ func main() {
 		if pressed {
 			send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
 		}
-
-		for _, idChunk = range bufferByte.GetChunks() {
+		chunks := bufferByte.GetChunks()
+		for _, idChunk = range chunks {
 			w.SetCellsByte(bufferByte.GetLast(idChunk), idChunk)
 		}
-		Draw(w)
+		Draw(w, chunks)
 		return nil
 	}))
 

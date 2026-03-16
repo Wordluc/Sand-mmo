@@ -2,6 +2,7 @@ package world
 
 import (
 	"encoding/binary"
+	"math"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 )
@@ -54,6 +55,27 @@ func (w *world) GetWorldBytes() []byte {
 	return decoded
 }
 
+func (w *world) ForEachCell(idChunk uint16, f func(x, y uint16, center *cell.Cell) error) error {
+
+	chunkPerRow := w.W / w.ChunkSize
+	chunkY := idChunk / chunkPerRow
+	chunkX := idChunk % chunkPerRow
+	x := chunkX*w.ChunkSize + w.ChunkSize - 1
+	y := chunkY*w.ChunkSize + w.ChunkSize - 1
+	for {
+		if err := f(x, y, w.Get(int32(x), int32(y))); err != nil {
+			return err
+		}
+		x = x - 1
+		if x < chunkX*w.ChunkSize || x == math.MaxUint16 {
+			x = chunkX*w.ChunkSize + w.ChunkSize - 1
+			y = y - 1
+		}
+		if y < chunkY*w.ChunkSize || y == math.MaxUint16 {
+			return nil
+		}
+	}
+}
 func (w *world) GetGeneratorsBytes() []byte {
 	var decoded []byte
 	var mockPackage common.Package

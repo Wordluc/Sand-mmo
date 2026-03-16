@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"maps"
-	"math"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	"sync"
@@ -104,27 +103,6 @@ func (w *ServerWorld) GetClients() (conns map[string]*ws.Conn) {
 	return conns
 }
 
-func (w *ServerWorld) forEachCell(idChunk uint16, f func(x, y uint16, center *cell.Cell) error) error {
-
-	chunkPerRow := w.W / w.ChunkSize
-	chunkY := idChunk / chunkPerRow
-	chunkX := idChunk % chunkPerRow
-	x := chunkX*w.ChunkSize + w.ChunkSize - 1
-	y := chunkY*w.ChunkSize + w.ChunkSize - 1
-	for {
-		if err := f(x, y, w.Get(int32(x), int32(y))); err != nil {
-			return err
-		}
-		x = x - 1
-		if x < chunkX*w.ChunkSize || x == math.MaxUint16 {
-			x = chunkX*w.ChunkSize + w.ChunkSize - 1
-			y = y - 1
-		}
-		if y < chunkY*w.ChunkSize || y == math.MaxUint16 {
-			return nil
-		}
-	}
-}
 func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 	drawCircle := func(radius int) error {
 		for iy := range radius * 2 {
@@ -376,7 +354,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 		}
 		return simulateCustomMovements(pos, maxSpeed, c, isFree, afterMoving, groups)
 	}
-	return w.forEachCell(idChunk, func(_x, _y uint16, center *cell.Cell) error {
+	return w.ForEachCell(idChunk, func(_x, _y uint16, center *cell.Cell) error {
 		if center == nil {
 			return nil
 		}
