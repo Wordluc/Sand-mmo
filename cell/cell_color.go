@@ -62,10 +62,10 @@ var colorMap map[CellType][]common.Color = map[CellType][]common.Color{
 	},
 }
 
-func (cell *Cell) NewColor(isGradientChoose bool) (color common.Color, spriteType uint8) {
+func (cell *Cell) NewColor(isGradientChose bool) (color common.Color, spriteType uint8) {
 	var idx uint8
 	if colors, ok := colorMap[cell.CellType]; ok {
-		if isGradientChoose {
+		if isGradientChose {
 			idx = cell.SpirteType
 		} else {
 			idx = uint8(rand.Intn(len(colors)))
