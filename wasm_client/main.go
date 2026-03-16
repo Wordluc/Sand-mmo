@@ -31,28 +31,25 @@ func initDrawBuffers() {
 }
 
 func Draw(w world.ClientWorld) {
-	// 4 bytes per pixel (RGBA)
-
+	var x, y, dx, dy, px int
 	var i uint16
 	for _, c := range w.GetCells() {
-		x := int(i%w.W) * common.SIZE_CELL
-		y := int(i/w.W) * common.SIZE_CELL
+		x = int(i%w.W) * common.SIZE_CELL
+		y = int(i/w.W) * common.SIZE_CELL
 		i++
 
 		// fill SIZE_CELL x SIZE_CELL pixels
-		for dy := range common.SIZE_CELL {
-			for dx := range common.SIZE_CELL {
-				px := ((y+dy)*common.W_WINDOWS*common.SIZE_CELL + (x + dx)) * 4 //?
+		for dy = range common.SIZE_CELL {
+			for dx = range common.SIZE_CELL {
+				px = ((y+dy)*common.W_WINDOWS*common.SIZE_CELL + (x + dx)) * 4
 				frameBuf[px], frameBuf[px+1], frameBuf[px+2], frameBuf[px+3] = c.GetColor().Get()
 			}
 		}
 	}
 
-	// copy entire buffer to JS in ONE call
 	js.CopyBytesToJS(jsDst, frameBuf)
-	imageData := jsImageData.New(jsDst, canvasW, canvasH)
 
-	ctx.Call("putImageData", imageData, 0, 0)
+	ctx.Call("putImageData", jsImageData.New(jsDst, canvasW, canvasH), 0, 0)
 
 }
 
@@ -113,8 +110,7 @@ func registryMouseMovement(document js.Value) {
 
 	document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) any {
 		m.Lock()
-		event := args[0]
-		if event.Get("key").String() == "r" && addGenerator == 0 {
+		if args[0].Get("key").String() == "r" && addGenerator == 0 {
 			addGenerator = 1
 		}
 		m.Unlock()
@@ -122,8 +118,7 @@ func registryMouseMovement(document js.Value) {
 	}))
 	document.Call("addEventListener", "keyup", js.FuncOf(func(this js.Value, args []js.Value) any {
 		m.Lock()
-		event := args[0]
-		if event.Get("key").String() == "r" {
+		if args[0].Get("key").String() == "r" {
 			addGenerator = 0
 		}
 		m.Unlock()
@@ -131,8 +126,7 @@ func registryMouseMovement(document js.Value) {
 	}))
 	document.Call("addEventListener", "mousemove", js.FuncOf(func(this js.Value, args []js.Value) any {
 		m.Lock()
-		event := args[0]
-		mouse.Set(int32(event.Get("clientX").Int()), int32(event.Get("clientY").Int()))
+		mouse.Set(int32(args[0].Get("clientX").Int()), int32(args[0].Get("clientY").Int()))
 		m.Unlock()
 		return nil
 	}))
@@ -157,6 +151,7 @@ func main() {
 	div.Set("width", common.SIZE_CELL*common.W_WINDOWS)
 	div.Set("height", common.SIZE_CELL*common.H_WINDOWS)
 	ctx = div.Call("getContext", "2d")
+	var idChunk uint16
 	registryMouseMovement(doc)
 	renderButtons(buttons, &cellType, &brushType)
 	w := world.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
@@ -209,19 +204,15 @@ func main() {
 		x = x / common.SIZE_CELL
 		y = y / common.SIZE_CELL
 
-		m.Lock()
-		isPressed := pressed
-		m.Unlock()
-
 		if addGenerator == 1 {
 			send(chain.GetGeneratorCommand(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
 			addGenerator = -1
 		}
-		if isPressed {
+		if pressed {
 			send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
 		}
 
-		for _, idChunk := range bufferByte.GetChunks() {
+		for _, idChunk = range bufferByte.GetChunks() {
 			w.SetCellsByte(bufferByte.GetLast(idChunk), idChunk)
 		}
 		Draw(w)
