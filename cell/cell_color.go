@@ -64,16 +64,17 @@ var colorMap map[CellType][]common.Color = map[CellType][]common.Color{
 
 func (cell *Cell) NewColor(isGradientChose bool) (color common.Color, spriteType uint8) {
 	var idx uint8
-	if colors, ok := colorMap[cell.CellType]; ok {
-		if isGradientChose {
-			idx = cell.SpirteType
-		} else {
-			idx = uint8(rand.Intn(len(colors)))
-		}
-		return colors[idx], idx
+	colors, ok := colorMap[cell.CellType]
+	if !ok {
+		fmt.Println("Color not found")
+		return common.Black, 0
 	}
-	fmt.Println("Color not found ")
-	return common.Black, 0
+	if isGradientChose {
+		idx = cell.SpirteType
+	} else {
+		idx = uint8(rand.Intn(len(colors)))
+	}
+	return colors[idx], idx
 }
 
 func (cell *Cell) GetColor() (color common.Color) {
