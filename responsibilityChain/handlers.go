@@ -29,7 +29,8 @@ func GetHandlers() []Handler {
 					e.world.AddGenerator(p.BrushPackage)
 					return nil
 				}
-				return e.world.ApplyBrush(p.BrushPackage)
+				err, _ := e.world.ApplyBrush(p.BrushPackage)
+				return err
 			},
 		},
 		{

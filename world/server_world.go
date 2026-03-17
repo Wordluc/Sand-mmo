@@ -7,6 +7,7 @@ import (
 	"maps"
 	"sand-mmo/cell"
 	"sand-mmo/common"
+	"slices"
 	"sync"
 	"time"
 
@@ -103,7 +104,8 @@ func (w *ServerWorld) GetClients() (conns map[string]*ws.Conn) {
 	return conns
 }
 
-func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
+func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bool) {
+	var c *cell.Cell
 	drawCircle := func(radius int) error {
 		for iy := range radius * 2 {
 			for ix := range radius * 2 {
@@ -119,7 +121,10 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 					continue
 				}
 				if (dx*dx + dy*dy) <= radius*radius/4 {
-					w.Get(x, y)
+					c = w.Get(x, y)
+					if c.CellType == cell.VACUUM_CELL {
+						metVacuum = true
+					}
 					w.Set(x, y, cell.NewCell(p.CellType))
 
 				}
@@ -142,6 +147,10 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 				if y < 0 {
 					continue
 				}
+				c = w.Get(x, y)
+				if c.CellType == cell.VACUUM_CELL {
+					metVacuum = true
+				}
 				w.Set(x, y, cell.NewCell(p.CellType))
 			}
 		}
@@ -149,15 +158,15 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 	}
 	switch p.BrushType {
 	case common.CIRCLE_SMALL:
-		return drawCircle(4)
+		return drawCircle(4), metVacuum
 	case common.CIRCLE_BIG:
-		return drawCircle(6)
+		return drawCircle(6), metVacuum
 	case common.SQUARE_SMALL:
-		return drawBox(4)
+		return drawBox(4), metVacuum
 	case common.SQUARE_BIG:
-		return drawBox(6)
+		return drawBox(6), metVacuum
 	}
-	return nil
+	return nil, metVacuum
 }
 
 func (w *ServerWorld) ImportGenerators(gen []byte) {
@@ -191,9 +200,12 @@ func (w *ServerWorld) AddGenerator(brush common.BrushPackage) {
 
 func (w *ServerWorld) ApplyGenerators() error {
 	for i := range w.generators {
-		err := w.ApplyBrush(w.generators[i])
+		err, metVacuum := w.ApplyBrush(w.generators[i])
 		if err != nil {
 			return err
+		}
+		if metVacuum {
+			w.generators = slices.Delete(w.generators, i, i+1)
 		}
 	}
 	return nil

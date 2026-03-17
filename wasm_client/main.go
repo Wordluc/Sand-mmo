@@ -203,9 +203,17 @@ func main() {
 	}))
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
 		x, y := mouse.Get()
+		if x < 0 || y < 0 {
+			return nil
+		}
+		if x >= common.W_WINDOWS*common.SIZE_CELL {
+			return nil
+		}
+		if y >= common.H_WINDOWS*common.SIZE_CELL {
+			return nil
+		}
 		x = x / common.SIZE_CELL
 		y = y / common.SIZE_CELL
-
 		if addGenerator == 1 {
 			send(chain.GetGeneratorCommand(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
 			addGenerator = -1
