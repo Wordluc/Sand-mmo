@@ -7,7 +7,6 @@ import (
 	"maps"
 	"sand-mmo/cell"
 	"sand-mmo/common"
-	"slices"
 	"sync"
 	"time"
 
@@ -122,6 +121,9 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bo
 				}
 				if (dx*dx + dy*dy) <= radius*radius/4 {
 					c = w.Get(x, y)
+					if c == nil {
+						continue
+					}
 					if c.CellType == cell.VACUUM_CELL {
 						metVacuum = true
 					}
@@ -140,14 +142,11 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bo
 				dy := (size - iy)
 
 				x := int32(int(p.X) - dx)
-				if x < 0 {
-					continue
-				}
 				y := int32(int(p.Y) - dy)
-				if y < 0 {
+				c = w.Get(x, y)
+				if c == nil {
 					continue
 				}
-				c = w.Get(x, y)
 				if c.CellType == cell.VACUUM_CELL {
 					metVacuum = true
 				}
@@ -199,15 +198,17 @@ func (w *ServerWorld) AddGenerator(brush common.BrushPackage) {
 }
 
 func (w *ServerWorld) ApplyGenerators() error {
+	newGenerators := make([]common.BrushPackage, 0)
 	for i := range w.generators {
 		err, metVacuum := w.ApplyBrush(w.generators[i])
 		if err != nil {
 			return err
 		}
-		if metVacuum {
-			w.generators = slices.Delete(w.generators, i, i+1)
+		if !metVacuum {
+			newGenerators = append(newGenerators, w.generators[i])
 		}
 	}
+	w.generators = newGenerators
 	return nil
 }
 

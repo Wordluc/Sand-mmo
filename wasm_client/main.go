@@ -202,6 +202,14 @@ func main() {
 		return nil
 	}))
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
+		chunks := bufferByte.GetChunks()
+		if len(chunks) != 0 {
+			for _, idChunk = range chunks {
+				w.SetCellsByte(bufferByte.GetLast(idChunk), idChunk)
+			}
+			Draw(w, chunks)
+		}
+
 		x, y := mouse.Get()
 		if x < 0 || y < 0 {
 			return nil
@@ -221,14 +229,6 @@ func main() {
 		if pressed {
 			send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
 		}
-		chunks := bufferByte.GetChunks()
-		if len(chunks) == 0 {
-			return nil
-		}
-		for _, idChunk = range chunks {
-			w.SetCellsByte(bufferByte.GetLast(idChunk), idChunk)
-		}
-		Draw(w, chunks)
 		return nil
 	}))
 
