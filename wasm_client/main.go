@@ -57,8 +57,8 @@ func Draw(w world.ClientWorld, chunksId []uint16) {
 var mouse common.Vec2
 var pressed bool
 var m sync.Mutex
-var brushType common.BrushType
-var cellType cell.CellType
+var brushType common.BrushType = common.CIRCLE_SMALL
+var cellType cell.CellType = cell.SAND_CELL
 var addGenerator int
 
 // Button definitions
