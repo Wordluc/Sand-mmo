@@ -3,6 +3,9 @@ services:
     image: wordluc/sand-mmo-server:latest
     deploy:
       mode: global
+    depends_on:
+      redis:
+        condition: service_started
     build:
       context: .
       dockerfile: server/Dockerfile
@@ -12,7 +15,7 @@ services:
   web:
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
     image: wordluc/sand-mmo-web:latest
     build:
       context: .
