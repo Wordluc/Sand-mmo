@@ -2,16 +2,14 @@ FROM golang:1.26
 
 WORKDIR /code
 
-RUN apt-get install -y ca-certificates 
 RUN apt-get install -y python3
-
-RUN ldconfig
 
 COPY . .
 
 WORKDIR wasm_client
-
-RUN GOOS=js GOARCH=wasm go build -o main.wasm main.go
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+	GOOS=js GOARCH=wasm go build -o main.wasm main.go
 
 EXPOSE 8080/tcp
 
