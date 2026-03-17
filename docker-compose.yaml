@@ -4,8 +4,7 @@ services:
     deploy:
       mode: global
     depends_on:
-      redis:
-        condition: service_started
+      - redis
     build:
       context: .
       dockerfile: server/Dockerfile

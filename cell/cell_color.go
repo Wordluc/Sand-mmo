@@ -62,22 +62,18 @@ var colorMap map[CellType][]common.Color = map[CellType][]common.Color{
 	},
 }
 
-func (cell *Cell) NewColor(isGradientChose bool) (color common.Color, spriteType uint8) {
+func (cell *Cell) GenerateNewColor() (color common.Color, spriteType uint8) {
 	var idx uint8
 	colors, ok := colorMap[cell.CellType]
 	if !ok {
 		fmt.Println("Color not found")
 		return common.Black, 0
 	}
-	if isGradientChose {
-		idx = cell.SpirteType
-	} else {
-		idx = uint8(rand.Intn(len(colors)))
-	}
+	idx = uint8(rand.Intn(len(colors)))
+	cell.SpirteType = idx
 	return colors[idx], idx
 }
 
 func (cell *Cell) GetColor() (color common.Color) {
-	color, _ = cell.NewColor(true)
-	return color
+	return colorMap[cell.CellType][cell.SpirteType]
 }

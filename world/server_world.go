@@ -330,6 +330,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 	simulateFireMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		afterMoving := func(x, y int32) error {
 			cell := w.Get(x, y)
+			(*cell).GenerateNewColor()
 			cell.Touched()
 			w.activeChunks.SortedInsert(idChunk)
 			cell.DecreaseLife()
