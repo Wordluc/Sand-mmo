@@ -1,0 +1,46 @@
+package core_handlers
+
+import (
+	"sand-mmo/cell"
+	"sand-mmo/common"
+)
+
+func GetInitCommand() (p common.Package) {
+	return common.Package{
+		Command: common.INIT,
+	}
+}
+func GetENDCommand() (p common.Package) {
+	return common.Package{
+		Command: common.END,
+	}
+}
+
+func GetGeneratorCommand(brush common.Package) (res []common.Package) {
+	res = append(res, common.Package{
+		Command: common.ADD_GENERATOR,
+	})
+	res = append(res, brush)
+	return res
+}
+
+func GetChunkCommand(chunkId uint32) (p common.Package) {
+	return common.Package{
+		Command: common.GET,
+		CommandPackage: common.CommandPackage{
+			Ident: common.CHUNK,
+			Arg:   chunkId,
+		},
+	}
+}
+func GetDrawCommand(x uint16, y uint16, cellType cell.CellType, brushType common.BrushType) (p common.Package) {
+	return common.Package{
+		Command: common.DRAW_IN,
+		BrushPackage: common.BrushPackage{
+			X:         x,
+			Y:         y,
+			CellType:  cellType,
+			BrushType: brushType,
+		},
+	}
+}

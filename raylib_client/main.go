@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sand-mmo/cell"
 	"sand-mmo/common"
-	chain "sand-mmo/responsibilityChain"
+	core "sand-mmo/core_handlers"
 	"sand-mmo/world"
 
 	ws "github.com/coder/websocket"
@@ -30,7 +30,7 @@ func main() {
 	go UpdateWorld(&w, conn)
 
 	defer conn.CloseNow()
-	defer common.SendToWebSocketPackages(conn, chain.GetENDCommand())
+	defer common.SendToWebSocketPackages(conn, core.GetENDCommand())
 
 	//Insert fps target
 	rl.SetTargetFPS(30)
@@ -90,14 +90,14 @@ func main() {
 		chunkId := w.GetChunkId(x, y)
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 			if !(vec.X > W_GAME || vec.Y > H_GAME) {
-				err := common.SendToWebSocketPackages(conn, chain.GetDrawCommand(x, y, cellType, brushType))
+				err := common.SendToWebSocketPackages(conn, core.GetDrawCommand(x, y, cellType, brushType))
 				if err != nil {
 					fmt.Println(err.Error())
 				}
 			}
 		}
 		if rl.IsKeyDown(rl.KeyR) {
-			err := common.SendToWebSocketPackages(conn, chain.GetGeneratorCommand(chain.GetDrawCommand(x, y, cellType, brushType))...)
+			err := common.SendToWebSocketPackages(conn, core.GetGeneratorCommand(core.GetDrawCommand(x, y, cellType, brushType))...)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -113,7 +113,7 @@ func createWebSocket() (*ws.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = common.SendToWebSocketPackages(conn, chain.GetInitCommand())
+	err = common.SendToWebSocketPackages(conn, core.GetInitCommand())
 	if err != nil {
 		return nil, err
 	}

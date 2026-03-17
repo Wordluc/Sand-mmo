@@ -13,7 +13,7 @@ import (
 
 	"io"
 	"sand-mmo/common"
-	chain "sand-mmo/responsibilityChain"
+	core "sand-mmo/core_handlers"
 	"sand-mmo/world"
 	"sync"
 	"time"
@@ -72,7 +72,7 @@ func main() {
 func handlerConnection(conn *ws.Conn, addr string) {
 	defer conn.CloseNow()
 	defer w.RemoveClient(addr)
-	engine := chain.NewResponsibilityChainEngine(w, chain.GetHandlers(), conn)
+	engine := core.NewCoreHandlers(w, core.GetHandlers(), conn)
 
 	for {
 		r, err := common.ReadFromWebSocketPackage(conn)

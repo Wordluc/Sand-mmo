@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"sand-mmo/cell"
 	"sand-mmo/common"
-	chain "sand-mmo/responsibilityChain"
+	core "sand-mmo/core_handlers"
 	"sand-mmo/world"
 	"strings"
 	"sync"
@@ -173,11 +173,11 @@ func main() {
 	var bufferByte utils.Buffer = utils.NewBuffer()
 
 	ws.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {
-		send(chain.GetInitCommand())
+		send(core.GetInitCommand())
 		return nil
 	}))
 	js.Global().Get("window").Call("addEventListener", "beforeunload", js.FuncOf(func(this js.Value, args []js.Value) any {
-		send(chain.GetENDCommand())
+		send(core.GetENDCommand())
 		ws.Call("close")
 		return nil
 	}))
@@ -223,11 +223,11 @@ func main() {
 		x = x / common.SIZE_CELL
 		y = y / common.SIZE_CELL
 		if addGenerator == 1 {
-			send(chain.GetGeneratorCommand(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
+			send(core.GetGeneratorCommand(core.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
 			addGenerator = -1
 		}
 		if pressed {
-			send(chain.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
+			send(core.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
 		}
 		return nil
 	}))
