@@ -32,7 +32,6 @@ func NewServerWorld(w, h, chunkSize uint16, redisClient *redis.Client) (res Serv
 	err := res.LoadSnapshot()
 	if err != nil {
 		fmt.Println("Falling loading world")
-		res.redis = nil
 	}
 	return res
 }
@@ -70,10 +69,12 @@ func (w *ServerWorld) SaveSnapshot() {
 	if w.redis == nil {
 		return
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
 	worldBytes := w.GetWorldBytes()
-	w.redis.Set(context.Background(), REDIS_KEY_BYTES_BYTES, string(worldBytes), 0)
+	w.redis.Set(ctx, REDIS_KEY_BYTES_BYTES, string(worldBytes), 0)
 	generatorsBytes := w.GetGeneratorsBytes()
-	w.redis.Set(context.Background(), REDIS_KEY_BYTES_GENERATOR, string(generatorsBytes), 0)
+	w.redis.Set(ctx, REDIS_KEY_BYTES_GENERATOR, string(generatorsBytes), 0)
 	println("World Saved")
 }
 
@@ -197,6 +198,17 @@ func (w *ServerWorld) AddGenerator(brush common.BrushPackage) {
 	w.generators = append(w.generators, brush)
 }
 
+func (w *ServerWorld) Loop() error {
+	err := w.ApplyGenerators()
+	if err != nil {
+		return err
+	}
+	chunksToSend := w.GetActiveChunksAndNeiboroud()
+	for _, iC := range chunksToSend {
+		w.SimulateChunk(uint16(iC))
+	}
+	return nil
+}
 func (w *ServerWorld) ApplyGenerators() error {
 	newGenerators := make([]common.BrushPackage, 0)
 	for i := range w.generators {

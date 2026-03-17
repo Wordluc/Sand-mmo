@@ -78,6 +78,7 @@ func handlerConnection(conn *ws.Conn, addr string) {
 		r, err := common.ReadFromWebSocketPackage(conn)
 		if err != nil {
 			fmt.Println("Error ", addr, ": ", err.Error())
+			w.RemoveClient(addr)
 			return
 		}
 		m.Lock()
@@ -91,66 +92,66 @@ func handlerConnection(conn *ws.Conn, addr string) {
 		}
 	}
 }
-func UpdateClientWorlds() {
+
+var timerSaving common.Timer
+var timerLoop common.Timer
+
+func loop() {
 	var waitG sync.WaitGroup
-	timer := common.NewTimer(time.Minute, w.SaveSnapshot)
-	go func() {
-		timer.Start()
-		defer timer.Stop()
-		for {
-			time.Sleep(common.SLEEP * time.Millisecond)
+	if w.GetLenClients() == 0 {
+		defer timerSaving.Stop()
+		defer timerLoop.Stop()
+		return
+	}
+	m.Lock()
+	err := w.Loop()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	chunksToSend := w.GetChunksToSend()
+	common.UntouchEverything()
 
-			if w.GetLenClients() == 0 {
-				return
+	var chunks [][]byte = make([][]byte, len(chunksToSend))
+	waitG.Add(len(chunksToSend))
+	for i, iC := range chunksToSend {
+		go func() {
+			chunks[i] = w.GetChunkBytesToSend(uint16(iC))
+			waitG.Done()
+		}()
+	}
+	waitG.Wait()
+	m.Unlock()
+	waitG.Add(w.GetLenClients())
+	for addr, ws := range w.GetClients() {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
+			defer cancel()
+			var err error
+			defer func() {
+				waitG.Done()
+				if err != nil {
+					fmt.Println("Removing for :", err.Error())
+					w.RemoveClient(addr)
+					return
+				}
+			}()
+			for _, chunk := range chunks {
+				if ws == nil {
+					continue
+				}
+				err = ws.Write(ctx, websocket.MessageBinary, chunk)
+				if err != nil {
+					return
+				}
 			}
-			m.Lock()
-			err := w.ApplyGenerators()
-			if err != nil {
-				fmt.Println(err)
-			}
-			chunksToSend := w.GetActiveChunksAndNeiboroud()
-			for _, iC := range chunksToSend {
-				w.SimulateChunk(uint16(iC))
-			}
-			chunksToSend = w.GetChunksToSend()
-			common.UntouchEverything()
+		}()
+	}
+	waitG.Wait()
+}
 
-			var chunks [][]byte = make([][]byte, len(chunksToSend))
-			waitG.Add(len(chunksToSend))
-			for i, iC := range chunksToSend {
-				go func() {
-					chunks[i] = w.GetChunkBytesToSend(uint16(iC))
-					waitG.Done()
-				}()
-			}
-			waitG.Wait()
-			m.Unlock()
-			waitG.Add(w.GetLenClients())
-			for addr, ws := range w.GetClients() {
-				go func() {
-					ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
-					defer cancel()
-					var err error
-					defer func() {
-						waitG.Done()
-						if err != nil {
-							fmt.Println("Removing for :", err.Error())
-							w.RemoveClient(addr)
-							return
-						}
-					}()
-					for _, chunk := range chunks {
-						if ws == nil {
-							continue
-						}
-						err = ws.Write(ctx, websocket.MessageBinary, chunk)
-						if err != nil {
-							return
-						}
-					}
-				}()
-			}
-			waitG.Wait()
-		}
-	}()
+func UpdateClientWorlds() {
+	timerSaving = common.NewTimer(time.Minute, w.SaveSnapshot)
+	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, loop)
+	timerSaving.Start()
+	timerLoop.Start()
 }
