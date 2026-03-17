@@ -110,16 +110,17 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 				dx := (radius - ix)
 				dy := (radius - iy)
 
-				x := int(p.X) - dx
+				x := int32(int(p.X) - dx)
 				if x < 0 {
 					continue
 				}
-				y := int(p.Y) - dy
+				y := int32(int(p.Y) - dy)
 				if y < 0 {
 					continue
 				}
 				if (dx*dx + dy*dy) <= radius*radius/4 {
-					w.Set(uint16(x), uint16(y), cell.NewCell(p.CellType))
+					w.Get(x, y)
+					w.Set(x, y, cell.NewCell(p.CellType))
 
 				}
 			}
@@ -133,15 +134,15 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) error {
 				dx := (size - ix)
 				dy := (size - iy)
 
-				x := int(p.X) - dx
+				x := int32(int(p.X) - dx)
 				if x < 0 {
 					continue
 				}
-				y := int(p.Y) - dy
+				y := int32(int(p.Y) - dy)
 				if y < 0 {
 					continue
 				}
-				w.Set(uint16(x), uint16(y), cell.NewCell(p.CellType))
+				w.Set(x, y, cell.NewCell(p.CellType))
 			}
 		}
 		return nil
@@ -210,11 +211,10 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 		oldx, oldy := pos.Get()
 		move := func(v common.Vec2) {
 			pos.Add(v)
-			x, y := pos.Get()
 			(*cell).Touched()
-			w.Set(uint16(x), uint16(y), *(*cell))
+			w.SetVec(pos, *(*cell))
 
-			*cell = w.Get(x, y)
+			*cell = w.GetVec(pos)
 			callbackAfterMoving(oldx, oldy)
 		}
 
@@ -236,7 +236,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 
 	simulateSimpleMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		afterMoving := func(x, y int32) error {
-			w.Set(uint16(x), uint16(y), cell.NewCell(cell.EMPTY_CELL))
+			w.Set(x, y, cell.NewCell(cell.EMPTY_CELL))
 			return nil
 		}
 		return simulateCustomMovements(pos, maxSpeed, c, isFree, afterMoving, groups)
@@ -244,7 +244,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 
 	simulateWaterMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		afterMoving := func(x, y int32) error {
-			w.Set(uint16(x), uint16(y), cell.NewCell(cell.EMPTY_CELL))
+			w.Set(x, y, cell.NewCell(cell.EMPTY_CELL))
 			return nil
 		}
 		beforeMoving := func(posToCheck common.Vec2) bool {
@@ -268,12 +268,11 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 	}
 	simulateLeafMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
 		afterMoving := func(x, y int32) error {
-			w.Set(uint16(x), uint16(y), cell.NewCell(cell.EMPTY_CELL))
+			w.Set(x, y, cell.NewCell(cell.EMPTY_CELL))
 			return nil
 		}
 		beforeMoving := func(posToCheck common.Vec2) bool {
-			x, y := posToCheck.Get()
-			tcell := w.Get(x, y)
+			tcell := w.GetVec(posToCheck)
 			if tcell == nil {
 				return false
 			}
@@ -292,8 +291,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 			return nil
 		}
 		isFree := func(pos common.Vec2) bool {
-			x, y := pos.Get()
-			tcell := w.Get(x, y)
+			tcell := w.GetVec(pos)
 			if tcell == nil {
 				return false
 			}
@@ -313,8 +311,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 			return nil
 		}
 		isFree := func(pos common.Vec2) bool {
-			x, y := pos.Get()
-			tcell := w.Get(x, y)
+			tcell := w.GetVec(pos)
 			if tcell == nil {
 				return false
 			}
@@ -332,12 +329,11 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 			c := w.Get(x, y)
 			c.Touched()
 			w.activeChunks.SortedInsert(idChunk)
-			w.Set(uint16(x), uint16(y), cell.NewCell(cell.EMPTY_CELL))
+			w.Set(x, y, cell.NewCell(cell.EMPTY_CELL))
 			return nil
 		}
 		isFree := func(pos common.Vec2) bool {
-			x, y := pos.Get()
-			tcell := w.Get(x, y)
+			tcell := w.GetVec(pos)
 			if tcell == nil {
 				return false
 			}
@@ -347,7 +343,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 				return false
 			}
 			if tcell.CellType == cell.WOOD_CELL || tcell.CellType == cell.LEAF_CELL {
-				w.Set(uint16(x), uint16(y), cell.NewCell(cell.FIRE_CELL))
+				w.SetVec(pos, cell.NewCell(cell.FIRE_CELL))
 				return false
 			}
 			return isFree(pos)
@@ -397,7 +393,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 			})
 		case cell.VACUUM_CELL:
 			if center.RemainingLife <= 0 {
-				w.Set(_x, _y, cell.NewCell(cell.EMPTY_CELL))
+				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
 				return nil
 			}
 			center.DecreaseLife()
@@ -413,7 +409,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 			}
 		case cell.SMOKE_CELL:
 			if center.RemainingLife <= 0 {
-				w.Set(_x, _y, cell.NewCell(cell.EMPTY_CELL))
+				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
 				return nil
 			}
 			center.DecreaseLife()
@@ -437,7 +433,7 @@ func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
 			})
 			if center.RemainingLife <= 0 {
 				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 20)
-				w.Set(_x, _y, smoke)
+				w.SetVec(pos, smoke)
 				return nil
 			}
 			if !moved {
@@ -487,10 +483,12 @@ func (w *ServerWorld) GetChunksToSend() []uint16 {
 
 func (w *world) SetVec(pos common.Vec2, cell cell.Cell) {
 	x, y := pos.Get()
-	w.Set(uint16(x), uint16(y), cell)
+	w.Set(x, y, cell)
 }
 
-func (w *world) Set(x, y uint16, cell cell.Cell) {
+func (w *world) Set(_x, _y int32, cell cell.Cell) {
+	x := uint16(_x)
+	y := uint16(_y)
 	if x >= w.W {
 		return
 	}
@@ -500,6 +498,11 @@ func (w *world) Set(x, y uint16, cell cell.Cell) {
 	w.activeChunks.SortedInsert(w.GetChunkId(x, y))
 	indexCell := x + (y * w.W)
 	w.cells[indexCell] = cell
+}
+
+func (w *world) GetVec(pos common.Vec2) *cell.Cell {
+	x, y := pos.Get()
+	return w.Get(x, y)
 }
 
 func (w *world) Get(_x, _y int32) *cell.Cell {
