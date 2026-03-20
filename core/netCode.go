@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"sand-mmo/common"
 	"sync"
@@ -95,4 +96,43 @@ func (w *NetCode) GetClients() (conns map[string]*ws.Conn) {
 	conns = maps.Clone(w.webSockets)
 	w.webSocketMutex.Unlock()
 	return conns
+}
+
+func (w *NetCode) SendChunks(chunksToSend []uint16) {
+	var waitG sync.WaitGroup
+	var chunks [][]byte = make([][]byte, len(chunksToSend))
+	waitG.Add(len(chunksToSend))
+	for i, iC := range chunksToSend {
+		go func() {
+			chunks[i] = w.world.GetChunkBytesToSend(uint16(iC))
+			waitG.Done()
+		}()
+	}
+	waitG.Wait()
+	waitG.Add(w.GetLenClients())
+	for addr, client := range w.GetClients() {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
+			defer cancel()
+			var err error
+			defer func() {
+				waitG.Done()
+				if err != nil {
+					fmt.Println("Removing for :", err.Error())
+					w.RemoveClient(addr)
+					return
+				}
+			}()
+			for _, chunk := range chunks {
+				if client == nil {
+					continue
+				}
+				err = client.Write(ctx, ws.MessageBinary, chunk)
+				if err != nil {
+					return
+				}
+			}
+		}()
+	}
+	waitG.Wait()
 }

@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/coder/websocket"
 	ws "github.com/coder/websocket"
 	"github.com/joho/godotenv"
 
@@ -101,7 +99,6 @@ func handlerConnection(conn *ws.Conn, addr string) {
 }
 
 func loop() {
-	var waitG sync.WaitGroup
 	if netCode.GetLenClients() == 0 {
 		defer StopNetCode()
 		return
@@ -113,43 +110,9 @@ func loop() {
 	}
 	chunksToSend := w.GetChunksToSend()
 	common.UntouchEverything()
-
-	var chunks [][]byte = make([][]byte, len(chunksToSend))
-	waitG.Add(len(chunksToSend))
-	for i, iC := range chunksToSend {
-		go func() {
-			chunks[i] = w.GetChunkBytesToSend(uint16(iC))
-			waitG.Done()
-		}()
-	}
-	waitG.Wait()
+	netCode.SendChunks(chunksToSend)
 	m.Unlock()
-	waitG.Add(netCode.GetLenClients())
-	for addr, ws := range netCode.GetClients() {
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
-			defer cancel()
-			var err error
-			defer func() {
-				waitG.Done()
-				if err != nil {
-					fmt.Println("Removing for :", err.Error())
-					netCode.RemoveClient(addr)
-					return
-				}
-			}()
-			for _, chunk := range chunks {
-				if ws == nil {
-					continue
-				}
-				err = ws.Write(ctx, websocket.MessageBinary, chunk)
-				if err != nil {
-					return
-				}
-			}
-		}()
-	}
-	waitG.Wait()
+
 }
 
 func StopNetCode() {
