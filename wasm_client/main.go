@@ -70,19 +70,19 @@ type ButtonDef struct {
 }
 
 var buttons = []ButtonDef{
+	{label: "Vacuum Cleaner", isBrush: false, cellType: cell.VACUUM_CELL},
 	{label: "Water", isBrush: false, cellType: cell.WATER_CELL},
 	{label: "Sand", isBrush: false, cellType: cell.SAND_CELL},
+	{label: "Wood", isBrush: false, cellType: cell.WOOD_CELL},
+	{label: "Leaf", isBrush: false, cellType: cell.LEAF_CELL},
+	{label: "Stone", isBrush: false, cellType: cell.STONE_CELL},
 	{label: "Smoke", isBrush: false, cellType: cell.SMOKE_CELL},
-	{label: "Small Circle", isBrush: true, brushType: common.CIRCLE_SMALL},
-	{label: "Big Circle", isBrush: true, brushType: common.CIRCLE_BIG},
+	{label: "Fire", isBrush: false, cellType: cell.FIRE_CELL},
+	{label: "Lava", isBrush: false, cellType: cell.LAVA_CELL},
 	{label: "Small Square", isBrush: true, brushType: common.SQUARE_SMALL},
 	{label: "Big Square", isBrush: true, brushType: common.SQUARE_BIG},
-	{label: "Vacuum Cleaner", isBrush: false, cellType: cell.VACUUM_CELL},
-	{label: "Stone", isBrush: false, cellType: cell.STONE_CELL},
-	{label: "Fire", isBrush: false, cellType: cell.FIRE_CELL},
-	{label: "Wood", isBrush: false, cellType: cell.WOOD_CELL},
-	{label: "Lava", isBrush: false, cellType: cell.LAVA_CELL},
-	{label: "Leaf", isBrush: false, cellType: cell.LEAF_CELL},
+	{label: "Small Circle", isBrush: true, brushType: common.CIRCLE_SMALL},
+	{label: "Big Circle", isBrush: true, brushType: common.CIRCLE_BIG},
 }
 
 // Render buttons using HTML DOM
