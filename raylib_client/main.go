@@ -64,7 +64,7 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 150, Width: 50, Height: 20}, "Big Square") {
 			brushType = common.SQUARE_BIG
 		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 175, Width: 50, Height: 20}, "Buco nero") {
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 175, Width: 50, Height: 20}, "Vacuum Cleaner") {
 			cellType = cell.VACUUM_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 200, Width: 50, Height: 20}, "Stone") {
@@ -79,7 +79,7 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 275, Width: 50, Height: 20}, "Lava") {
 			cellType = cell.LAVA_CELL
 		}
-		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 300, Width: 50, Height: 20}, "Foglia") {
+		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 300, Width: 50, Height: 20}, "Leaf") {
 			cellType = cell.LEAF_CELL
 		}
 		Draw(w)
