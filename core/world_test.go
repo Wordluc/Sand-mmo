@@ -1,4 +1,4 @@
-package world
+package core
 
 import (
 	"encoding/binary"
@@ -27,7 +27,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 	}
 
 	// 8x4 world
-	w := NewServerWorld(8, 4, 2, nil)
+	w := NewServerWorld(8, 4, 2)
 	w.ImportCells(encoded)
 
 	caseTest := []struct {

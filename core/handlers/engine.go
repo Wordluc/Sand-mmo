@@ -1,9 +1,9 @@
-package core_handlers
+package handlers
 
 import (
 	"fmt"
 	"sand-mmo/common"
-	"sand-mmo/world"
+	"sand-mmo/core"
 
 	ws "github.com/coder/websocket"
 )
@@ -11,12 +11,12 @@ import (
 type CoreHandlers struct {
 	ps          []handler
 	i           int
-	world       *world.ServerWorld
+	world       *core.ServerWorld
 	webSocket   *ws.Conn
 	LastCommand common.Command
 }
 
-func NewCoreHandlers(world *world.ServerWorld, ps []handler, tcpConn *ws.Conn) (res CoreHandlers) {
+func NewCoreHandlers(world *core.ServerWorld, ps []handler, tcpConn *ws.Conn) (res CoreHandlers) {
 	res.ps = ps
 	res.world = world
 	res.webSocket = tcpConn

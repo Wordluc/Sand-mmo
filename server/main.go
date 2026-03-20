@@ -13,15 +13,16 @@ import (
 
 	"io"
 	"sand-mmo/common"
-	core "sand-mmo/core_handlers"
-	"sand-mmo/world"
+	"sand-mmo/core"
+	handlers "sand-mmo/core/handlers"
 	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-var w *world.ServerWorld
+var w *core.ServerWorld
+var netCode *core.NetCode
 var m *sync.Mutex = &sync.Mutex{}
 
 func handler(write http.ResponseWriter, r *http.Request) {
@@ -31,10 +32,10 @@ func handler(write http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if w.AddClient(r.RemoteAddr, c) == 1 {
+	if netCode.AddClient(r.RemoteAddr, c) == 1 {
 		go UpdateClientWorlds()
 	}
-	fmt.Println("N: ", w.GetLenClients())
+	fmt.Println("N: ", netCode.GetLenClients())
 	go handlerConnection(c, r.RemoteAddr)
 
 }
@@ -59,7 +60,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	w = new(world.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE, redis))
+	w = new(core.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE))
+	netCode = new(core.NewNetCode(w, redis))
 
 	http.HandleFunc("/ws", handler)
 	err = http.ListenAndServe(":8000", nil)
@@ -71,14 +73,14 @@ func main() {
 
 func handlerConnection(conn *ws.Conn, addr string) {
 	defer conn.CloseNow()
-	defer w.RemoveClient(addr)
-	engine := core.NewCoreHandlers(w, core.GetHandlers(), conn)
+	defer netCode.RemoveClient(addr)
+	engine := handlers.NewCoreHandlers(w, handlers.GetHandlers(), conn)
 
 	for {
 		r, err := common.ReadFromWebSocketPackage(conn)
 		if err != nil {
 			fmt.Println("Error ", addr, ": ", err.Error())
-			w.RemoveClient(addr)
+			netCode.RemoveClient(addr)
 			return
 		}
 		m.Lock()
@@ -98,7 +100,7 @@ var timerLoop common.Timer
 
 func loop() {
 	var waitG sync.WaitGroup
-	if w.GetLenClients() == 0 {
+	if netCode.GetLenClients() == 0 {
 		defer timerSaving.Stop()
 		defer timerLoop.Stop()
 		return
@@ -121,8 +123,8 @@ func loop() {
 	}
 	waitG.Wait()
 	m.Unlock()
-	waitG.Add(w.GetLenClients())
-	for addr, ws := range w.GetClients() {
+	waitG.Add(netCode.GetLenClients())
+	for addr, ws := range netCode.GetClients() {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
 			defer cancel()
@@ -131,7 +133,7 @@ func loop() {
 				waitG.Done()
 				if err != nil {
 					fmt.Println("Removing for :", err.Error())
-					w.RemoveClient(addr)
+					netCode.RemoveClient(addr)
 					return
 				}
 			}()
@@ -150,7 +152,7 @@ func loop() {
 }
 
 func UpdateClientWorlds() {
-	timerSaving = common.NewTimer(time.Minute, w.SaveSnapshot)
+	timerSaving = common.NewTimer(time.Minute, netCode.SaveSnapshot)
 	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, loop)
 	timerSaving.Start()
 	timerLoop.Start()

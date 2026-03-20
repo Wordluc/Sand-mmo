@@ -1,4 +1,4 @@
-package world
+package core
 
 import (
 	"sand-mmo/cell"

@@ -1,4 +1,4 @@
-package world
+package core
 
 import (
 	"encoding/binary"
@@ -91,6 +91,7 @@ func (w *world) GetChunkId(x, y uint16) uint16 {
 	id := (y/w.ChunkSize)*chunkPerRow + x/w.ChunkSize
 	return id
 }
+
 func (w *world) GetNumberChucks() uint16 {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
 }
@@ -116,6 +117,7 @@ func (w *world) GetChunkBytes(idChunk uint16) []uint16 {
 
 	return decoded
 }
+
 func (w *world) GetChunkBytesToSend(idChunk uint16) []byte {
 	chunk := w.GetChunkBytes(idChunk)
 	var bytes []byte

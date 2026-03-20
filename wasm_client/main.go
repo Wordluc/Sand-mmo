@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"sand-mmo/cell"
 	"sand-mmo/common"
-	core "sand-mmo/core_handlers"
-	"sand-mmo/world"
+	"sand-mmo/core"
+	"sand-mmo/core/handlers"
 	"strings"
 	"sync"
 	"syscall/js"
@@ -30,7 +30,7 @@ func initDrawBuffers() {
 	jsImageData = js.Global().Get("ImageData").New(jsDst, canvasW, canvasH)
 }
 
-func Draw(w world.ClientWorld, chunksId []uint16) {
+func Draw(w core.ClientWorld, chunksId []uint16) {
 	var dx, dy, px, x, y int
 	var color common.Color
 	for _, chunkId := range chunksId {
@@ -155,7 +155,7 @@ func main() {
 	var idChunk uint16
 	registryMouseMovement(doc)
 	renderButtons(buttons, &cellType, &brushType)
-	w := world.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
+	w := core.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 
 	loc := js.Global().Get("location")
 	host, _, _ := strings.Cut(loc.Get("host").String(), ":")
@@ -173,11 +173,11 @@ func main() {
 	var bufferByte utils.Buffer = utils.NewBuffer()
 
 	ws.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {
-		send(core.GetInitCommand())
+		send(handlers.GetInitCommand())
 		return nil
 	}))
 	js.Global().Get("window").Call("addEventListener", "beforeunload", js.FuncOf(func(this js.Value, args []js.Value) any {
-		send(core.GetENDCommand())
+		send(handlers.GetENDCommand())
 		ws.Call("close")
 		return nil
 	}))
@@ -223,11 +223,11 @@ func main() {
 		x = x / common.SIZE_CELL
 		y = y / common.SIZE_CELL
 		if addGenerator == 1 {
-			send(core.GetGeneratorCommand(core.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
+			send(handlers.GetGeneratorCommand(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
 			addGenerator = -1
 		}
 		if pressed {
-			send(core.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
+			send(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
 		}
 		return nil
 	}))

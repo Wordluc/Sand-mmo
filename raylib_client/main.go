@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sand-mmo/cell"
 	"sand-mmo/common"
-	core "sand-mmo/core_handlers"
-	"sand-mmo/world"
+	"sand-mmo/core"
+	"sand-mmo/core/handlers"
 
 	ws "github.com/coder/websocket"
 	ru "github.com/gen2brain/raylib-go/raygui"
@@ -20,7 +20,7 @@ const H_GAME = common.H_WINDOWS * common.SIZE_CELL
 
 func main() {
 	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME+common.SIZE_CELL, "")
-	w := world.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
+	w := core.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
 
 	conn, err := createWebSocket()
 	if err != nil {
@@ -30,7 +30,7 @@ func main() {
 	go UpdateWorld(&w, conn)
 
 	defer conn.CloseNow()
-	defer common.SendToWebSocketPackages(conn, core.GetENDCommand())
+	defer common.SendToWebSocketPackages(conn, handlers.GetENDCommand())
 
 	//Insert fps target
 	rl.SetTargetFPS(30)
@@ -90,14 +90,14 @@ func main() {
 		chunkId := w.GetChunkId(x, y)
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 			if !(vec.X > W_GAME || vec.Y > H_GAME) {
-				err := common.SendToWebSocketPackages(conn, core.GetDrawCommand(x, y, cellType, brushType))
+				err := common.SendToWebSocketPackages(conn, handlers.GetDrawCommand(x, y, cellType, brushType))
 				if err != nil {
 					fmt.Println(err.Error())
 				}
 			}
 		}
 		if rl.IsKeyDown(rl.KeyR) {
-			err := common.SendToWebSocketPackages(conn, core.GetGeneratorCommand(core.GetDrawCommand(x, y, cellType, brushType))...)
+			err := common.SendToWebSocketPackages(conn, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, cellType, brushType))...)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -113,7 +113,7 @@ func createWebSocket() (*ws.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = common.SendToWebSocketPackages(conn, core.GetInitCommand())
+	err = common.SendToWebSocketPackages(conn, handlers.GetInitCommand())
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func createWebSocket() (*ws.Conn, error) {
 	return conn, nil
 }
 
-func UpdateWorld(world *world.ClientWorld, webSocket *ws.Conn) {
+func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 	for {
 		//2->16bit
 		//		var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
@@ -135,7 +135,8 @@ func UpdateWorld(world *world.ClientWorld, webSocket *ws.Conn) {
 		world.SetCellsByte(bytes[2:], idChunk)
 	}
 }
-func Draw(w world.ClientWorld) {
+
+func Draw(w core.ClientWorld) {
 	var i, x, y uint16
 	for _, c := range w.GetCells() {
 		x = i % w.W * common.SIZE_CELL

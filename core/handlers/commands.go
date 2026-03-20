@@ -1,4 +1,4 @@
-package core_handlers
+package handlers
 
 import (
 	"sand-mmo/cell"
