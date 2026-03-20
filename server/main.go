@@ -44,7 +44,7 @@ func getRedisClient() (*redis.Client, error) {
 	println("Redis: ", fmt.Sprintf("%v:%v", os.Getenv("redis_address"), os.Getenv("redis_port")))
 	client := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%v:%v", os.Getenv("redis_address"), os.Getenv("redis_port")),
-		Password: os.Getenv("redis_password"),
+		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       0, // use default DB
 		Protocol: 2,
 	})

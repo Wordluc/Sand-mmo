@@ -37,9 +37,17 @@ func (w *NetCode) SaveSnapshot() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	worldBytes := w.world.GetWorldBytes()
-	w.redis.Set(ctx, REDIS_KEY_BYTES_BYTES, string(worldBytes), 0)
+	err := w.redis.Set(ctx, REDIS_KEY_BYTES_BYTES, string(worldBytes), 0).Err()
+	if err != nil {
+		println(err.Error())
+		return
+	}
 	generatorsBytes := w.world.GetGeneratorsBytes()
-	w.redis.Set(ctx, REDIS_KEY_BYTES_GENERATOR, string(generatorsBytes), 0)
+	err = w.redis.Set(ctx, REDIS_KEY_BYTES_GENERATOR, string(generatorsBytes), 0).Err()
+	if err != nil {
+		println(err.Error())
+		return
+	}
 	println("World Saved")
 }
 

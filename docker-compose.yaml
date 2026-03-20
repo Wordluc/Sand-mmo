@@ -23,13 +23,18 @@ services:
     ports:
       - "8080:8080"
   redis:
-    deploy:
-      mode: global
+    env_file: ".env"
     image: redis
+    environment:
+      - REDIS_PASSWORD
+    command: ["sh", "-c", "redis-server --requirepass $$REDIS_PASSWORD"]
     ports:
       - "6000:6379"
     volumes:
       - redis-data:/data
+    deploy:
+      mode: global
+
 volumes:
     redis-data:
 
