@@ -24,6 +24,8 @@ import (
 var w *core.ServerWorld
 var netCode *core.NetCode
 var m *sync.Mutex = &sync.Mutex{}
+var timerSaving common.Timer
+var timerLoop common.Timer
 
 func handler(write http.ResponseWriter, r *http.Request) {
 	c, err := ws.Accept(write, r, &ws.AcceptOptions{
@@ -33,7 +35,7 @@ func handler(write http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 	if netCode.AddClient(r.RemoteAddr, c) == 1 {
-		go UpdateClientWorlds()
+		go StartNetCode()
 	}
 	fmt.Println("N: ", netCode.GetLenClients())
 	go handlerConnection(c, r.RemoteAddr)
@@ -62,6 +64,9 @@ func main() {
 	}
 	w = new(core.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE))
 	netCode = new(core.NewNetCode(w, redis))
+
+	timerSaving = common.NewTimer(time.Minute, netCode.SaveSnapshot)
+	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, loop)
 
 	http.HandleFunc("/ws", handler)
 	err = http.ListenAndServe(":8000", nil)
@@ -95,14 +100,10 @@ func handlerConnection(conn *ws.Conn, addr string) {
 	}
 }
 
-var timerSaving common.Timer
-var timerLoop common.Timer
-
 func loop() {
 	var waitG sync.WaitGroup
 	if netCode.GetLenClients() == 0 {
-		defer timerSaving.Stop()
-		defer timerLoop.Stop()
+		defer StopNetCode()
 		return
 	}
 	m.Lock()
@@ -151,9 +152,12 @@ func loop() {
 	waitG.Wait()
 }
 
-func UpdateClientWorlds() {
-	timerSaving = common.NewTimer(time.Minute, netCode.SaveSnapshot)
-	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, loop)
+func StopNetCode() {
+	timerSaving.Stop()
+	timerLoop.Stop()
+}
+
+func StartNetCode() {
 	timerSaving.Start()
 	timerLoop.Start()
 }
