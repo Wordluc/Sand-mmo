@@ -33,7 +33,7 @@ func handler(write http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 	if netCode.AddClient(r.RemoteAddr, c) == 1 {
-		go StartNetCode()
+		go StartLoop()
 	}
 	fmt.Println("N: ", netCode.GetLenClients())
 	go handlerConnection(c, r.RemoteAddr)
@@ -100,7 +100,7 @@ func handlerConnection(conn *ws.Conn, addr string) {
 
 func loop() {
 	if netCode.GetLenClients() == 0 {
-		defer StopNetCode()
+		defer StopLoop()
 		return
 	}
 	m.Lock()
@@ -115,12 +115,12 @@ func loop() {
 
 }
 
-func StopNetCode() {
+func StopLoop() {
 	timerSaving.Stop()
 	timerLoop.Stop()
 }
 
-func StartNetCode() {
+func StartLoop() {
 	timerSaving.Start()
 	timerLoop.Start()
 }
