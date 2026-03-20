@@ -8,6 +8,7 @@ import (
 type Timer struct {
 	time     time.Duration
 	enable   bool
+	running  bool
 	callback func()
 	*sync.Mutex
 }
@@ -23,22 +24,27 @@ func NewTimer(time time.Duration, callback func()) Timer {
 func (t *Timer) Stop() {
 	t.enable = false
 }
+
 func (t *Timer) Start() {
 	if t.enable {
 		return
 	}
 	t.enable = true
-	t.loop()
+	if !t.running {
+		t.loop()
+	}
 }
 
 func (t *Timer) loop() {
+	t.Lock()
 	if !t.enable {
+		t.running = false
 		return
 	}
-	t.Lock()
 
 	go func() {
 		t.callback()
+		t.running = true
 		t.Unlock()
 	}()
 
