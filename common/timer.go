@@ -40,6 +40,7 @@ func (t *Timer) loop() {
 	t.Lock()
 	if !t.enable {
 		t.running = false
+		t.Unlock()
 		return
 	}
 
