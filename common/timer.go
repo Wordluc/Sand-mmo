@@ -31,6 +31,7 @@ func (t *Timer) Start() {
 	}
 	t.enable = true
 	if !t.running {
+		t.running = true
 		t.loop()
 	}
 }
@@ -44,7 +45,6 @@ func (t *Timer) loop() {
 
 	go func() {
 		t.callback()
-		t.running = true
 		t.Unlock()
 	}()
 
