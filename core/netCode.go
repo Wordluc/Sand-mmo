@@ -77,6 +77,7 @@ func (w *NetCode) LoadSnapshot() error {
 		return err
 	}
 	w.world.ImportGenerators(generatorBytes)
+	println("World Loaded")
 	return nil
 }
 

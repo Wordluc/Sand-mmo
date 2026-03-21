@@ -10,14 +10,16 @@ type Timer struct {
 	enable   bool
 	running  bool
 	callback func()
+	desc     string
 	*sync.Mutex
 }
 
-func NewTimer(time time.Duration, callback func()) Timer {
+func NewTimer(time time.Duration, desc string, callback func()) Timer {
 	return Timer{
 		time:     time,
 		callback: callback,
 		Mutex:    &sync.Mutex{},
+		desc:     desc,
 	}
 }
 
@@ -32,7 +34,11 @@ func (t *Timer) Start() {
 	t.enable = true
 	if !t.running {
 		t.running = true
-		t.loop()
+		println("Timer Started: " + t.desc)
+		time.AfterFunc(t.time, func() {
+			t.loop()
+
+		})
 	}
 }
 

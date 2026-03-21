@@ -66,8 +66,8 @@ func main() {
 		netCode.LoadSnapshot()
 	}
 
-	timerSaving = common.NewTimer(time.Minute, netCode.SaveSnapshot)
-	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, loop)
+	timerSaving = common.NewTimer(time.Minute, "TimerSaving", netCode.SaveSnapshot)
+	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, "TimerLoop", loop)
 
 	http.HandleFunc("/ws", handler)
 	err = http.ListenAndServe(":8000", nil)
