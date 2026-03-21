@@ -8,25 +8,25 @@ import (
 )
 
 type world struct {
-	W            uint16
-	H            uint16
-	ChunkSize    uint16
+	W            int
+	H            int
+	ChunkSize    int
 	cells        []cell.Cell
-	activeChunks common.OrderList[uint16]
+	activeChunks common.OrderList[int]
 	generators   []common.BrushPackage
 }
 
-func newWorld(w, h, chunkSize uint16) world {
+func newWorld(w, h, chunkSize int) world {
 	world := world{}
 	world.cells = make([]cell.Cell, w*h)
 	world.H = h
 	world.W = w
 	world.ChunkSize = chunkSize
-	world.activeChunks = common.NewOrderList[uint16]()
+	world.activeChunks = common.NewOrderList[int]()
 	return world
 }
 
-func (w *world) SetCellsByte(bytes []byte, idChunk uint16) {
+func (w *world) SetCellsByte(bytes []byte, idChunk int) {
 	const u32Size = 2
 	var u16 uint16
 	var c cell.Cell
@@ -55,7 +55,7 @@ func (w *world) GetWorldBytes() []byte {
 	return decoded
 }
 
-func (w *world) ForEachCell(idChunk uint16, f func(x, y uint16, center *cell.Cell) error) error {
+func (w *world) ForEachCell(idChunk int, f func(x, y int, center *cell.Cell) error) (err error) {
 
 	chunkPerRow := w.W / w.ChunkSize
 	chunkY := idChunk / chunkPerRow
@@ -63,7 +63,7 @@ func (w *world) ForEachCell(idChunk uint16, f func(x, y uint16, center *cell.Cel
 	x := chunkX*w.ChunkSize + w.ChunkSize - 1
 	y := chunkY*w.ChunkSize + w.ChunkSize - 1
 	for {
-		if err := f(x, y, w.Get(int32(x), int32(y))); err != nil {
+		if err = f(x, y, w.Get(x, y)); err != nil {
 			return err
 		}
 		x = x - 1
@@ -86,17 +86,17 @@ func (w *world) GetGeneratorsBytes() []byte {
 	return decoded
 }
 
-func (w *world) GetChunkId(x, y uint16) uint16 {
+func (w *world) GetChunkId(x, y int) int {
 	chunkPerRow := w.W / w.ChunkSize
 	id := (y/w.ChunkSize)*chunkPerRow + x/w.ChunkSize
 	return id
 }
 
-func (w *world) GetNumberChucks() uint16 {
+func (w *world) GetNumberChucks() int {
 	return w.W / w.ChunkSize * w.H / w.ChunkSize
 }
 
-func (w *world) GetChunkBytes(idChunk uint16) []uint16 {
+func (w *world) GetChunkBytes(idChunk int) []uint16 {
 	var decoded []uint16
 
 	chunkPerRow := w.W / w.ChunkSize
@@ -118,10 +118,10 @@ func (w *world) GetChunkBytes(idChunk uint16) []uint16 {
 	return decoded
 }
 
-func (w *world) GetChunkBytesToSend(idChunk uint16) []byte {
+func (w *world) GetChunkBytesToSend(idChunk int) []byte {
 	chunk := w.GetChunkBytes(idChunk)
 	var bytes []byte
-	bytes = binary.BigEndian.AppendUint16(bytes, idChunk)
+	bytes = binary.BigEndian.AppendUint16(bytes, uint16(idChunk))
 	for i := range chunk {
 		bytes = binary.BigEndian.AppendUint16(bytes, chunk[i])
 	}

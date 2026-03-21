@@ -107,13 +107,13 @@ func (w *NetCode) GetClients() (conns map[string]*ws.Conn) {
 	return conns
 }
 
-func (w *NetCode) SendChunks(chunksToSend []uint16) {
+func (w *NetCode) SendChunks(chunksToSend []int) {
 	var waitG sync.WaitGroup
 	var chunks [][]byte = make([][]byte, len(chunksToSend))
 	waitG.Add(len(chunksToSend))
 	for i, iC := range chunksToSend {
 		go func() {
-			chunks[i] = w.world.GetChunkBytesToSend(uint16(iC))
+			chunks[i] = w.world.GetChunkBytesToSend(iC)
 			waitG.Done()
 		}()
 	}

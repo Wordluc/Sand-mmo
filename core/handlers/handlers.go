@@ -14,7 +14,7 @@ func GetHandlers() []handler {
 		{
 			p: common.GET,
 			handler: func(p common.Package, e *CoreHandlers) error {
-				bytes := e.world.GetChunkBytesToSend(uint16(p.Arg))
+				bytes := e.world.GetChunkBytesToSend(int(p.Arg))
 				err := e.webSocket.Write(context.Background(), ws.MessageBinary, bytes)
 				if err != nil {
 					return err

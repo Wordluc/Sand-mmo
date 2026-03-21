@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"net/http/pprof"
 )
 
 var w *core.ServerWorld
@@ -68,7 +69,7 @@ func main() {
 
 	timerSaving = common.NewTimer(time.Minute, "TimerSaving", netCode.SaveSnapshot)
 	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, "TimerLoop", loop)
-
+	http.HandleFunc("/profile", pprof.Profile)
 	http.HandleFunc("/ws", handler)
 	err = http.ListenAndServe(":8000", nil)
 	if err != nil {

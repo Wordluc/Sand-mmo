@@ -65,11 +65,10 @@ func (c *Cell) Touched() {
 	c.touchedId = common.GTouchedId
 }
 
-func (c *Cell) IsNew() bool {
-	defer func() {
-		c.forceTouched = false
-	}()
-	return c.forceTouched
+func (c *Cell) IsNew() (res bool) {
+	res = c.forceTouched
+	c.forceTouched = false
+	return res
 }
 
 func DecodeCell(input uint16) Cell {

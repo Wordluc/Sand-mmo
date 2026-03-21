@@ -10,7 +10,7 @@ type ServerWorld struct {
 	world
 }
 
-func NewServerWorld(w, h, chunkSize uint16) (res ServerWorld) {
+func NewServerWorld(w, h, chunkSize int) (res ServerWorld) {
 	res.world = newWorld(w, h, chunkSize)
 	return res
 }
@@ -18,16 +18,16 @@ func NewServerWorld(w, h, chunkSize uint16) (res ServerWorld) {
 func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bool) {
 	var c *cell.Cell
 	drawCircle := func(radius int) error {
-		for iy := range radius * 2 {
+		for i_y := range radius * 2 {
 			for ix := range radius * 2 {
 				dx := (radius - ix)
-				dy := (radius - iy)
+				dy := (radius - i_y)
 
-				x := int32(int(p.X) - dx)
+				x := int(p.X) - dx
 				if x < 0 {
 					continue
 				}
-				y := int32(int(p.Y) - dy)
+				y := int(p.Y) - dy
 				if y < 0 {
 					continue
 				}
@@ -48,13 +48,13 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bo
 		return nil
 	}
 	drawBox := func(size int) error {
-		for iy := range size * 2 {
+		for i_y := range size * 2 {
 			for ix := range size * 2 {
 				dx := (size - ix)
-				dy := (size - iy)
+				dy := (size - i_y)
 
-				x := int32(int(p.X) - dx)
-				y := int32(int(p.Y) - dy)
+				x := int(p.X) - dx
+				y := int(p.Y) - dy
 				c = w.Get(x, y)
 				if c == nil {
 					continue
@@ -116,7 +116,7 @@ func (w *ServerWorld) Loop() error {
 	}
 	chunksToSend := w.GetActiveChunksAndNeiboroud()
 	for _, iC := range chunksToSend {
-		w.SimulateChunk(uint16(iC))
+		w.SimulateChunk(iC)
 	}
 	return nil
 }
@@ -136,257 +136,8 @@ func (w *ServerWorld) ApplyGenerators() error {
 	return nil
 }
 
-func (w *ServerWorld) SimulateChunk(idChunk uint16) error {
-
-	isFree := func(pos common.Vec2) bool {
-		x, y := pos.Get()
-		c := w.Get(x, y)
-
-		return c != nil && (c.IsEmpty())
-	}
-	simulateCustomMovements := func(pos common.Vec2, maxSpeed int32, cell **cell.Cell, callbackBeforeMoving func(vec common.Vec2) bool, callbackAfterMoving func(x, y int32) error, groups []common.Vec2) bool {
-		oldx, oldy := pos.Get()
-		move := func(v common.Vec2) {
-			pos.Add(v)
-			(*cell).Touched()
-			w.SetVec(pos, *(*cell))
-
-			*cell = w.GetVec(pos)
-			callbackAfterMoving(oldx, oldy)
-		}
-
-		for _, g := range groups {
-			for s := maxSpeed; s > 0; s-- {
-				o := g.Copy()
-				o.MultConst(s)
-				nPos := pos.Copy()
-				nPos.Add(o)
-				if callbackBeforeMoving(nPos) {
-					move(o)
-					return true
-
-				}
-			}
-		}
-		return false
-	}
-
-	simulateSimpleMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
-		afterMoving := func(x, y int32) error {
-			w.Set(x, y, cell.NewCell(cell.EMPTY_CELL))
-			return nil
-		}
-		return simulateCustomMovements(pos, maxSpeed, c, isFree, afterMoving, groups)
-	}
-
-	simulateWaterMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
-		afterMoving := func(x, y int32) error {
-			w.Set(x, y, cell.NewCell(cell.EMPTY_CELL))
-			return nil
-		}
-		beforeMoving := func(posToCheck common.Vec2) bool {
-			x, y := posToCheck.Get()
-			tcell := w.Get(x, y)
-			if tcell == nil {
-				return false
-			}
-			if tcell.CellType == cell.LAVA_CELL || tcell.CellType == cell.FIRE_CELL {
-				smoke, isSmoke := NewCellByChance(cell.SMOKE_CELL, 10)
-				if !isSmoke {
-					tcell.RemainingLife = 0
-					return false
-				}
-				w.SetVec(pos, smoke)
-				return false
-			}
-			return isFree(posToCheck)
-		}
-		return simulateCustomMovements(pos, maxSpeed, c, beforeMoving, afterMoving, groups)
-	}
-	simulateLeafMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
-		afterMoving := func(x, y int32) error {
-			w.Set(x, y, cell.NewCell(cell.EMPTY_CELL))
-			return nil
-		}
-		beforeMoving := func(posToCheck common.Vec2) bool {
-			tcell := w.GetVec(posToCheck)
-			if tcell == nil {
-				return false
-			}
-			if tcell.CellType == cell.LAVA_CELL || tcell.CellType == cell.FIRE_CELL {
-				fire := cell.NewCell(cell.FIRE_CELL)
-				w.SetVec(pos, fire)
-				return false
-			}
-			return isFree(posToCheck)
-		}
-		return simulateCustomMovements(pos, maxSpeed, c, beforeMoving, afterMoving, groups)
-	}
-
-	simulateVacummMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
-		afterMoving := func(x, y int32) error {
-			return nil
-		}
-		isFree := func(pos common.Vec2) bool {
-			tcell := w.GetVec(pos)
-			if tcell == nil {
-				return false
-			}
-			if !isFree(pos) && tcell.CellType != cell.VACUUM_CELL {
-				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
-			}
-			return false
-		}
-		return simulateCustomMovements(pos, maxSpeed, c, isFree, afterMoving, groups)
-	}
-	simulateFireMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
-		afterMoving := func(x, y int32) error {
-			cell := w.Get(x, y)
-			(*cell).GenerateNewColor()
-			cell.Touched()
-			w.activeChunks.SortedInsert(idChunk)
-			cell.DecreaseLife()
-			return nil
-		}
-		isFree := func(pos common.Vec2) bool {
-			tcell := w.GetVec(pos)
-			if tcell == nil {
-				return false
-			}
-			if (tcell.CellType == cell.WOOD_CELL || tcell.CellType == cell.LEAF_CELL) && (*c).RemainingLife != 0 {
-				(*c).RemainingLife = 3
-				return true
-			}
-			return false
-		}
-		return simulateCustomMovements(pos, maxSpeed, c, isFree, afterMoving, groups)
-	}
-
-	simulateLavaMovements := func(pos common.Vec2, maxSpeed int32, c **cell.Cell, groups []common.Vec2) bool {
-		afterMoving := func(x, y int32) error {
-			c := w.Get(x, y)
-			c.Touched()
-			w.activeChunks.SortedInsert(idChunk)
-			w.Set(x, y, cell.NewCell(cell.EMPTY_CELL))
-			return nil
-		}
-		isFree := func(pos common.Vec2) bool {
-			tcell := w.GetVec(pos)
-			if tcell == nil {
-				return false
-			}
-			if tcell.CellType == cell.WATER_CELL {
-				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 10)
-				w.SetVec(pos, smoke)
-				return false
-			}
-			if tcell.CellType == cell.WOOD_CELL || tcell.CellType == cell.LEAF_CELL {
-				w.SetVec(pos, cell.NewCell(cell.FIRE_CELL))
-				return false
-			}
-			return isFree(pos)
-		}
-		return simulateCustomMovements(pos, maxSpeed, c, isFree, afterMoving, groups)
-	}
-	return w.ForEachCell(idChunk, func(_x, _y uint16, center *cell.Cell) error {
-		if center == nil {
-			return nil
-		}
-
-		if center.IsNew() {
-			w.activeChunks.SortedInsert(idChunk)
-		}
-		if center.IsEmpty() || center.IsTouched() {
-			return nil
-		}
-		pos := common.NewVec2(int32(_x), int32(_y))
-		switch center.CellType {
-		case cell.SAND_CELL:
-			simulateSimpleMovements(pos, 2, &center, []common.Vec2{
-				common.NewVec2(0, 1),
-				common.NewVec2(1, 1),
-				common.NewVec2(-1, 1),
-			})
-		case cell.LAVA_CELL:
-			simulateLavaMovements(pos, 1, &center, []common.Vec2{
-				common.NewVec2(0, 1),
-				common.NewVec2(1, 1),
-				common.NewVec2(-1, 1),
-				common.NewVec2(-1, 0),
-				common.NewVec2(1, 0),
-			})
-		case cell.LEAF_CELL:
-			simulateLeafMovements(pos, 1, &center, []common.Vec2{
-				common.NewVec2(0, 1),
-				common.NewVec2(1, 1),
-				common.NewVec2(-1, 1),
-			})
-		case cell.WATER_CELL:
-			simulateWaterMovements(pos, 2, &center, []common.Vec2{
-				common.NewVec2(0, 1),
-				common.NewVec2(1, 1),
-				common.NewVec2(-1, 1),
-				common.NewVec2(-1, 0),
-				common.NewVec2(1, 0),
-			})
-		case cell.VACUUM_CELL:
-			if center.RemainingLife <= 0 {
-				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
-				return nil
-			}
-			center.DecreaseLife()
-			moved := simulateVacummMovements(pos, 1, &center, []common.Vec2{
-				common.NewVec2(0, 1),
-				common.NewVec2(0, -1),
-				common.NewVec2(1, 0),
-				common.NewVec2(-1, 0),
-			})
-			if !moved {
-				center.Touched()
-				w.activeChunks.SortedInsert(idChunk)
-			}
-		case cell.SMOKE_CELL:
-			if center.RemainingLife <= 0 {
-				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
-				return nil
-			}
-			center.DecreaseLife()
-			moved := simulateSimpleMovements(pos, 2, &center, []common.Vec2{
-				common.NewVec2(0, -1),
-				common.NewVec2(1, -1),
-				common.NewVec2(-1, -1),
-				common.NewVec2(-1, 0),
-				common.NewVec2(1, 0),
-			})
-			if !moved {
-				center.Touched()
-				w.activeChunks.SortedInsert(idChunk)
-			}
-		case cell.FIRE_CELL:
-			moved := simulateFireMovements(pos, 2, &center, []common.Vec2{
-				common.NewVec2(0, 1),
-				common.NewVec2(0, -1),
-				common.NewVec2(1, 0),
-				common.NewVec2(-1, 0),
-			})
-			if center.RemainingLife <= 0 {
-				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 20)
-				w.SetVec(pos, smoke)
-				return nil
-			}
-			if !moved {
-				center.Touched()
-				w.activeChunks.SortedInsert(idChunk)
-				center.DecreaseLife()
-			}
-		}
-
-		return nil
-	})
-}
-
-func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []uint16) {
-	l := common.NewOrderList[uint16]()
+func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []int) {
+	l := common.NewOrderList[int]()
 	chunks := w.activeChunks.Get()
 	w.activeChunks.Clean()
 
@@ -410,13 +161,13 @@ func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []uint16) {
 			if n < 0 || n >= totalChunks {
 				continue
 			}
-			l.SortedInsert(uint16(n))
+			l.SortedInsert(n)
 		}
 	}
 	return l.GetReversSort()
 }
 
-func (w *ServerWorld) GetChunksToSend() []uint16 {
+func (w *ServerWorld) GetChunksToSend() []int {
 	return w.activeChunks.Get()
 }
 
@@ -425,9 +176,7 @@ func (w *world) SetVec(pos common.Vec2, cell cell.Cell) {
 	w.Set(x, y, cell)
 }
 
-func (w *world) Set(_x, _y int32, cell cell.Cell) {
-	x := uint16(_x)
-	y := uint16(_y)
+func (w *world) Set(x, y int, cell cell.Cell) {
 	if x >= w.W {
 		return
 	}
@@ -444,15 +193,13 @@ func (w *world) GetVec(pos common.Vec2) *cell.Cell {
 	return w.Get(x, y)
 }
 
-func (w *world) Get(_x, _y int32) *cell.Cell {
-	if _x < 0 {
+func (w *world) Get(x, y int) *cell.Cell {
+	if x < 0 {
 		return nil
 	}
-	if _y < 0 {
+	if y < 0 {
 		return nil
 	}
-	x := uint16(_x)
-	y := uint16(_y)
 	if x >= w.W {
 		return nil
 	}
