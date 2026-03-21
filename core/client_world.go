@@ -8,7 +8,7 @@ type ClientWorld struct {
 	world
 }
 
-func NewClientWorld(w, h, chunkSize uint16) (res ClientWorld) {
+func NewClientWorld(w, h, chunkSize int) (res ClientWorld) {
 	res.world = newWorld(w, h, chunkSize)
 	return res
 }

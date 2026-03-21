@@ -1,0 +1,1354 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="358" onload="init(evt)" viewBox="0 0 1200 358" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x="' + params.x + '"][y="' + params.y + '"]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add("hide");
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector("rect");
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == "unzoom") clearzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split("=");
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = "?";
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == "&")
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+		if (currentSearchTerm === null) return;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="358.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >Flame Graph</text>
+<text id="details" x="10.00" y="341" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="341" > </text>
+<g id="frames">
+<g >
+<title>sand-mmo/core.(*ServerWorld).isFree (5 samples, 1.77%)</title><rect x="298.7" y="181" width="20.9" height="15.0" fill="rgb(233,131,31)" rx="2" ry="2" />
+<text  x="301.72" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.getMCache (1 samples, 0.35%)</title><rect x="1106.3" y="165" width="4.2" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="1109.31" y="175.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).ApplyGenerators (2 samples, 0.71%)</title><rect x="114.6" y="245" width="8.4" height="15.0" fill="rgb(219,64,15)" rx="2" ry="2" />
+<text  x="117.61" y="255.5" ></text>
+</g>
+<g >
+<title>runtime.newproc.func1 (11 samples, 3.90%)</title><rect x="68.6" y="213" width="46.0" height="15.0" fill="rgb(252,218,52)" rx="2" ry="2" />
+<text  x="71.58" y="223.5" >runt..</text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*Conn).writeFramePayload (1 samples, 0.35%)</title><rect x="1118.9" y="229" width="4.1" height="15.0" fill="rgb(227,102,24)" rx="2" ry="2" />
+<text  x="1121.87" y="239.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*NetCode).SendChunks.func2 (159 samples, 56.38%)</title><rect x="520.5" y="293" width="665.3" height="15.0" fill="rgb(244,180,43)" rx="2" ry="2" />
+<text  x="523.50" y="303.5" >sand-mmo/core.(*NetCode).SendChunks.func2</text>
+</g>
+<g >
+<title>runtime.newproc (11 samples, 3.90%)</title><rect x="68.6" y="245" width="46.0" height="15.0" fill="rgb(231,119,28)" rx="2" ry="2" />
+<text  x="71.58" y="255.5" >runt..</text>
+</g>
+<g >
+<title>syscall.RawSyscall6 (123 samples, 43.62%)</title><rect x="541.4" y="133" width="514.7" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="544.42" y="143.5" >syscall.RawSyscall6</text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).GetChunkBytes (5 samples, 1.77%)</title><rect x="499.6" y="261" width="20.9" height="15.0" fill="rgb(242,171,41)" rx="2" ry="2" />
+<text  x="502.57" y="271.5" ></text>
+</g>
+<g >
+<title>runtime.save (2 samples, 0.71%)</title><rect x="528.9" y="101" width="8.3" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="531.87" y="111.5" ></text>
+</g>
+<g >
+<title>runtime.(*mspan).initInlineMarkBits (1 samples, 0.35%)</title><rect x="491.2" y="149" width="4.2" height="15.0" fill="rgb(243,178,42)" rx="2" ry="2" />
+<text  x="494.21" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.gcAssistAlloc (1 samples, 0.35%)</title><rect x="507.9" y="197" width="4.2" height="15.0" fill="rgb(226,98,23)" rx="2" ry="2" />
+<text  x="510.94" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.acquirepNoTrace (1 samples, 0.35%)</title><rect x="47.7" y="197" width="4.1" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="50.66" y="207.5" ></text>
+</g>
+<g >
+<title>slices.BinarySearch[go.shape.[]go.shape.uint16,go.shape.uint16] (3 samples, 1.06%)</title><rect x="369.9" y="133" width="12.5" height="15.0" fill="rgb(227,103,24)" rx="2" ry="2" />
+<text  x="372.86" y="143.5" ></text>
+</g>
+<g >
+<title>net.(*conn).Write (127 samples, 45.04%)</title><rect x="524.7" y="213" width="531.4" height="15.0" fill="rgb(206,4,1)" rx="2" ry="2" />
+<text  x="527.68" y="223.5" >net.(*conn).Write</text>
+</g>
+<g >
+<title>runtime.markroot.func1 (1 samples, 0.35%)</title><rect x="14.2" y="213" width="4.2" height="15.0" fill="rgb(222,80,19)" rx="2" ry="2" />
+<text  x="17.18" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.selectnbrecv (1 samples, 0.35%)</title><rect x="1123.0" y="213" width="4.2" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="1126.05" y="223.5" ></text>
+</g>
+<g >
+<title>context.(*cancelCtx).Done (1 samples, 0.35%)</title><rect x="1064.5" y="133" width="4.2" height="15.0" fill="rgb(238,152,36)" rx="2" ry="2" />
+<text  x="1067.47" y="143.5" ></text>
+</g>
+<g >
+<title>runtime.unlockWithRank (1 samples, 0.35%)</title><rect x="85.3" y="133" width="4.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="88.32" y="143.5" ></text>
+</g>
+<g >
+<title>runtime.wakep (1 samples, 0.35%)</title><rect x="51.8" y="229" width="4.2" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="54.84" y="239.5" ></text>
+</g>
+<g >
+<title>context.(*cancelCtx).propagateCancel (3 samples, 1.06%)</title><rect x="1089.6" y="197" width="12.5" height="15.0" fill="rgb(226,100,24)" rx="2" ry="2" />
+<text  x="1092.57" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.systemstack (1 samples, 0.35%)</title><rect x="537.2" y="101" width="4.2" height="15.0" fill="rgb(206,6,1)" rx="2" ry="2" />
+<text  x="540.23" y="111.5" ></text>
+</g>
+<g >
+<title>runtime.findRunnable (6 samples, 2.13%)</title><rect x="26.7" y="245" width="25.1" height="15.0" fill="rgb(219,64,15)" rx="2" ry="2" />
+<text  x="29.74" y="255.5" >r..</text>
+</g>
+<g >
+<title>net.(*netFD).Write (126 samples, 44.68%)</title><rect x="528.9" y="197" width="527.2" height="15.0" fill="rgb(229,114,27)" rx="2" ry="2" />
+<text  x="531.87" y="207.5" >net.(*netFD).Write</text>
+</g>
+<g >
+<title>maps.Clone[go.shape.map[string]*github.com/coder/websocket.Conn,go.shape.string,go.shape.*uint8] (1 samples, 0.35%)</title><rect x="56.0" y="245" width="4.2" height="15.0" fill="rgb(237,148,35)" rx="2" ry="2" />
+<text  x="59.03" y="255.5" ></text>
+</g>
+<g >
+<title>sync/atomic.(*Value).Load (1 samples, 0.35%)</title><rect x="1097.9" y="181" width="4.2" height="15.0" fill="rgb(212,35,8)" rx="2" ry="2" />
+<text  x="1100.94" y="191.5" ></text>
+</g>
+<g >
+<title>context.AfterFunc.func1 (5 samples, 1.77%)</title><rect x="1060.3" y="197" width="20.9" height="15.0" fill="rgb(219,65,15)" rx="2" ry="2" />
+<text  x="1063.28" y="207.5" ></text>
+</g>
+<g >
+<title>bufio.(*Writer).Write (1 samples, 0.35%)</title><rect x="1118.9" y="213" width="4.1" height="15.0" fill="rgb(238,152,36)" rx="2" ry="2" />
+<text  x="1121.87" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.resetspinning (1 samples, 0.35%)</title><rect x="51.8" y="245" width="4.2" height="15.0" fill="rgb(225,95,22)" rx="2" ry="2" />
+<text  x="54.84" y="255.5" ></text>
+</g>
+<g >
+<title>runtime.newobject (2 samples, 0.71%)</title><rect x="1102.1" y="197" width="8.4" height="15.0" fill="rgb(221,75,18)" rx="2" ry="2" />
+<text  x="1105.13" y="207.5" ></text>
+</g>
+<g >
+<title>sync.(*Once).doSlow (1 samples, 0.35%)</title><rect x="1081.2" y="181" width="4.2" height="15.0" fill="rgb(254,227,54)" rx="2" ry="2" />
+<text  x="1084.21" y="191.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*Conn).write (153 samples, 54.26%)</title><rect x="520.5" y="261" width="640.2" height="15.0" fill="rgb(211,29,7)" rx="2" ry="2" />
+<text  x="523.50" y="271.5" >github.com/coder/websocket.(*Conn).write</text>
+</g>
+<g >
+<title>runtime.startm (2 samples, 0.71%)</title><rect x="106.2" y="181" width="8.4" height="15.0" fill="rgb(220,71,17)" rx="2" ry="2" />
+<text  x="109.24" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/cell.EncodeCell (1 samples, 0.35%)</title><rect x="495.4" y="261" width="4.2" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="498.39" y="271.5" ></text>
+</g>
+<g >
+<title>runtime.wbBufFlush (1 samples, 0.35%)</title><rect x="18.4" y="229" width="4.2" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="21.37" y="239.5" ></text>
+</g>
+<g >
+<title>slices.BinarySearch[go.shape.[]go.shape.uint16,go.shape.uint16] (5 samples, 1.77%)</title><rect x="127.2" y="213" width="20.9" height="15.0" fill="rgb(227,103,24)" rx="2" ry="2" />
+<text  x="130.16" y="223.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*Conn).setupWriteTimeout (7 samples, 2.48%)</title><rect x="1089.6" y="229" width="29.3" height="15.0" fill="rgb(244,181,43)" rx="2" ry="2" />
+<text  x="1092.57" y="239.5" >gi..</text>
+</g>
+<g >
+<title>runtime.lockWithRank (1 samples, 0.35%)</title><rect x="1131.4" y="197" width="4.2" height="15.0" fill="rgb(214,42,10)" rx="2" ry="2" />
+<text  x="1134.42" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgc (2 samples, 0.71%)</title><rect x="507.9" y="229" width="8.4" height="15.0" fill="rgb(241,169,40)" rx="2" ry="2" />
+<text  x="510.94" y="239.5" ></text>
+</g>
+<g >
+<title>sand-mmo/cell.(*Cell).GenerateNewColor (1 samples, 0.35%)</title><rect x="114.6" y="181" width="4.2" height="15.0" fill="rgb(246,188,45)" rx="2" ry="2" />
+<text  x="117.61" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).SetVec (4 samples, 1.42%)</title><rect x="445.2" y="197" width="16.7" height="15.0" fill="rgb(232,125,29)" rx="2" ry="2" />
+<text  x="448.18" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.stopm (2 samples, 0.71%)</title><rect x="43.5" y="229" width="8.3" height="15.0" fill="rgb(242,172,41)" rx="2" ry="2" />
+<text  x="46.48" y="239.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*Conn).writer (6 samples, 2.13%)</title><rect x="1160.7" y="261" width="25.1" height="15.0" fill="rgb(225,92,22)" rx="2" ry="2" />
+<text  x="1163.71" y="271.5" >g..</text>
+</g>
+<g >
+<title>runtime.divRoundUp (1 samples, 0.35%)</title><rect x="1102.1" y="165" width="4.2" height="15.0" fill="rgb(211,27,6)" rx="2" ry="2" />
+<text  x="1105.13" y="175.5" ></text>
+</g>
+<g >
+<title>context.AfterFunc (5 samples, 1.77%)</title><rect x="1089.6" y="213" width="20.9" height="15.0" fill="rgb(247,196,47)" rx="2" ry="2" />
+<text  x="1092.57" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.systemstack (2 samples, 0.71%)</title><rect x="14.2" y="277" width="8.4" height="15.0" fill="rgb(206,6,1)" rx="2" ry="2" />
+<text  x="17.18" y="287.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket/internal/errd.Wrap (2 samples, 0.71%)</title><rect x="1144.0" y="213" width="8.3" height="15.0" fill="rgb(220,70,16)" rx="2" ry="2" />
+<text  x="1146.97" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.reentersyscall (3 samples, 1.06%)</title><rect x="528.9" y="117" width="12.5" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="531.87" y="127.5" ></text>
+</g>
+<g >
+<title>runtime.growslice (2 samples, 0.71%)</title><rect x="487.0" y="261" width="8.4" height="15.0" fill="rgb(230,119,28)" rx="2" ry="2" />
+<text  x="490.02" y="271.5" ></text>
+</g>
+<g >
+<title>sync/atomic.(*Value).Store (1 samples, 0.35%)</title><rect x="1060.3" y="149" width="4.2" height="15.0" fill="rgb(251,215,51)" rx="2" ry="2" />
+<text  x="1063.28" y="159.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).Set (3 samples, 1.06%)</title><rect x="449.4" y="181" width="12.5" height="15.0" fill="rgb(229,113,27)" rx="2" ry="2" />
+<text  x="452.36" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgc (2 samples, 0.71%)</title><rect x="60.2" y="229" width="8.4" height="15.0" fill="rgb(241,169,40)" rx="2" ry="2" />
+<text  x="63.21" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.mapaccess2 (1 samples, 0.35%)</title><rect x="114.6" y="165" width="4.2" height="15.0" fill="rgb(208,14,3)" rx="2" ry="2" />
+<text  x="117.61" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.futex (1 samples, 0.35%)</title><rect x="35.1" y="181" width="4.2" height="15.0" fill="rgb(237,150,35)" rx="2" ry="2" />
+<text  x="38.11" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.memclrNoHeapPointers (1 samples, 0.35%)</title><rect x="64.4" y="117" width="4.2" height="15.0" fill="rgb(252,219,52)" rx="2" ry="2" />
+<text  x="67.40" y="127.5" ></text>
+</g>
+<g >
+<title>runtime.park_m (1 samples, 0.35%)</title><rect x="51.8" y="277" width="4.2" height="15.0" fill="rgb(233,132,31)" rx="2" ry="2" />
+<text  x="54.84" y="287.5" ></text>
+</g>
+<g >
+<title>runtime.findObject (1 samples, 0.35%)</title><rect x="18.4" y="181" width="4.2" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="21.37" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.deferprocStack (1 samples, 0.35%)</title><rect x="1156.5" y="229" width="4.2" height="15.0" fill="rgb(223,86,20)" rx="2" ry="2" />
+<text  x="1159.52" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.wakep (3 samples, 1.06%)</title><rect x="102.1" y="197" width="12.5" height="15.0" fill="rgb(216,54,13)" rx="2" ry="2" />
+<text  x="105.06" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.deductAssistCredit (1 samples, 0.35%)</title><rect x="507.9" y="213" width="4.2" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="510.94" y="223.5" ></text>
+</g>
+<g >
+<title>internal/runtime/maps.(*Map).deleteSmall (1 samples, 0.35%)</title><rect x="1068.7" y="117" width="4.1" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="1071.65" y="127.5" ></text>
+</g>
+<g >
+<title>runtime.mapassign (1 samples, 0.35%)</title><rect x="1093.8" y="181" width="4.1" height="15.0" fill="rgb(208,16,3)" rx="2" ry="2" />
+<text  x="1096.76" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateWaterMovements.func1 (9 samples, 3.19%)</title><rect x="344.8" y="181" width="37.6" height="15.0" fill="rgb(247,193,46)" rx="2" ry="2" />
+<text  x="347.75" y="191.5" >san..</text>
+</g>
+<g >
+<title>bufio.(*Writer).WriteByte (1 samples, 0.35%)</title><rect x="1139.8" y="213" width="4.2" height="15.0" fill="rgb(228,107,25)" rx="2" ry="2" />
+<text  x="1142.79" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.wbBufFlush1 (1 samples, 0.35%)</title><rect x="537.2" y="53" width="4.2" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="540.23" y="63.5" ></text>
+</g>
+<g >
+<title>runtime.mapdelete (2 samples, 0.71%)</title><rect x="1068.7" y="149" width="8.3" height="15.0" fill="rgb(224,90,21)" rx="2" ry="2" />
+<text  x="1071.65" y="159.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateCustomMovements (5 samples, 1.77%)</title><rect x="298.7" y="197" width="20.9" height="15.0" fill="rgb(250,208,49)" rx="2" ry="2" />
+<text  x="301.72" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.mapaccess2 (2 samples, 0.71%)</title><rect x="353.1" y="133" width="8.4" height="15.0" fill="rgb(208,14,3)" rx="2" ry="2" />
+<text  x="356.12" y="143.5" ></text>
+</g>
+<g >
+<title>sand-mmo/common.(*OrderList[go.shape.uint16]).SortedInsert (2 samples, 0.71%)</title><rect x="453.5" y="165" width="8.4" height="15.0" fill="rgb(250,210,50)" rx="2" ry="2" />
+<text  x="456.55" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.(*mspan).initHeapBits (1 samples, 0.35%)</title><rect x="64.4" y="133" width="4.2" height="15.0" fill="rgb(248,201,48)" rx="2" ry="2" />
+<text  x="67.40" y="143.5" ></text>
+</g>
+<g >
+<title>bufio.(*Writer).Flush (128 samples, 45.39%)</title><rect x="520.5" y="229" width="535.6" height="15.0" fill="rgb(246,189,45)" rx="2" ry="2" />
+<text  x="523.50" y="239.5" >bufio.(*Writer).Flush</text>
+</g>
+<g >
+<title>runtime.(*gList).pop (1 samples, 0.35%)</title><rect x="72.8" y="181" width="4.2" height="15.0" fill="rgb(246,191,45)" rx="2" ry="2" />
+<text  x="75.77" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgcSmallScanNoHeader (1 samples, 0.35%)</title><rect x="1110.5" y="181" width="4.2" height="15.0" fill="rgb(216,53,12)" rx="2" ry="2" />
+<text  x="1113.50" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.(*mcache).nextFree (1 samples, 0.35%)</title><rect x="491.2" y="213" width="4.2" height="15.0" fill="rgb(222,80,19)" rx="2" ry="2" />
+<text  x="494.21" y="223.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateSimpleMovements.func1 (1 samples, 0.35%)</title><rect x="294.5" y="181" width="4.2" height="15.0" fill="rgb(231,122,29)" rx="2" ry="2" />
+<text  x="297.54" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.scanstack (1 samples, 0.35%)</title><rect x="14.2" y="197" width="4.2" height="15.0" fill="rgb(210,23,5)" rx="2" ry="2" />
+<text  x="17.18" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateSimpleMovements (6 samples, 2.13%)</title><rect x="294.5" y="213" width="25.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="297.54" y="223.5" >s..</text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*Conn).writeFrame (153 samples, 54.26%)</title><rect x="520.5" y="245" width="640.2" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="523.50" y="255.5" >github.com/coder/websocket.(*Conn).writeFrame</text>
+</g>
+<g >
+<title>runtime.newobject (2 samples, 0.71%)</title><rect x="60.2" y="245" width="8.4" height="15.0" fill="rgb(221,75,18)" rx="2" ry="2" />
+<text  x="63.21" y="255.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).Get (1 samples, 0.35%)</title><rect x="290.4" y="181" width="4.1" height="15.0" fill="rgb(207,10,2)" rx="2" ry="2" />
+<text  x="293.35" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgc (2 samples, 0.71%)</title><rect x="1102.1" y="181" width="8.4" height="15.0" fill="rgb(241,169,40)" rx="2" ry="2" />
+<text  x="1105.13" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateLavaMovements.func1 (1 samples, 0.35%)</title><rect x="286.2" y="181" width="4.2" height="15.0" fill="rgb(217,57,13)" rx="2" ry="2" />
+<text  x="289.17" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.wbBufFlush1 (1 samples, 0.35%)</title><rect x="18.4" y="197" width="4.2" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="21.37" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).isFree (6 samples, 2.13%)</title><rect x="403.3" y="165" width="25.1" height="15.0" fill="rgb(233,131,31)" rx="2" ry="2" />
+<text  x="406.33" y="175.5" >s..</text>
+</g>
+<g >
+<title>runtime.(*mcentral).grow (1 samples, 0.35%)</title><rect x="491.2" y="165" width="4.2" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="494.21" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.gcDrain (2 samples, 0.71%)</title><rect x="14.2" y="245" width="8.4" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="17.18" y="255.5" ></text>
+</g>
+<g >
+<title>runtime.gcMarkTermination (1 samples, 0.35%)</title><rect x="507.9" y="165" width="4.2" height="15.0" fill="rgb(216,52,12)" rx="2" ry="2" />
+<text  x="510.94" y="175.5" ></text>
+</g>
+<g >
+<title>main.loop (103 samples, 36.52%)</title><rect x="56.0" y="277" width="431.0" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="59.03" y="287.5" >main.loop</text>
+</g>
+<g >
+<title>github.com/coder/websocket.swapTimeoutStop (7 samples, 2.48%)</title><rect x="1056.1" y="213" width="29.3" height="15.0" fill="rgb(221,77,18)" rx="2" ry="2" />
+<text  x="1059.10" y="223.5" >gi..</text>
+</g>
+<g >
+<title>slices.BinarySearch[go.shape.[]go.shape.uint16,go.shape.uint16] (2 samples, 0.71%)</title><rect x="453.5" y="149" width="8.4" height="15.0" fill="rgb(227,103,24)" rx="2" ry="2" />
+<text  x="456.55" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.(*mcentral).cacheSpan (1 samples, 0.35%)</title><rect x="64.4" y="165" width="4.2" height="15.0" fill="rgb(244,179,42)" rx="2" ry="2" />
+<text  x="67.40" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.gfget.func2 (1 samples, 0.35%)</title><rect x="85.3" y="165" width="4.2" height="15.0" fill="rgb(252,220,52)" rx="2" ry="2" />
+<text  x="88.32" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgcSmallNoscan (2 samples, 0.71%)</title><rect x="487.0" y="229" width="8.4" height="15.0" fill="rgb(239,156,37)" rx="2" ry="2" />
+<text  x="490.02" y="239.5" ></text>
+</g>
+<g >
+<title>syscall.Syscall (126 samples, 44.68%)</title><rect x="528.9" y="149" width="527.2" height="15.0" fill="rgb(215,47,11)" rx="2" ry="2" />
+<text  x="531.87" y="159.5" >syscall.Syscall</text>
+</g>
+<g >
+<title>runtime.startm (1 samples, 0.35%)</title><rect x="51.8" y="213" width="4.2" height="15.0" fill="rgb(220,71,17)" rx="2" ry="2" />
+<text  x="54.84" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgc (2 samples, 0.71%)</title><rect x="487.0" y="245" width="8.4" height="15.0" fill="rgb(241,169,40)" rx="2" ry="2" />
+<text  x="490.02" y="255.5" ></text>
+</g>
+<g >
+<title>runtime.isSystemGoroutine (2 samples, 0.71%)</title><rect x="89.5" y="181" width="8.4" height="15.0" fill="rgb(215,50,11)" rx="2" ry="2" />
+<text  x="92.50" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.(*_panic).nextDefer (1 samples, 0.35%)</title><rect x="1152.3" y="229" width="4.2" height="15.0" fill="rgb(218,61,14)" rx="2" ry="2" />
+<text  x="1155.34" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.nextFreeFast (1 samples, 0.35%)</title><rect x="1114.7" y="181" width="4.2" height="15.0" fill="rgb(227,102,24)" rx="2" ry="2" />
+<text  x="1117.68" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateCustomMovements.func1 (11 samples, 3.90%)</title><rect x="336.4" y="197" width="46.0" height="15.0" fill="rgb(221,77,18)" rx="2" ry="2" />
+<text  x="339.38" y="207.5" >sand..</text>
+</g>
+<g >
+<title>runtime.futex (1 samples, 0.35%)</title><rect x="51.8" y="165" width="4.2" height="15.0" fill="rgb(237,150,35)" rx="2" ry="2" />
+<text  x="54.84" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.growslice (3 samples, 1.06%)</title><rect x="507.9" y="245" width="12.6" height="15.0" fill="rgb(230,119,28)" rx="2" ry="2" />
+<text  x="510.94" y="255.5" ></text>
+</g>
+<g >
+<title>internal/runtime/maps.rand (1 samples, 0.35%)</title><rect x="1072.8" y="117" width="4.2" height="15.0" fill="rgb(243,176,42)" rx="2" ry="2" />
+<text  x="1075.84" y="127.5" ></text>
+</g>
+<g >
+<title>runtime.(*waitq).dequeue (1 samples, 0.35%)</title><rect x="1169.1" y="213" width="4.2" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="1172.08" y="223.5" ></text>
+</g>
+<g >
+<title>context.removeChild (3 samples, 1.06%)</title><rect x="1064.5" y="165" width="12.5" height="15.0" fill="rgb(221,76,18)" rx="2" ry="2" />
+<text  x="1067.47" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.unlock2 (1 samples, 0.35%)</title><rect x="1181.6" y="181" width="4.2" height="15.0" fill="rgb(244,181,43)" rx="2" ry="2" />
+<text  x="1184.63" y="191.5" ></text>
+</g>
+<g >
+<title>internal/runtime/syscall/linux.Syscall6 (122 samples, 43.26%)</title><rect x="545.6" y="117" width="510.5" height="15.0" fill="rgb(239,156,37)" rx="2" ry="2" />
+<text  x="548.60" y="127.5" >internal/runtime/syscall/linux.Syscall6</text>
+</g>
+<g >
+<title>runtime.runSafePointFn (1 samples, 0.35%)</title><rect x="537.2" y="85" width="4.2" height="15.0" fill="rgb(217,57,13)" rx="2" ry="2" />
+<text  x="540.23" y="95.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*mu).unlock (2 samples, 0.71%)</title><rect x="1127.2" y="229" width="8.4" height="15.0" fill="rgb(245,188,45)" rx="2" ry="2" />
+<text  x="1130.23" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.schedule (6 samples, 2.13%)</title><rect x="26.7" y="261" width="25.1" height="15.0" fill="rgb(220,72,17)" rx="2" ry="2" />
+<text  x="29.74" y="271.5" >r..</text>
+</g>
+<g >
+<title>runtime.unlockWithRank (1 samples, 0.35%)</title><rect x="1181.6" y="197" width="4.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="1184.63" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/cell.NewCell (1 samples, 0.35%)</title><rect x="114.6" y="197" width="4.2" height="15.0" fill="rgb(227,104,25)" rx="2" ry="2" />
+<text  x="117.61" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgc (2 samples, 0.71%)</title><rect x="1110.5" y="197" width="8.4" height="15.0" fill="rgb(241,169,40)" rx="2" ry="2" />
+<text  x="1113.50" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.selectnbrecv (1 samples, 0.35%)</title><rect x="1085.4" y="213" width="4.2" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="1088.39" y="223.5" ></text>
+</g>
+<g >
+<title>internal/runtime/maps.(*Map).Delete (2 samples, 0.71%)</title><rect x="1068.7" y="133" width="8.3" height="15.0" fill="rgb(230,115,27)" rx="2" ry="2" />
+<text  x="1071.65" y="143.5" ></text>
+</g>
+<g >
+<title>context.(*cancelCtx).cancel (1 samples, 0.35%)</title><rect x="1060.3" y="165" width="4.2" height="15.0" fill="rgb(241,166,39)" rx="2" ry="2" />
+<text  x="1063.28" y="175.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).ApplyBrush.func1 (2 samples, 0.71%)</title><rect x="114.6" y="213" width="8.4" height="15.0" fill="rgb(240,161,38)" rx="2" ry="2" />
+<text  x="117.61" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.entersyscall (3 samples, 1.06%)</title><rect x="528.9" y="133" width="12.5" height="15.0" fill="rgb(249,203,48)" rx="2" ry="2" />
+<text  x="531.87" y="143.5" ></text>
+</g>
+<g >
+<title>sand-mmo/cell.NewCell (4 samples, 1.42%)</title><rect x="344.8" y="165" width="16.7" height="15.0" fill="rgb(227,104,25)" rx="2" ry="2" />
+<text  x="347.75" y="175.5" ></text>
+</g>
+<g >
+<title>internal/sync.(*Mutex).Unlock (1 samples, 0.35%)</title><rect x="1077.0" y="165" width="4.2" height="15.0" fill="rgb(249,202,48)" rx="2" ry="2" />
+<text  x="1080.02" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.(*mcache).refill (1 samples, 0.35%)</title><rect x="64.4" y="181" width="4.2" height="15.0" fill="rgb(232,124,29)" rx="2" ry="2" />
+<text  x="67.40" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.notewakeup (1 samples, 0.35%)</title><rect x="51.8" y="197" width="4.2" height="15.0" fill="rgb(231,122,29)" rx="2" ry="2" />
+<text  x="54.84" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.(*spanInlineMarkBits).init (1 samples, 0.35%)</title><rect x="491.2" y="133" width="4.2" height="15.0" fill="rgb(247,197,47)" rx="2" ry="2" />
+<text  x="494.21" y="143.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateCustomMovements (4 samples, 1.42%)</title><rect x="319.6" y="197" width="16.8" height="15.0" fill="rgb(250,208,49)" rx="2" ry="2" />
+<text  x="322.65" y="207.5" ></text>
+</g>
+<g >
+<title>internal/sync.(*Mutex).Lock (1 samples, 0.35%)</title><rect x="123.0" y="229" width="4.2" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="125.98" y="239.5" ></text>
+</g>
+<g >
+<title>syscall.write (126 samples, 44.68%)</title><rect x="528.9" y="165" width="527.2" height="15.0" fill="rgb(252,217,51)" rx="2" ry="2" />
+<text  x="531.87" y="175.5" >syscall.write</text>
+</g>
+<g >
+<title>context.(*timerCtx).Done (2 samples, 0.71%)</title><rect x="1160.7" y="213" width="8.4" height="15.0" fill="rgb(233,132,31)" rx="2" ry="2" />
+<text  x="1163.71" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.futexwakeup (2 samples, 0.71%)</title><rect x="106.2" y="149" width="8.4" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="109.24" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.gcBgMarkWorker (2 samples, 0.71%)</title><rect x="14.2" y="293" width="8.4" height="15.0" fill="rgb(235,140,33)" rx="2" ry="2" />
+<text  x="17.18" y="303.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).Set (5 samples, 1.77%)</title><rect x="361.5" y="165" width="20.9" height="15.0" fill="rgb(229,113,27)" rx="2" ry="2" />
+<text  x="364.49" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.mPark (1 samples, 0.35%)</title><rect x="35.1" y="229" width="4.2" height="15.0" fill="rgb(254,226,54)" rx="2" ry="2" />
+<text  x="38.11" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.findObject (1 samples, 0.35%)</title><rect x="537.2" y="37" width="4.2" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="540.23" y="47.5" ></text>
+</g>
+<g >
+<title>runtime.gfget (2 samples, 0.71%)</title><rect x="81.1" y="181" width="8.4" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="84.13" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateCustomMovements (1 samples, 0.35%)</title><rect x="290.4" y="197" width="4.1" height="15.0" fill="rgb(250,208,49)" rx="2" ry="2" />
+<text  x="293.35" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).GetChunkBytesToSend (6 samples, 2.13%)</title><rect x="495.4" y="277" width="25.1" height="15.0" fill="rgb(237,149,35)" rx="2" ry="2" />
+<text  x="498.39" y="287.5" >s..</text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*mu).lock (6 samples, 2.13%)</title><rect x="1160.7" y="229" width="25.1" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="1163.71" y="239.5" >g..</text>
+</g>
+<g >
+<title>runtime.mcall (8 samples, 2.84%)</title><rect x="22.6" y="293" width="33.4" height="15.0" fill="rgb(213,40,9)" rx="2" ry="2" />
+<text  x="25.55" y="303.5" >ru..</text>
+</g>
+<g >
+<title>runtime.chanrecv (1 samples, 0.35%)</title><rect x="1123.0" y="197" width="4.2" height="15.0" fill="rgb(240,161,38)" rx="2" ry="2" />
+<text  x="1126.05" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/cell.(*Cell).GenerateNewColor (4 samples, 1.42%)</title><rect x="344.8" y="149" width="16.7" height="15.0" fill="rgb(246,188,45)" rx="2" ry="2" />
+<text  x="347.75" y="159.5" ></text>
+</g>
+<g >
+<title>sync.(*WaitGroup).Add (1 samples, 0.35%)</title><rect x="1185.8" y="277" width="4.2" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="1188.82" y="287.5" ></text>
+</g>
+<g >
+<title>runtime.findmoduledatap (2 samples, 0.71%)</title><rect x="89.5" y="165" width="8.4" height="15.0" fill="rgb(240,163,38)" rx="2" ry="2" />
+<text  x="92.50" y="175.5" ></text>
+</g>
+<g >
+<title>runtime.systemstack (1 samples, 0.35%)</title><rect x="507.9" y="149" width="4.2" height="15.0" fill="rgb(206,6,1)" rx="2" ry="2" />
+<text  x="510.94" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.memclrNoHeapPointers (1 samples, 0.35%)</title><rect x="516.3" y="229" width="4.2" height="15.0" fill="rgb(252,219,52)" rx="2" ry="2" />
+<text  x="519.31" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.(*mcache).refill (1 samples, 0.35%)</title><rect x="491.2" y="197" width="4.2" height="15.0" fill="rgb(232,124,29)" rx="2" ry="2" />
+<text  x="494.21" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).Loop.(*ServerWorld).SimulateChunk.func1 (63 samples, 22.34%)</title><rect x="198.3" y="229" width="263.6" height="15.0" fill="rgb(234,134,32)" rx="2" ry="2" />
+<text  x="201.30" y="239.5" >sand-mmo/core.(*ServerWorld).Loop.(..</text>
+</g>
+<g >
+<title>runtime.findfunc (1 samples, 0.35%)</title><rect x="22.6" y="229" width="4.1" height="15.0" fill="rgb(220,72,17)" rx="2" ry="2" />
+<text  x="25.55" y="239.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.writeFrameHeader (4 samples, 1.42%)</title><rect x="1135.6" y="229" width="16.7" height="15.0" fill="rgb(223,84,20)" rx="2" ry="2" />
+<text  x="1138.60" y="239.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).ForEachCell (74 samples, 26.24%)</title><rect x="152.3" y="245" width="309.6" height="15.0" fill="rgb(247,196,46)" rx="2" ry="2" />
+<text  x="155.27" y="255.5" >sand-mmo/core.(*world).ForEachCell</text>
+</g>
+<g >
+<title>runtime.(*waitq).dequeue (1 samples, 0.35%)</title><rect x="1127.2" y="197" width="4.2" height="15.0" fill="rgb(239,160,38)" rx="2" ry="2" />
+<text  x="1130.23" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.schedule (1 samples, 0.35%)</title><rect x="51.8" y="261" width="4.2" height="15.0" fill="rgb(220,72,17)" rx="2" ry="2" />
+<text  x="54.84" y="271.5" ></text>
+</g>
+<g >
+<title>internal/sync.(*Mutex).Lock (1 samples, 0.35%)</title><rect x="361.5" y="149" width="4.2" height="15.0" fill="rgb(215,48,11)" rx="2" ry="2" />
+<text  x="364.49" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.newobject (2 samples, 0.71%)</title><rect x="1110.5" y="213" width="8.4" height="15.0" fill="rgb(221,75,18)" rx="2" ry="2" />
+<text  x="1113.50" y="223.5" ></text>
+</g>
+<g >
+<title>sync.(*WaitGroup).Done (1 samples, 0.35%)</title><rect x="1185.8" y="293" width="4.2" height="15.0" fill="rgb(222,82,19)" rx="2" ry="2" />
+<text  x="1188.82" y="303.5" ></text>
+</g>
+<g >
+<title>runtime.stealWork (1 samples, 0.35%)</title><rect x="39.3" y="229" width="4.2" height="15.0" fill="rgb(253,224,53)" rx="2" ry="2" />
+<text  x="42.29" y="239.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateCustomMovements.func1 (1 samples, 0.35%)</title><rect x="286.2" y="197" width="4.2" height="15.0" fill="rgb(221,77,18)" rx="2" ry="2" />
+<text  x="289.17" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.gcDrainMarkWorkerDedicated (2 samples, 0.71%)</title><rect x="14.2" y="261" width="8.4" height="15.0" fill="rgb(206,5,1)" rx="2" ry="2" />
+<text  x="17.18" y="271.5" ></text>
+</g>
+<g >
+<title>all (282 samples, 100%)</title><rect x="10.0" y="309" width="1180.0" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="13.00" y="319.5" ></text>
+</g>
+<g >
+<title>math/rand.Intn (1 samples, 0.35%)</title><rect x="348.9" y="133" width="4.2" height="15.0" fill="rgb(249,203,48)" rx="2" ry="2" />
+<text  x="351.94" y="143.5" ></text>
+</g>
+<g >
+<title>runtime.rand (1 samples, 0.35%)</title><rect x="1072.8" y="101" width="4.2" height="15.0" fill="rgb(209,21,5)" rx="2" ry="2" />
+<text  x="1075.84" y="111.5" ></text>
+</g>
+<g >
+<title>runtime.selectgo (3 samples, 1.06%)</title><rect x="1173.3" y="213" width="12.5" height="15.0" fill="rgb(212,35,8)" rx="2" ry="2" />
+<text  x="1176.26" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.(*mcache).nextFree (1 samples, 0.35%)</title><rect x="64.4" y="197" width="4.2" height="15.0" fill="rgb(222,80,19)" rx="2" ry="2" />
+<text  x="67.40" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateCustomMovements (15 samples, 5.32%)</title><rect x="382.4" y="197" width="62.8" height="15.0" fill="rgb(250,208,49)" rx="2" ry="2" />
+<text  x="385.41" y="207.5" >sand-m..</text>
+</g>
+<g >
+<title>runtime.getMCache (1 samples, 0.35%)</title><rect x="60.2" y="213" width="4.2" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="63.21" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.isSystemGoroutine (1 samples, 0.35%)</title><rect x="22.6" y="245" width="4.1" height="15.0" fill="rgb(215,50,11)" rx="2" ry="2" />
+<text  x="25.55" y="255.5" ></text>
+</g>
+<g >
+<title>runtime.gcMarkDone.func1 (1 samples, 0.35%)</title><rect x="537.2" y="69" width="4.2" height="15.0" fill="rgb(224,91,21)" rx="2" ry="2" />
+<text  x="540.23" y="79.5" ></text>
+</g>
+<g >
+<title>sync.(*Once).Do (1 samples, 0.35%)</title><rect x="1081.2" y="197" width="4.2" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="1084.21" y="207.5" ></text>
+</g>
+<g >
+<title>slices.Insert[go.shape.[]go.shape.uint16,go.shape.uint16] (1 samples, 0.35%)</title><rect x="148.1" y="213" width="4.2" height="15.0" fill="rgb(237,147,35)" rx="2" ry="2" />
+<text  x="151.09" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.lock2 (1 samples, 0.35%)</title><rect x="1131.4" y="181" width="4.2" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="1134.42" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/cell.NewCell (1 samples, 0.35%)</title><rect x="294.5" y="165" width="4.2" height="15.0" fill="rgb(227,104,25)" rx="2" ry="2" />
+<text  x="297.54" y="175.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).Get (4 samples, 1.42%)</title><rect x="428.4" y="181" width="16.8" height="15.0" fill="rgb(207,10,2)" rx="2" ry="2" />
+<text  x="431.44" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/cell.(*Cell).GenerateNewColor (1 samples, 0.35%)</title><rect x="294.5" y="149" width="4.2" height="15.0" fill="rgb(246,188,45)" rx="2" ry="2" />
+<text  x="297.54" y="159.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*Conn).clearWriteTimeout (7 samples, 2.48%)</title><rect x="1056.1" y="229" width="29.3" height="15.0" fill="rgb(215,49,11)" rx="2" ry="2" />
+<text  x="1059.10" y="239.5" >gi..</text>
+</g>
+<g >
+<title>runtime.chanrecv (1 samples, 0.35%)</title><rect x="1085.4" y="197" width="4.2" height="15.0" fill="rgb(240,161,38)" rx="2" ry="2" />
+<text  x="1088.39" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/common.(*Timer).loop.func1 (103 samples, 36.52%)</title><rect x="56.0" y="293" width="431.0" height="15.0" fill="rgb(238,155,37)" rx="2" ry="2" />
+<text  x="59.03" y="303.5" >sand-mmo/common.(*Timer).loop.func1</text>
+</g>
+<g >
+<title>sand-mmo/core.(*NetCode).SendChunks (14 samples, 4.96%)</title><rect x="56.0" y="261" width="58.6" height="15.0" fill="rgb(229,111,26)" rx="2" ry="2" />
+<text  x="59.03" y="271.5" >sand-m..</text>
+</g>
+<g >
+<title>runtime.gcMarkDone (1 samples, 0.35%)</title><rect x="507.9" y="181" width="4.2" height="15.0" fill="rgb(253,222,53)" rx="2" ry="2" />
+<text  x="510.94" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.selectnbrecv (2 samples, 0.71%)</title><rect x="1127.2" y="213" width="8.4" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="1130.23" y="223.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*NetCode).SendChunks.func1 (8 samples, 2.84%)</title><rect x="487.0" y="293" width="33.5" height="15.0" fill="rgb(250,210,50)" rx="2" ry="2" />
+<text  x="490.02" y="303.5" >sa..</text>
+</g>
+<g >
+<title>sand-mmo/common.(*OrderList[go.shape.uint16]).SortedInsert (1 samples, 0.35%)</title><rect x="118.8" y="181" width="4.2" height="15.0" fill="rgb(250,210,50)" rx="2" ry="2" />
+<text  x="121.79" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.futex (2 samples, 0.71%)</title><rect x="106.2" y="133" width="8.4" height="15.0" fill="rgb(237,150,35)" rx="2" ry="2" />
+<text  x="109.24" y="143.5" ></text>
+</g>
+<g >
+<title>runtime.(*stkframe).getStackMap (1 samples, 0.35%)</title><rect x="14.2" y="165" width="4.2" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="17.18" y="175.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*Conn).Write (159 samples, 56.38%)</title><rect x="520.5" y="277" width="665.3" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="523.50" y="287.5" >github.com/coder/websocket.(*Conn).Write</text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateCustomMovements.func1 (1 samples, 0.35%)</title><rect x="294.5" y="197" width="4.2" height="15.0" fill="rgb(221,77,18)" rx="2" ry="2" />
+<text  x="297.54" y="207.5" ></text>
+</g>
+<g >
+<title>context.parentCancelCtx (1 samples, 0.35%)</title><rect x="1064.5" y="149" width="4.2" height="15.0" fill="rgb(206,9,2)" rx="2" ry="2" />
+<text  x="1067.47" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.systemstack (11 samples, 3.90%)</title><rect x="68.6" y="229" width="46.0" height="15.0" fill="rgb(206,6,1)" rx="2" ry="2" />
+<text  x="71.58" y="239.5" >runt..</text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateWaterMovements (34 samples, 12.06%)</title><rect x="319.6" y="213" width="142.3" height="15.0" fill="rgb(225,94,22)" rx="2" ry="2" />
+<text  x="322.65" y="223.5" >sand-mmo/core.(*Se..</text>
+</g>
+<g >
+<title>runtime.markroot (1 samples, 0.35%)</title><rect x="14.2" y="229" width="4.2" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="17.18" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.(*timers).check (1 samples, 0.35%)</title><rect x="30.9" y="229" width="4.2" height="15.0" fill="rgb(229,113,27)" rx="2" ry="2" />
+<text  x="33.92" y="239.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*msgWriter).reset (6 samples, 2.13%)</title><rect x="1160.7" y="245" width="25.1" height="15.0" fill="rgb(206,8,2)" rx="2" ry="2" />
+<text  x="1163.71" y="255.5" >g..</text>
+</g>
+<g >
+<title>runtime.runqput (1 samples, 0.35%)</title><rect x="97.9" y="197" width="4.2" height="15.0" fill="rgb(217,59,14)" rx="2" ry="2" />
+<text  x="100.87" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgcSmallNoscan (1 samples, 0.35%)</title><rect x="512.1" y="213" width="4.2" height="15.0" fill="rgb(239,156,37)" rx="2" ry="2" />
+<text  x="515.13" y="223.5" ></text>
+</g>
+<g >
+<title>maps.clone (1 samples, 0.35%)</title><rect x="56.0" y="229" width="4.2" height="15.0" fill="rgb(251,216,51)" rx="2" ry="2" />
+<text  x="59.03" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.goexit0 (7 samples, 2.48%)</title><rect x="22.6" y="277" width="29.2" height="15.0" fill="rgb(231,122,29)" rx="2" ry="2" />
+<text  x="25.55" y="287.5" >ru..</text>
+</g>
+<g >
+<title>sand-mmo/common.(*OrderList[go.shape.uint16]).SortedInsert (6 samples, 2.13%)</title><rect x="127.2" y="229" width="25.1" height="15.0" fill="rgb(250,210,50)" rx="2" ry="2" />
+<text  x="130.16" y="239.5" >s..</text>
+</g>
+<g >
+<title>runtime.futexsleep (1 samples, 0.35%)</title><rect x="35.1" y="197" width="4.2" height="15.0" fill="rgb(218,63,15)" rx="2" ry="2" />
+<text  x="38.11" y="207.5" ></text>
+</g>
+<g >
+<title>runtime.notewakeup (2 samples, 0.71%)</title><rect x="106.2" y="165" width="8.4" height="15.0" fill="rgb(231,122,29)" rx="2" ry="2" />
+<text  x="109.24" y="175.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).ApplyBrush (2 samples, 0.71%)</title><rect x="114.6" y="229" width="8.4" height="15.0" fill="rgb(218,62,15)" rx="2" ry="2" />
+<text  x="117.61" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.wbBufFlush.func1 (1 samples, 0.35%)</title><rect x="18.4" y="213" width="4.2" height="15.0" fill="rgb(237,149,35)" rx="2" ry="2" />
+<text  x="21.37" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.scanframeworker (1 samples, 0.35%)</title><rect x="14.2" y="181" width="4.2" height="15.0" fill="rgb(228,110,26)" rx="2" ry="2" />
+<text  x="17.18" y="191.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*mu).lock (1 samples, 0.35%)</title><rect x="1123.0" y="229" width="4.2" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="1126.05" y="239.5" ></text>
+</g>
+<g >
+<title>runtime.stackalloc (1 samples, 0.35%)</title><rect x="85.3" y="149" width="4.2" height="15.0" fill="rgb(251,212,50)" rx="2" ry="2" />
+<text  x="88.32" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.mallocgcSmallScanNoHeader (1 samples, 0.35%)</title><rect x="64.4" y="213" width="4.2" height="15.0" fill="rgb(216,53,12)" rx="2" ry="2" />
+<text  x="67.40" y="223.5" ></text>
+</g>
+<g >
+<title>internal/chacha8rand.block (1 samples, 0.35%)</title><rect x="10.0" y="293" width="4.2" height="15.0" fill="rgb(214,45,10)" rx="2" ry="2" />
+<text  x="13.00" y="303.5" ></text>
+</g>
+<g >
+<title>runtime.notesleep (1 samples, 0.35%)</title><rect x="35.1" y="213" width="4.2" height="15.0" fill="rgb(230,119,28)" rx="2" ry="2" />
+<text  x="38.11" y="223.5" ></text>
+</g>
+<g >
+<title>context.(*afterFuncCtx).cancel (5 samples, 1.77%)</title><rect x="1060.3" y="181" width="20.9" height="15.0" fill="rgb(225,94,22)" rx="2" ry="2" />
+<text  x="1063.28" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.gdestroy (1 samples, 0.35%)</title><rect x="22.6" y="261" width="4.1" height="15.0" fill="rgb(238,152,36)" rx="2" ry="2" />
+<text  x="25.55" y="271.5" ></text>
+</g>
+<g >
+<title>runtime.(*mcentral).grow (1 samples, 0.35%)</title><rect x="64.4" y="149" width="4.2" height="15.0" fill="rgb(233,130,31)" rx="2" ry="2" />
+<text  x="67.40" y="159.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).Set (1 samples, 0.35%)</title><rect x="118.8" y="197" width="4.2" height="15.0" fill="rgb(229,113,27)" rx="2" ry="2" />
+<text  x="121.79" y="207.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateLavaMovements (2 samples, 0.71%)</title><rect x="286.2" y="213" width="8.3" height="15.0" fill="rgb(246,188,45)" rx="2" ry="2" />
+<text  x="289.17" y="223.5" ></text>
+</g>
+<g >
+<title>syscall.Write (126 samples, 44.68%)</title><rect x="528.9" y="181" width="527.2" height="15.0" fill="rgb(208,18,4)" rx="2" ry="2" />
+<text  x="531.87" y="191.5" >syscall.Write</text>
+</g>
+<g >
+<title>slices.BinarySearch[go.shape.[]go.shape.uint16,go.shape.uint16] (1 samples, 0.35%)</title><rect x="286.2" y="149" width="4.2" height="15.0" fill="rgb(227,103,24)" rx="2" ry="2" />
+<text  x="289.17" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.acquirep (2 samples, 0.71%)</title><rect x="43.5" y="213" width="8.3" height="15.0" fill="rgb(236,146,34)" rx="2" ry="2" />
+<text  x="46.48" y="223.5" ></text>
+</g>
+<g >
+<title>runtime.empty (1 samples, 0.35%)</title><rect x="1085.4" y="181" width="4.2" height="15.0" fill="rgb(218,61,14)" rx="2" ry="2" />
+<text  x="1088.39" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).simulateWaterMovements.func2 (11 samples, 3.90%)</title><rect x="382.4" y="181" width="46.0" height="15.0" fill="rgb(240,163,39)" rx="2" ry="2" />
+<text  x="385.41" y="191.5" >sand..</text>
+</g>
+<g >
+<title>sand-mmo/core.(*world).Get (6 samples, 2.13%)</title><rect x="461.9" y="245" width="25.1" height="15.0" fill="rgb(207,10,2)" rx="2" ry="2" />
+<text  x="464.91" y="255.5" >s..</text>
+</g>
+<g >
+<title>sand-mmo/common.(*OrderList[go.shape.uint16]).SortedInsert (4 samples, 1.42%)</title><rect x="365.7" y="149" width="16.7" height="15.0" fill="rgb(250,210,50)" rx="2" ry="2" />
+<text  x="368.67" y="159.5" ></text>
+</g>
+<g >
+<title>runtime.unlock2 (1 samples, 0.35%)</title><rect x="85.3" y="117" width="4.2" height="15.0" fill="rgb(244,181,43)" rx="2" ry="2" />
+<text  x="88.32" y="127.5" ></text>
+</g>
+<g >
+<title>runtime.(*mcentral).cacheSpan (1 samples, 0.35%)</title><rect x="491.2" y="181" width="4.2" height="15.0" fill="rgb(244,179,42)" rx="2" ry="2" />
+<text  x="494.21" y="191.5" ></text>
+</g>
+<g >
+<title>runtime.futexwakeup (1 samples, 0.35%)</title><rect x="51.8" y="181" width="4.2" height="15.0" fill="rgb(219,66,15)" rx="2" ry="2" />
+<text  x="54.84" y="191.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).SimulateChunk (80 samples, 28.37%)</title><rect x="152.3" y="261" width="334.7" height="15.0" fill="rgb(235,140,33)" rx="2" ry="2" />
+<text  x="155.27" y="271.5" >sand-mmo/core.(*ServerWorld).SimulateChunk</text>
+</g>
+<g >
+<title>internal/runtime/maps.(*Map).Clone (1 samples, 0.35%)</title><rect x="56.0" y="213" width="4.2" height="15.0" fill="rgb(213,37,9)" rx="2" ry="2" />
+<text  x="59.03" y="223.5" ></text>
+</g>
+<g >
+<title>sand-mmo/common.(*OrderList[go.shape.uint16]).SortedInsert (1 samples, 0.35%)</title><rect x="286.2" y="165" width="4.2" height="15.0" fill="rgb(250,210,50)" rx="2" ry="2" />
+<text  x="289.17" y="175.5" ></text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).Loop (9 samples, 3.19%)</title><rect x="114.6" y="261" width="37.7" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="117.61" y="271.5" >san..</text>
+</g>
+<g >
+<title>sand-mmo/core.(*ServerWorld).GetActiveChunksAndNeiboroud (7 samples, 2.48%)</title><rect x="123.0" y="245" width="29.3" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="125.98" y="255.5" >sa..</text>
+</g>
+<g >
+<title>runtime.(*gList).push (1 samples, 0.35%)</title><rect x="77.0" y="181" width="4.1" height="15.0" fill="rgb(216,54,12)" rx="2" ry="2" />
+<text  x="79.95" y="191.5" ></text>
+</g>
+<g >
+<title>slices.BinarySearch[go.shape.[]go.shape.uint16,go.shape.uint16] (1 samples, 0.35%)</title><rect x="118.8" y="165" width="4.2" height="15.0" fill="rgb(227,103,24)" rx="2" ry="2" />
+<text  x="121.79" y="175.5" ></text>
+</g>
+<g >
+<title>encoding/binary.bigEndian.AppendUint16 (2 samples, 0.71%)</title><rect x="487.0" y="277" width="8.4" height="15.0" fill="rgb(206,4,1)" rx="2" ry="2" />
+<text  x="490.02" y="287.5" ></text>
+</g>
+<g >
+<title>github.com/coder/websocket.(*Conn).isClosed (1 samples, 0.35%)</title><rect x="1085.4" y="229" width="4.2" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="1088.39" y="239.5" ></text>
+</g>
+<g >
+<title>sync/atomic.StorePointer (1 samples, 0.35%)</title><rect x="1060.3" y="133" width="4.2" height="15.0" fill="rgb(220,72,17)" rx="2" ry="2" />
+<text  x="1063.28" y="143.5" ></text>
+</g>
+<g >
+<title>runtime.newproc1 (7 samples, 2.48%)</title><rect x="68.6" y="197" width="29.3" height="15.0" fill="rgb(214,43,10)" rx="2" ry="2" />
+<text  x="71.58" y="207.5" >ru..</text>
+</g>
+</g>
+</svg>

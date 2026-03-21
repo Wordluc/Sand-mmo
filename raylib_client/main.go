@@ -87,7 +87,7 @@ func main() {
 		x := uint16(vec.X) / common.SIZE_CELL
 		y := uint16(vec.Y) / common.SIZE_CELL
 		//avoid to send same package twise
-		chunkId := w.GetChunkId(x, y)
+		chunkId := w.GetChunkId(int(x), int(y))
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 			if !(vec.X > W_GAME || vec.Y > H_GAME) {
 				err := common.SendToWebSocketPackages(conn, handlers.GetDrawCommand(x, y, cellType, brushType))
@@ -132,12 +132,12 @@ func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 			continue
 		}
 		idChunk := binary.BigEndian.Uint16(bytes[0:2])
-		world.SetCellsByte(bytes[2:], idChunk)
+		world.SetCellsByte(bytes[2:], int(idChunk))
 	}
 }
 
 func Draw(w core.ClientWorld) {
-	var i, x, y uint16
+	var i, x, y int
 	for _, c := range w.GetCells() {
 		x = i % w.W * common.SIZE_CELL
 		y = i / w.W * common.SIZE_CELL

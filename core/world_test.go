@@ -70,7 +70,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
 			want = append(want, cell.EncodeCell(c.cell[i]))
 		}
-		got := w.GetChunkBytes(uint16(c.idChunk))
+		got := w.GetChunkBytes(c.idChunk)
 
 		if !slices.Equal(got, want) {
 			t.Fatalf("GetChunk(%v) failed\n got: %v\nwant: %v", c.idChunk, got, want)

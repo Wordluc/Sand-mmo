@@ -30,13 +30,13 @@ func initDrawBuffers() {
 	jsImageData = js.Global().Get("ImageData").New(jsDst, canvasW, canvasH)
 }
 
-func Draw(w core.ClientWorld, chunksId []uint16) {
-	var dx, dy, px, x, y int
+func Draw(w core.ClientWorld, chunksId []int) {
+	var dx, dy, px int
 	var color common.Color
 	for _, chunkId := range chunksId {
-		w.ForEachCell(chunkId, func(xUint16, yUint16 uint16, center *cell.Cell) error {
-			x = int(xUint16 * common.SIZE_CELL)
-			y = int(yUint16 * common.SIZE_CELL)
+		w.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
+			x = x * common.SIZE_CELL
+			y = y * common.SIZE_CELL
 			color = center.GetColor()
 			for dy = range common.SIZE_CELL {
 				for dx = range common.SIZE_CELL {
@@ -127,7 +127,7 @@ func registryMouseMovement(document js.Value) {
 	}))
 	document.Call("addEventListener", "mousemove", js.FuncOf(func(this js.Value, args []js.Value) any {
 		m.Lock()
-		mouse.Set(int32(args[0].Get("clientX").Int()), int32(args[0].Get("clientY").Int()))
+		mouse.Set(args[0].Get("clientX").Int(), args[0].Get("clientY").Int())
 		m.Unlock()
 		return nil
 	}))
@@ -152,7 +152,7 @@ func main() {
 	div.Set("width", common.SIZE_CELL*common.W_WINDOWS)
 	div.Set("height", common.SIZE_CELL*common.H_WINDOWS)
 	ctx = div.Call("getContext", "2d")
-	var idChunk uint16
+	var idChunk int
 	registryMouseMovement(doc)
 	renderButtons(buttons, &cellType, &brushType)
 	w := core.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
@@ -188,7 +188,7 @@ func main() {
 		buf := make([]byte, data.Get("byteLength").Int())
 		js.CopyBytesToGo(buf, js.Global().Get("Uint8Array").New(data))
 		chunkId := binary.BigEndian.Uint16(buf[0:2])
-		bufferByte.Append(chunkId, buf[2:])
+		bufferByte.Append(int(chunkId), buf[2:])
 		return nil
 	}))
 
