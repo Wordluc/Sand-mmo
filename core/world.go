@@ -77,11 +77,11 @@ func (w *world) ForEachCell(idChunk int, f func(x, y int, center *cell.Cell) err
 	}
 }
 func (w *world) GetGeneratorsBytes() []byte {
-	var decoded []byte
+	var decoded []byte = make([]byte, 8*len(w.generators))
 	var mockPackage common.Package
-	for _, c := range w.generators {
+	for i, c := range w.generators {
 		mockPackage.BrushPackage = c
-		decoded = binary.BigEndian.AppendUint64(decoded, common.Encode(mockPackage))
+		binary.BigEndian.PutUint64(decoded[i*8:], common.Encode(mockPackage))
 	}
 	return decoded
 }
@@ -97,7 +97,7 @@ func (w *world) GetNumberChucks() int {
 }
 
 func (w *world) GetChunkBytes(idChunk int) []uint16 {
-	var decoded []uint16
+	var decoded []uint16 = make([]uint16, w.ChunkSize*w.ChunkSize)
 
 	chunkPerRow := w.W / w.ChunkSize
 
@@ -107,9 +107,8 @@ func (w *world) GetChunkBytes(idChunk int) []uint16 {
 	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
 	var i uint16
 	for range uint16(w.ChunkSize) {
-		i = 0
 		for _, c := range w.cells[iCell : iCell+w.ChunkSize] {
-			decoded = append(decoded, cell.EncodeCell(c))
+			decoded[i] = cell.EncodeCell(c)
 			i++
 		}
 		iCell += (w.W)
@@ -120,10 +119,10 @@ func (w *world) GetChunkBytes(idChunk int) []uint16 {
 
 func (w *world) GetChunkBytesToSend(idChunk int) []byte {
 	chunk := w.GetChunkBytes(idChunk)
-	var bytes []byte
-	bytes = binary.BigEndian.AppendUint16(bytes, uint16(idChunk))
+	var bytes []byte = make([]byte, 2+len(chunk)*2)
+	binary.BigEndian.PutUint16(bytes[0:], uint16(idChunk))
 	for i := range chunk {
-		bytes = binary.BigEndian.AppendUint16(bytes, chunk[i])
+		binary.BigEndian.PutUint16(bytes[i*2+2:], chunk[i])
 	}
 	return bytes
 }
