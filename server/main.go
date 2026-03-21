@@ -25,6 +25,7 @@ var netCode *core.NetCode
 var m *sync.Mutex = &sync.Mutex{}
 var timerSaving common.Timer
 var timerLoop common.Timer
+var err error
 
 func handler(write http.ResponseWriter, r *http.Request) {
 	c, err := ws.Accept(write, r, &ws.AcceptOptions{
@@ -108,13 +109,12 @@ func loop() {
 		return
 	}
 	m.Lock()
-	err := w.Loop()
+	err = w.Loop()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	chunksToSend := w.GetChunksToSend()
+	netCode.SendChunks(w.GetChunksToSend())
 	common.UntouchEverything()
-	netCode.SendChunks(chunksToSend)
 	m.Unlock()
 
 }
