@@ -62,7 +62,9 @@ func main() {
 	}
 	w = new(core.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE))
 	netCode = new(core.NewNetCode(w, redis))
-	netCode.LoadSnapshot()
+	if os.Getenv("load") == "true" {
+		netCode.LoadSnapshot()
+	}
 
 	timerSaving = common.NewTimer(time.Minute, netCode.SaveSnapshot)
 	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, loop)
@@ -122,6 +124,8 @@ func StopLoop() {
 }
 
 func StartLoop() {
-	timerSaving.Start()
+	if os.Getenv("save") == "true" {
+		timerSaving.Start()
+	}
 	timerLoop.Start()
 }
