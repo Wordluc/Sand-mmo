@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	"sand-mmo/core"
@@ -114,7 +115,7 @@ func renderButtons(buttons []ButtonDef, cellType *cell.CellType, brushType *comm
 var move = false
 
 func registryMouseMovement(document js.Value, w *core.ClientWorld) {
-	const t = 250
+	const t = 100
 	moveA := throttle(t, func() {
 		xClient--
 		if xClient <= 0 {
@@ -296,6 +297,8 @@ func main() {
 		if move {
 			send(handlers.GetMoveCommand(uint16(xClient + yClient*common.W_CHUNKS_TOTAL)))
 			move = false
+			fmt.Printf("x: %v/%v\n", xClient, common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT)
+			fmt.Printf("y: %v/%v\n", yClient, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
 		}
 		return nil
 	}))
