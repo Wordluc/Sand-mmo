@@ -2,8 +2,8 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"maps"
 	"sand-mmo/common"
 	"sync"
 	"time"
@@ -16,15 +16,19 @@ const REDIS_KEY_BYTES_BYTES = "world:bytes"
 const REDIS_KEY_BYTES_GENERATOR = "world:generator"
 
 type NetCode struct {
-	webSockets     map[string]*ws.Conn
-	webSocketMutex *sync.Mutex
-	redis          *redis.Client
-	world          *ServerWorld
+	clients *sync.Map
+	redis   *redis.Client
+	world   *ServerWorld
+}
+
+type Client struct {
+	Addr      string
+	Conn      *ws.Conn
+	AtChunkId int
 }
 
 func NewNetCode(world *ServerWorld, redisClient *redis.Client) (res NetCode) {
-	res.webSockets = map[string]*ws.Conn{}
-	res.webSocketMutex = &sync.Mutex{}
+	res.clients = &sync.Map{}
 	res.redis = redisClient
 	res.world = world
 	return res
@@ -81,63 +85,116 @@ func (w *NetCode) LoadSnapshot() error {
 	return nil
 }
 
-func (w *NetCode) AddClient(addr string, conn *ws.Conn) int {
-	w.webSocketMutex.Lock()
-	defer w.webSocketMutex.Unlock()
-	w.webSockets[addr] = conn
-	return len(w.webSockets)
+func (w *NetCode) AddClient(addr string, conn *ws.Conn) (c *Client) {
+	c = &Client{
+		Addr:      addr,
+		Conn:      conn,
+		AtChunkId: 0,
+	}
+	w.clients.Store(addr, c)
+	return c
 }
 
-func (w *NetCode) RemoveClient(addr string) {
-	w.webSocketMutex.Lock()
-	defer w.webSocketMutex.Unlock()
-	delete(w.webSockets, addr)
+func (w *NetCode) RemoveClient(client *Client) {
+	fmt.Println("End " + client.Addr)
+	w.clients.Delete(client.Addr)
+	client.Conn.CloseNow()
 }
 
-func (w *NetCode) GetLenClients() int {
-	w.webSocketMutex.Lock()
-	defer w.webSocketMutex.Unlock()
-	return len(w.webSockets)
+func (w *NetCode) GetLenClients() (count int) {
+	w.clients.Range(func(key, value any) bool {
+		count++
+		return true
+	})
+	return count
 }
 
-func (w *NetCode) GetClients() (conns map[string]*ws.Conn) {
-	w.webSocketMutex.Lock()
-	conns = maps.Clone(w.webSockets)
-	w.webSocketMutex.Unlock()
+func (w *NetCode) GetClient(addr string) (c Client, err error) {
+	v, ok := w.clients.Load(addr)
+	if !ok {
+		return c, errors.New("Client not found")
+	}
+	c = v.(Client)
+	return c, nil
+}
+func (w *NetCode) GetClients() (conns map[string]*Client) {
+	conns = map[string]*Client{}
+	w.clients.Range(func(key, value any) bool {
+		conns[key.(string)] = value.(*Client)
+		return true
+	})
 	return conns
+}
+
+func (w *NetCode) SendAllChunksTo(client *Client) (err error) {
+	defer func() {
+		if err != nil {
+			fmt.Println("Removing for :", err.Error())
+			w.RemoveClient(client)
+			return
+		}
+	}()
+	xClient, yClient := w.world.GetGlobalXYChunk(client.AtChunkId)
+	x, y := xClient, yClient
+	idChunk := client.AtChunkId
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+		chunk := w.world.GetChunkBytesToSend(idChunk)
+		err = client.Conn.Write(ctx, ws.MessageBinary, chunk)
+		if err != nil {
+			return err
+		}
+		x++
+		if x >= xClient+common.W_CHUNKS_CLIENT {
+			y++
+			x = xClient
+		}
+		if y >= yClient+common.H_CHUNKS_CLIENT {
+			return
+		}
+		idChunk = x + y*common.W_CHUNKS_TOTAL
+	}
 }
 
 func (w *NetCode) SendChunks(chunksToSend []int) {
 	var waitG sync.WaitGroup
-	var chunks [][]byte = make([][]byte, len(chunksToSend))
-	waitG.Add(len(chunksToSend))
-	for i, iC := range chunksToSend {
-		go func() {
-			chunks[i] = w.world.GetChunkBytesToSend(iC)
-			waitG.Done()
-		}()
+	var chunks map[int][]byte = make(map[int][]byte)
+	for _, iC := range chunksToSend {
+		chunks[iC] = w.world.GetChunkBytesToSend(iC)
 	}
-	waitG.Wait()
 	waitG.Add(w.GetLenClients())
-	for addr, client := range w.GetClients() {
+	for _, client := range w.GetClients() {
+		if client.Conn == nil {
+			continue
+		}
+
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), common.SLEEP*time.Millisecond)
+			xClient, yClient := w.world.GetGlobalXYChunk(client.AtChunkId)
+			var x, y int
+			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 			defer cancel()
 			var err error
 			defer func() {
 				waitG.Done()
 				if err != nil {
 					fmt.Println("Removing for :", err.Error())
-					w.RemoveClient(addr)
+					w.RemoveClient(client)
 					return
 				}
 			}()
-			for _, chunk := range chunks {
-				if client == nil {
+
+			for idChunk, chunk := range chunks {
+				x, y = w.world.GetGlobalXYChunk(idChunk)
+				if x < xClient || x >= xClient+common.W_CHUNKS_CLIENT {
 					continue
 				}
-				err = client.Write(ctx, ws.MessageBinary, chunk)
+				if y < yClient || y >= yClient+common.H_CHUNKS_CLIENT {
+					continue
+				}
+				err = client.Conn.Write(ctx, ws.MessageBinary, chunk)
 				if err != nil {
+					fmt.Println(err)
 					return
 				}
 			}

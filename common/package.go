@@ -9,14 +9,11 @@ const (
 	GET     Command = 16 + iota
 	INIT
 	ADD_GENERATOR
+	MOVE_AT
 	END
 )
 
 type args = uint16
-
-const (
-	CHUNK args = iota
-)
 
 type Package struct {
 	Code    uint64
@@ -27,8 +24,8 @@ type Package struct {
 
 // 16bit command | 16bit ident | 32bit args
 type CommandPackage struct {
-	Ident uint16
-	Arg   uint32
+	Arg1 uint16
+	Arg2 uint32
 }
 type BrushType = uint8
 
@@ -69,14 +66,14 @@ func Encode(c Package) uint64 {
 }
 
 func decodeCommand(input uint64, p Package) Package {
-	p.Ident = uint16((input & 0x0000FFFF00000000) >> 32)
-	p.Arg = uint32((input & 0x00000000FFFFFFFF))
+	p.Arg1 = uint16((input & 0x0000FFFF00000000) >> 32)
+	p.Arg2 = uint32((input & 0x00000000FFFFFFFF))
 	return p
 }
 
 func encodeCommand(c Package, output uint64) uint64 {
-	output |= (uint64(c.Ident) & 0xFFFF) << 32
-	output |= (uint64(c.Arg) & 0xFFFFFFFF)
+	output |= (uint64(c.Arg1) & 0xFFFF) << 32
+	output |= (uint64(c.Arg2) & 0xFFFFFFFF)
 	return output
 }
 

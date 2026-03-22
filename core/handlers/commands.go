@@ -24,12 +24,20 @@ func GetGeneratorCommand(brush common.Package) (res []common.Package) {
 	return res
 }
 
-func GetChunkCommand(chunkId uint32) (p common.Package) {
+func GetMoveCommand(atChunkId uint16) (p common.Package) {
+	return common.Package{
+		Command: common.MOVE_AT,
+		CommandPackage: common.CommandPackage{
+			Arg1: atChunkId,
+		},
+	}
+}
+
+func GetChunkCommand(chunkId uint16) (p common.Package) {
 	return common.Package{
 		Command: common.GET,
 		CommandPackage: common.CommandPackage{
-			Ident: common.CHUNK,
-			Arg:   chunkId,
+			Arg1: chunkId,
 		},
 	}
 }

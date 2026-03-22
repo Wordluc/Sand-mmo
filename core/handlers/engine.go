@@ -4,23 +4,27 @@ import (
 	"fmt"
 	"sand-mmo/common"
 	"sand-mmo/core"
-
-	ws "github.com/coder/websocket"
 )
 
 type CoreHandlers struct {
 	ps          []handler
 	i           int
 	world       *core.ServerWorld
-	webSocket   *ws.Conn
-	LastCommand common.Command
+	client      *core.Client
+	lastCommand common.Command
+	netCode     *core.NetCode
 }
 
-func NewCoreHandlers(world *core.ServerWorld, ps []handler, tcpConn *ws.Conn) (res CoreHandlers) {
+func NewCoreHandlers(world *core.ServerWorld, ps []handler, client *core.Client, netCode *core.NetCode) (res CoreHandlers) {
 	res.ps = ps
 	res.world = world
-	res.webSocket = tcpConn
+	res.client = client
+	res.netCode = netCode
 	return res
+}
+
+func (pm *CoreHandlers) IsLastCommand(command common.Command) bool {
+	return pm.lastCommand == command
 }
 
 func (pm *CoreHandlers) Run(p common.Package) error {
@@ -36,7 +40,7 @@ func (pm *CoreHandlers) Run(p common.Package) error {
 	}
 
 	err := pm.ps[pm.i].run(p, pm)
-	pm.LastCommand = p.Command
+	pm.lastCommand = p.Command
 	return err
 }
 

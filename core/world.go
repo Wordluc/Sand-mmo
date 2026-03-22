@@ -26,6 +26,9 @@ func newWorld(w, h, chunkSize int) world {
 	return world
 }
 
+func (w *world) CleanAllMap() {
+	w.cells = make([]cell.Cell, w.W*w.H)
+}
 func (w *world) SetCellsByte(bytes []byte, idChunk int) {
 	const u32Size = 2
 	var u16 uint16
@@ -44,7 +47,6 @@ func (w *world) SetCellsByte(bytes []byte, idChunk int) {
 			iCell += (w.W - w.ChunkSize)
 		}
 	}
-
 }
 
 func (w *world) GetWorldBytes() []byte {
@@ -76,6 +78,7 @@ func (w *world) ForEachCell(idChunk int, f func(x, y int, center *cell.Cell) err
 		}
 	}
 }
+
 func (w *world) GetGeneratorsBytes() []byte {
 	var decoded []byte = make([]byte, 8*len(w.generators))
 	var mockPackage common.Package
@@ -87,9 +90,13 @@ func (w *world) GetGeneratorsBytes() []byte {
 }
 
 func (w *world) GetChunkId(x, y int) int {
-	chunkPerRow := w.W / w.ChunkSize
-	id := (y/w.ChunkSize)*chunkPerRow + x/w.ChunkSize
+	id := (y/w.ChunkSize)*common.W_CHUNKS_TOTAL + x/w.ChunkSize
 	return id
+}
+func (w *world) GetGlobalXYChunk(idChunk int) (x, y int) {
+	y = idChunk / common.W_CHUNKS_TOTAL
+	x = idChunk % common.W_CHUNKS_TOTAL
+	return x, y
 }
 
 func (w *world) GetNumberChucks() int {

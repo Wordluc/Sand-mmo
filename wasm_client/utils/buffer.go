@@ -15,6 +15,10 @@ func NewBuffer() Buffer {
 	return Buffer{Mutex: &sync.Mutex{}, stacks: map[int]*Stack{}}
 }
 
+func (b *Buffer) Clean() {
+	b.stacks = map[int]*Stack{}
+	b.chunkAvailable = make([]int, 0)
+}
 func (b *Buffer) Append(idChunk int, bytes []byte) {
 	b.Lock()
 	if _, ok := b.stacks[idChunk]; !ok {

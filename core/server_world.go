@@ -136,6 +136,10 @@ func (w *ServerWorld) ApplyGenerators() error {
 	return nil
 }
 
+func (w *ServerWorld) GetChunksToSend() []int {
+	return w.activeChunks.Get()
+}
+
 func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []int) {
 	l := common.NewOrderList[int]()
 	chunks := w.activeChunks.Get()
@@ -165,10 +169,6 @@ func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []int) {
 		}
 	}
 	return l.GetReversSort()
-}
-
-func (w *ServerWorld) GetChunksToSend() []int {
-	return w.activeChunks.Get()
 }
 
 func (w *world) SetVec(pos common.Vec2, cell cell.Cell) {

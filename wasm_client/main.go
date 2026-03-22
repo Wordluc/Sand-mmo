@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	"sand-mmo/core"
@@ -20,13 +21,14 @@ var frameBuf []byte
 var jsDst js.Value
 var jsImageData js.Value
 var canvasW, canvasH int
+var bufferByte utils.Buffer = utils.NewBuffer()
 
 func initDrawBuffers() {
-	size := int(common.W_WINDOWS) * int(common.H_WINDOWS) * int(common.SIZE_CELL) * int(common.SIZE_CELL) * 4
+	size := int(common.W_CELLS_CLIENT) * int(common.H_CELLS_CLIENT) * int(common.SIZE_CELL) * int(common.SIZE_CELL) * 4
 	frameBuf = make([]byte, size)
 	jsDst = js.Global().Get("Uint8ClampedArray").New(size)
-	canvasW = int(common.W_WINDOWS) * int(common.SIZE_CELL)
-	canvasH = int(common.H_WINDOWS) * int(common.SIZE_CELL)
+	canvasW = int(common.W_CELLS_CLIENT) * int(common.SIZE_CELL)
+	canvasH = int(common.H_CELLS_CLIENT) * int(common.SIZE_CELL)
 	jsImageData = js.Global().Get("ImageData").New(jsDst, canvasW, canvasH)
 }
 
@@ -40,7 +42,7 @@ func Draw(w core.ClientWorld, chunksId []int) {
 			color = center.GetColor()
 			for dy = range common.SIZE_CELL {
 				for dx = range common.SIZE_CELL {
-					px = ((y+dy)*common.W_WINDOWS*common.SIZE_CELL + (x + dx)) * 4
+					px = ((y+dy)*common.W_CELLS_CLIENT*common.SIZE_CELL + (x + dx)) * 4
 					frameBuf[px], frameBuf[px+1], frameBuf[px+2], frameBuf[px+3] = color.Get()
 				}
 			}
@@ -60,6 +62,8 @@ var m sync.Mutex
 var brushType common.BrushType = common.CIRCLE_SMALL
 var cellType cell.CellType = cell.SAND_CELL
 var addGenerator int
+var xClient int
+var yClient int
 
 // Button definitions
 type ButtonDef struct {
@@ -107,14 +111,48 @@ func renderButtons(buttons []ButtonDef, cellType *cell.CellType, brushType *comm
 	}
 }
 
-func registryMouseMovement(document js.Value) {
+func registryMouseMovement(document js.Value, w *core.ClientWorld) {
 
 	document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) any {
+		move := false
 		m.Lock()
+		defer m.Unlock()
 		if args[0].Get("key").String() == "r" && addGenerator == 0 {
 			addGenerator = 1
 		}
-		m.Unlock()
+		if args[0].Get("key").String() == "a" {
+			xClient--
+			if xClient <= 0 {
+				xClient = 0
+			}
+			move = true
+		}
+		if args[0].Get("key").String() == "d" {
+			xClient++
+			if xClient >= common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT {
+				xClient = common.W_CHUNKS_TOTAL - common.W_CHUNKS_CLIENT
+			}
+			move = true
+		}
+		if args[0].Get("key").String() == "w" {
+			yClient -= 1
+			if yClient <= 0 {
+				yClient = 0
+			}
+			move = true
+		}
+		if args[0].Get("key").String() == "s" {
+			yClient += 1
+			if yClient >= common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT {
+				yClient = common.H_CHUNKS_TOTAL - common.H_CHUNKS_CLIENT
+			}
+			move = true
+		}
+		if move {
+			fmt.Println(xClient, yClient)
+			send(handlers.GetMoveCommand(uint16(xClient + yClient*common.W_CHUNKS_TOTAL)))
+			bufferByte.Clean()
+		}
 		return nil
 	}))
 	document.Call("addEventListener", "keyup", js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -149,13 +187,13 @@ func main() {
 	initDrawBuffers()
 	doc := js.Global().Get("document")
 	div := doc.Call("getElementById", "GAME_WINDOW")
-	div.Set("width", common.SIZE_CELL*common.W_WINDOWS)
-	div.Set("height", common.SIZE_CELL*common.H_WINDOWS)
+	div.Set("width", common.SIZE_CELL*common.W_CELLS_CLIENT)
+	div.Set("height", common.SIZE_CELL*common.H_CELLS_CLIENT)
 	ctx = div.Call("getContext", "2d")
 	var idChunk int
-	registryMouseMovement(doc)
 	renderButtons(buttons, &cellType, &brushType)
-	w := core.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
+	w := core.NewClientWorld(common.W_CELLS_CLIENT, common.H_CELLS_CLIENT, common.CHUNK_SIZE)
+	registryMouseMovement(doc, &w)
 
 	loc := js.Global().Get("location")
 	host, _, _ := strings.Cut(loc.Get("host").String(), ":")
@@ -170,10 +208,10 @@ func main() {
 
 	ws.Set("binaryType", "arraybuffer")
 
-	var bufferByte utils.Buffer = utils.NewBuffer()
-
 	ws.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {
 		send(handlers.GetInitCommand())
+		yClient = 192
+		send(handlers.GetMoveCommand(uint16(yClient * common.W_CHUNKS_TOTAL)))
 		return nil
 	}))
 	js.Global().Get("window").Call("addEventListener", "beforeunload", js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -187,8 +225,9 @@ func main() {
 
 		buf := make([]byte, data.Get("byteLength").Int())
 		js.CopyBytesToGo(buf, js.Global().Get("Uint8Array").New(data))
-		chunkId := binary.BigEndian.Uint16(buf[0:2])
-		bufferByte.Append(int(chunkId), buf[2:])
+		gChunkId := int(binary.BigEndian.Uint16(buf[0:2]))
+
+		bufferByte.Append(gChunkId, buf[2:])
 		return nil
 	}))
 
@@ -203,21 +242,34 @@ func main() {
 	}))
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
 		chunks := bufferByte.GetChunks()
+		var toDraw = []int{}
 		if len(chunks) != 0 {
 			for _, idChunk = range chunks {
-				w.SetCellsByte(bufferByte.GetLast(idChunk), idChunk)
+				x, y := w.GetGlobalXYChunk(idChunk)
+				x = x - xClient
+				y = y - yClient
+
+				if x < 0 || x >= common.W_CHUNKS_CLIENT {
+					continue
+				}
+				if y < 0 || y >= common.H_CHUNKS_CLIENT {
+					continue
+				}
+
+				w.SetCellsByte(bufferByte.GetLast(idChunk), x+y*common.W_CHUNKS_CLIENT)
+				toDraw = append(toDraw, x+y*common.W_CHUNKS_CLIENT)
 			}
-			Draw(w, chunks)
 		}
+		Draw(w, toDraw)
 
 		x, y := mouse.Get()
 		if x < 0 || y < 0 {
 			return nil
 		}
-		if x >= common.W_WINDOWS*common.SIZE_CELL {
+		if x >= common.W_CELLS_CLIENT*common.SIZE_CELL {
 			return nil
 		}
-		if y >= common.H_WINDOWS*common.SIZE_CELL {
+		if y >= common.H_CELLS_CLIENT*common.SIZE_CELL {
 			return nil
 		}
 		x = x / common.SIZE_CELL

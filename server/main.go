@@ -9,7 +9,6 @@ import (
 	ws "github.com/coder/websocket"
 	"github.com/joho/godotenv"
 
-	"io"
 	"sand-mmo/common"
 	"sand-mmo/core"
 	handlers "sand-mmo/core/handlers"
@@ -23,8 +22,8 @@ import (
 var w *core.ServerWorld
 var netCode *core.NetCode
 var m *sync.Mutex = &sync.Mutex{}
-var timerSaving common.Timer
-var timerLoop common.Timer
+var schedulerSaving common.Scheduler
+var schedulerLoop common.Scheduler
 var err error
 
 func handler(write http.ResponseWriter, r *http.Request) {
@@ -34,11 +33,12 @@ func handler(write http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	if netCode.AddClient(r.RemoteAddr, c) == 1 {
+	client := netCode.AddClient(r.RemoteAddr, c)
+	if netCode.GetLenClients() == 1 {
 		go StartLoop()
 	}
 	fmt.Println("N: ", netCode.GetLenClients())
-	go handlerConnection(c, r.RemoteAddr)
+	go handlerConnection(client)
 
 }
 
@@ -62,14 +62,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	w = new(core.NewServerWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE))
+	w = new(core.NewServerWorld(common.W_CELLS_TOTAL, common.H_CELLS_TOTAL, common.CHUNK_SIZE))
 	netCode = new(core.NewNetCode(w, redis))
 	if os.Getenv("load") == "true" {
 		netCode.LoadSnapshot()
 	}
 
-	timerSaving = common.NewTimer(time.Minute, "TimerSaving", netCode.SaveSnapshot)
-	timerLoop = common.NewTimer(common.SLEEP*time.Millisecond, "TimerLoop", loop)
+	schedulerSaving = common.NewTimer(time.Minute, "TimerSaving", netCode.SaveSnapshot)
+	schedulerLoop = common.NewTimer(common.SLEEP*time.Millisecond, "TimerLoop", loop)
 	http.HandleFunc("/profile", pprof.Profile)
 	http.HandleFunc("/ws", handler)
 	err = http.ListenAndServe(":8000", nil)
@@ -79,25 +79,20 @@ func main() {
 
 }
 
-func handlerConnection(conn *ws.Conn, addr string) {
-	defer conn.CloseNow()
-	defer netCode.RemoveClient(addr)
-	engine := handlers.NewCoreHandlers(w, handlers.GetHandlers(), conn)
+func handlerConnection(client *core.Client) {
+	defer netCode.RemoveClient(client)
+	engine := handlers.NewCoreHandlers(w, handlers.GetHandlers(), client, netCode)
 
 	for {
-		r, err := common.ReadFromWebSocketPackage(conn)
+		r, err := common.ReadFromWebSocketPackage(client.Conn)
 		if err != nil {
-			fmt.Println("Error ", addr, ": ", err.Error())
-			netCode.RemoveClient(addr)
+			fmt.Println("Error ", client.Addr, ": ", err.Error())
 			return
 		}
 		m.Lock()
 		err = engine.Run(r)
 		m.Unlock()
 		if err != nil {
-			if errors.Is(err, io.ErrUnexpectedEOF) {
-				return
-			}
 			fmt.Println(err.Error())
 		}
 	}
@@ -120,13 +115,13 @@ func loop() {
 }
 
 func StopLoop() {
-	timerSaving.Stop()
-	timerLoop.Stop()
+	schedulerSaving.Stop()
+	schedulerLoop.Stop()
 }
 
 func StartLoop() {
 	if os.Getenv("save") == "true" {
-		timerSaving.Start()
+		schedulerSaving.Start()
 	}
-	timerLoop.Start()
+	schedulerLoop.Start()
 }

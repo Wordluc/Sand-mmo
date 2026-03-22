@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Timer struct {
+type Scheduler struct {
 	time     time.Duration
 	enable   bool
 	running  bool
@@ -14,8 +14,8 @@ type Timer struct {
 	*sync.Mutex
 }
 
-func NewTimer(time time.Duration, desc string, callback func()) Timer {
-	return Timer{
+func NewTimer(time time.Duration, desc string, callback func()) Scheduler {
+	return Scheduler{
 		time:     time,
 		callback: callback,
 		Mutex:    &sync.Mutex{},
@@ -23,11 +23,11 @@ func NewTimer(time time.Duration, desc string, callback func()) Timer {
 	}
 }
 
-func (t *Timer) Stop() {
+func (t *Scheduler) Stop() {
 	t.enable = false
 }
 
-func (t *Timer) Start() {
+func (t *Scheduler) Start() {
 	if t.enable {
 		return
 	}
@@ -42,7 +42,7 @@ func (t *Timer) Start() {
 	}
 }
 
-func (t *Timer) loop() {
+func (t *Scheduler) loop() {
 	t.Lock()
 	if !t.enable {
 		t.running = false

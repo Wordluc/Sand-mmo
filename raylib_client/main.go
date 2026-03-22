@@ -15,12 +15,12 @@ import (
 )
 
 const W_BUTTONS_SIDE = 100
-const W_GAME = common.W_WINDOWS * common.SIZE_CELL
-const H_GAME = common.H_WINDOWS * common.SIZE_CELL
+const W_GAME = common.W_CELLS_TOTAL * common.SIZE_CELL
+const H_GAME = common.H_CELLS_TOTAL * common.SIZE_CELL
 
 func main() {
 	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME+common.SIZE_CELL, "")
-	w := core.NewClientWorld(common.W_WINDOWS, common.H_WINDOWS, common.CHUNK_SIZE)
+	w := core.NewClientWorld(common.W_CELLS_TOTAL, common.H_CELLS_TOTAL, common.CHUNK_SIZE)
 
 	conn, err := createWebSocket()
 	if err != nil {

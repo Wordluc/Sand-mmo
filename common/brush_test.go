@@ -29,8 +29,8 @@ func TestEncode(t *testing.T) {
 			p: Package{
 				Command: 0x0080,
 				CommandPackage: CommandPackage{
-					Ident: 0xBEEF,
-					Arg:   0xDEADBEEF,
+					Arg1: 0xBEEF,
+					Arg2: 0xDEADBEEF,
 				},
 			},
 			want: 0x0080BEEFDEADBEEF,
@@ -54,8 +54,8 @@ func TestEncode(t *testing.T) {
 			p: Package{
 				Command: 0xFFFF,
 				CommandPackage: CommandPackage{
-					Ident: 0xFFFF,
-					Arg:   0xFFFFFFFF,
+					Arg1: 0xFFFF,
+					Arg2: 0xFFFFFFFF,
 				},
 			},
 			want: 0xFFFFFFFFFFFFFFFF,
@@ -97,8 +97,8 @@ func TestDecode(t *testing.T) {
 			want: Package{
 				Command: 0x0080,
 				CommandPackage: CommandPackage{
-					Ident: 0xBEEF,
-					Arg:   0xDEADBEEF,
+					Arg1: 0xBEEF,
+					Arg2: 0xDEADBEEF,
 				},
 			},
 		},
@@ -114,8 +114,8 @@ func TestDecode(t *testing.T) {
 				got.BrushType != tt.want.BrushType ||
 				got.CellType != tt.want.CellType ||
 				got.Extra != tt.want.Extra ||
-				got.Ident != tt.want.Ident ||
-				got.Arg != tt.want.Arg {
+				got.Arg1 != tt.want.Arg1 ||
+				got.Arg2 != tt.want.Arg2 {
 				t.Fatalf("got %+v want %+v", got, tt.want)
 			}
 		})
