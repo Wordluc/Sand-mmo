@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"fmt"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	"sand-mmo/core"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"syscall/js"
+	"time"
 
 	"wasm/utils"
 )
@@ -111,47 +111,58 @@ func renderButtons(buttons []ButtonDef, cellType *cell.CellType, brushType *comm
 	}
 }
 
+var move = false
+
 func registryMouseMovement(document js.Value, w *core.ClientWorld) {
+	const t = 250
+	moveA := throttle(t, func() {
+		xClient--
+		if xClient <= 0 {
+			xClient = 0
+		}
+		move = true
+	})
+	moveD := throttle(t, func() {
+		xClient++
+		if xClient >= common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT {
+			xClient = common.W_CHUNKS_TOTAL - common.W_CHUNKS_CLIENT
+		}
+		move = true
+	})
+	moveW := throttle(t, func() {
+		yClient -= 1
+		if yClient <= 0 {
+			yClient = 0
+		}
+		move = true
+
+	})
+	moveS := throttle(t, func() {
+
+		yClient += 1
+		if yClient >= common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT {
+			yClient = common.H_CHUNKS_TOTAL - common.H_CHUNKS_CLIENT
+		}
+		move = true
+	})
 
 	document.Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) any {
-		move := false
 		m.Lock()
 		defer m.Unlock()
 		if args[0].Get("key").String() == "r" && addGenerator == 0 {
 			addGenerator = 1
 		}
 		if args[0].Get("key").String() == "a" {
-			xClient--
-			if xClient <= 0 {
-				xClient = 0
-			}
-			move = true
+			moveA()
 		}
 		if args[0].Get("key").String() == "d" {
-			xClient++
-			if xClient >= common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT {
-				xClient = common.W_CHUNKS_TOTAL - common.W_CHUNKS_CLIENT
-			}
-			move = true
+			moveD()
 		}
 		if args[0].Get("key").String() == "w" {
-			yClient -= 1
-			if yClient <= 0 {
-				yClient = 0
-			}
-			move = true
+			moveW()
 		}
 		if args[0].Get("key").String() == "s" {
-			yClient += 1
-			if yClient >= common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT {
-				yClient = common.H_CHUNKS_TOTAL - common.H_CHUNKS_CLIENT
-			}
-			move = true
-		}
-		if move {
-			fmt.Println(xClient, yClient)
-			send(handlers.GetMoveCommand(uint16(xClient + yClient*common.W_CHUNKS_TOTAL)))
-			bufferByte.Clean()
+			moveS()
 		}
 		return nil
 	}))
@@ -261,6 +272,7 @@ func main() {
 			}
 		}
 		Draw(w, toDraw)
+		bufferByte.Clean()
 
 		x, y := mouse.Get()
 		if x < 0 || y < 0 {
@@ -281,6 +293,10 @@ func main() {
 		if pressed {
 			send(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
 		}
+		if move {
+			send(handlers.GetMoveCommand(uint16(xClient + yClient*common.W_CHUNKS_TOTAL)))
+			move = false
+		}
 		return nil
 	}))
 
@@ -296,6 +312,28 @@ func send(ps ...common.Package) {
 		ws.Call("send", dst)
 	}
 }
+
+func throttle(t time.Duration, fn func()) func() {
+	var mu sync.Mutex
+	var running bool
+
+	return func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if running {
+			return
+		}
+		running = true
+		go func() {
+			time.Sleep(t * time.Millisecond)
+			mu.Lock()
+			running = false
+			mu.Unlock()
+		}()
+		fn()
+	}
+}
+
 func sendRaw(bytes []byte) {
 	dst := js.Global().Get("Uint8Array").New(8)
 	js.CopyBytesToJS(dst, bytes)
