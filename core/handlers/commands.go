@@ -5,9 +5,12 @@ import (
 	"sand-mmo/common"
 )
 
-func GetInitCommand() (p common.Package) {
+func GetInitCommand(chunkId int) (p common.Package) {
 	return common.Package{
 		Command: common.INIT,
+		CommandPackage: common.CommandPackage{
+			Arg1: uint16(chunkId),
+		},
 	}
 }
 func GetENDCommand() (p common.Package) {

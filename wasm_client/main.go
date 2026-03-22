@@ -33,6 +33,30 @@ func initDrawBuffers() {
 	jsImageData = js.Global().Get("ImageData").New(jsDst, canvasW, canvasH)
 }
 
+func DrawAll(w core.ClientWorld) {
+	var dx, dy, px int
+	var color common.Color
+	for chunkId := range w.GetNumberChucks() {
+		w.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
+			x = x * common.SIZE_CELL
+			y = y * common.SIZE_CELL
+			color = center.GetColor()
+			for dy = range common.SIZE_CELL {
+				for dx = range common.SIZE_CELL {
+					px = ((y+dy)*common.W_CELLS_CLIENT*common.SIZE_CELL + (x + dx)) * 4
+					frameBuf[px], frameBuf[px+1], frameBuf[px+2], frameBuf[px+3] = color.Get()
+				}
+			}
+			return nil
+		})
+	}
+
+	js.CopyBytesToJS(jsDst, frameBuf)
+
+	ctx.Call("putImageData", jsImageData, 0, 0)
+
+}
+
 func Draw(w core.ClientWorld, chunksId []int) {
 	var dx, dy, px int
 	var color common.Color
@@ -64,7 +88,10 @@ var brushType common.BrushType = common.CIRCLE_SMALL
 var cellType cell.CellType = cell.SAND_CELL
 var addGenerator int
 var xClient int
-var yClient int
+var yClient int = 192
+
+var oldXClient int
+var oldYClient int
 
 // Button definitions
 type ButtonDef struct {
@@ -221,9 +248,7 @@ func main() {
 	ws.Set("binaryType", "arraybuffer")
 
 	ws.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {
-		send(handlers.GetInitCommand())
-		yClient = 192
-		send(handlers.GetMoveCommand(uint16(yClient * common.W_CHUNKS_TOTAL)))
+		send(handlers.GetInitCommand(xClient + yClient*common.W_CHUNKS_TOTAL))
 		return nil
 	}))
 	js.Global().Get("window").Call("addEventListener", "beforeunload", js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -253,6 +278,40 @@ func main() {
 		return nil
 	}))
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
+		x, y := mouse.Get()
+		if x < 0 || y < 0 {
+			return nil
+		}
+		go func() {
+			if x >= common.W_CELLS_CLIENT*common.SIZE_CELL {
+				return
+			}
+			if y >= common.H_CELLS_CLIENT*common.SIZE_CELL {
+				return
+			}
+			x = x / common.SIZE_CELL
+			y = y / common.SIZE_CELL
+			if addGenerator == 1 {
+				send(handlers.GetGeneratorCommand(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
+				addGenerator = -1
+			}
+			if pressed {
+				send(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
+			}
+		}()
+
+		if move {
+			send(handlers.GetMoveCommand(uint16(xClient + yClient*common.W_CHUNKS_TOTAL)))
+			move = false
+			w.ShiftWorld(xClient-oldXClient, yClient-oldYClient)
+			DrawAll(w)
+			bufferByte.Clean()
+			oldXClient = xClient
+			oldYClient = yClient
+			fmt.Printf("x: %v/%v\n", xClient, common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT)
+			fmt.Printf("y: %v/%v\n", yClient, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
+			return nil
+		}
 		chunks := bufferByte.GetChunks()
 		var toDraw = []int{}
 		if len(chunks) != 0 {
@@ -273,33 +332,7 @@ func main() {
 			}
 		}
 		Draw(w, toDraw)
-		bufferByte.Clean()
 
-		x, y := mouse.Get()
-		if x < 0 || y < 0 {
-			return nil
-		}
-		if x >= common.W_CELLS_CLIENT*common.SIZE_CELL {
-			return nil
-		}
-		if y >= common.H_CELLS_CLIENT*common.SIZE_CELL {
-			return nil
-		}
-		x = x / common.SIZE_CELL
-		y = y / common.SIZE_CELL
-		if addGenerator == 1 {
-			send(handlers.GetGeneratorCommand(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
-			addGenerator = -1
-		}
-		if pressed {
-			send(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))
-		}
-		if move {
-			send(handlers.GetMoveCommand(uint16(xClient + yClient*common.W_CHUNKS_TOTAL)))
-			move = false
-			fmt.Printf("x: %v/%v\n", xClient, common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT)
-			fmt.Printf("y: %v/%v\n", yClient, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
-		}
 		return nil
 	}))
 

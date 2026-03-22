@@ -157,6 +157,35 @@ func (w *NetCode) SendAllChunksTo(client *Client) (err error) {
 	}
 }
 
+func (w *NetCode) SendChunksTo(chunksToSend map[int][]byte, client *Client) {
+	xClient, yClient := w.world.GetGlobalXYChunk(client.AtChunkId)
+	var x, y int
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	var err error
+	defer func() {
+		if err != nil {
+			fmt.Println("Removing for :", err.Error())
+			w.RemoveClient(client)
+			return
+		}
+	}()
+
+	for idChunk, chunk := range chunksToSend {
+		x, y = w.world.GetGlobalXYChunk(idChunk)
+		if x < xClient || x >= xClient+common.W_CHUNKS_CLIENT {
+			continue
+		}
+		if y < yClient || y >= yClient+common.H_CHUNKS_CLIENT {
+			continue
+		}
+		err = client.Conn.Write(ctx, ws.MessageBinary, chunk)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+}
 func (w *NetCode) SendChunks(chunksToSend []int) {
 	var waitG sync.WaitGroup
 	var chunks map[int][]byte = make(map[int][]byte)
@@ -170,35 +199,10 @@ func (w *NetCode) SendChunks(chunksToSend []int) {
 		}
 
 		go func() {
-			xClient, yClient := w.world.GetGlobalXYChunk(client.AtChunkId)
-			var x, y int
-			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-			defer cancel()
-			var err error
-			defer func() {
-				waitG.Done()
-				if err != nil {
-					fmt.Println("Removing for :", err.Error())
-					w.RemoveClient(client)
-					return
-				}
-			}()
-
-			for idChunk, chunk := range chunks {
-				x, y = w.world.GetGlobalXYChunk(idChunk)
-				if x < xClient || x >= xClient+common.W_CHUNKS_CLIENT {
-					continue
-				}
-				if y < yClient || y >= yClient+common.H_CHUNKS_CLIENT {
-					continue
-				}
-				err = client.Conn.Write(ctx, ws.MessageBinary, chunk)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-			}
+			w.SendChunksTo(chunks, client)
+			waitG.Done()
 		}()
+
 	}
 	waitG.Wait()
 }

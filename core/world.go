@@ -93,6 +93,7 @@ func (w *world) GetChunkId(x, y int) int {
 	id := (y/w.ChunkSize)*common.W_CHUNKS_TOTAL + x/w.ChunkSize
 	return id
 }
+
 func (w *world) GetGlobalXYChunk(idChunk int) (x, y int) {
 	y = idChunk / common.W_CHUNKS_TOTAL
 	x = idChunk % common.W_CHUNKS_TOTAL

@@ -40,6 +40,7 @@ func GetHandlers() []handler {
 			p: common.INIT,
 			handler: func(p common.Package, e *CoreHandlers) error {
 				fmt.Println("Init bidirectional connection: " + e.client.Addr)
+				e.client.AtChunkId = int(p.Arg1)
 				e.netCode.SendAllChunksTo(e.client)
 				return nil
 			},
@@ -47,8 +48,33 @@ func GetHandlers() []handler {
 		{
 			p: common.MOVE_AT,
 			handler: func(p common.Package, e *CoreHandlers) error {
+				oldX, oldY := e.world.GetGlobalXYChunk(e.client.AtChunkId)
 				e.client.AtChunkId = int(p.Arg1)
-				e.netCode.SendAllChunksTo(e.client)
+				newX, newY := e.world.GetGlobalXYChunk(e.client.AtChunkId)
+				chunksToSend := []int{}
+				if newX > oldX {
+					for y := newY; y < newY+common.H_CHUNKS_CLIENT; y++ {
+						chunksToSend = append(chunksToSend, newX+common.W_CHUNKS_CLIENT+y*common.W_CHUNKS_TOTAL)
+					}
+				} else if newX < oldX {
+					for y := newY; y < newY+common.H_CHUNKS_CLIENT; y++ {
+						chunksToSend = append(chunksToSend, newX+y*common.W_CHUNKS_TOTAL)
+					}
+				}
+				if newY > oldY {
+					for x := newX; x < newX+common.W_CHUNKS_CLIENT; x++ {
+						chunksToSend = append(chunksToSend, x+(newY+common.H_CHUNKS_CLIENT-1)*common.W_CHUNKS_TOTAL)
+					}
+				} else if newY < oldY {
+					for x := newX; x < newX+common.W_CHUNKS_CLIENT; x++ {
+						chunksToSend = append(chunksToSend, x+newY*common.W_CHUNKS_TOTAL)
+					}
+				}
+				var chunks map[int][]byte = make(map[int][]byte)
+				for _, iC := range chunksToSend {
+					chunks[iC] = e.world.GetChunkBytesToSend(iC)
+				}
+				e.netCode.SendChunksTo(chunks, e.client)
 				return nil
 			},
 		},

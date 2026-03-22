@@ -2,7 +2,7 @@ services:
   server-simulator:
     environment:
       save: "true"
-      load: "true"
+      load: "false"
     image: wordluc/sand-mmo-server:latest
     deploy:
       mode: global
