@@ -2,7 +2,9 @@ services:
   server-simulator:
     environment:
       save: "true"
-      load: "false"
+      load: "true"
+      redis_address: "redis"
+      redis_port: "6379"
     image: wordluc/sand-mmo-server:latest
     deploy:
       mode: global
