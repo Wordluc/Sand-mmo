@@ -91,7 +91,7 @@ var xClient int
 var yClient int = 192
 
 var oldXClient int
-var oldYClient int
+var oldYClient int = yClient
 
 // Button definitions
 type ButtonDef struct {
@@ -301,9 +301,9 @@ func main() {
 		}()
 
 		if move {
+			w.ShiftWorld(xClient-oldXClient, yClient-oldYClient)
 			send(handlers.GetMoveCommand(uint16(xClient + yClient*common.W_CHUNKS_TOTAL)))
 			move = false
-			w.ShiftWorld(xClient-oldXClient, yClient-oldYClient)
 			DrawAll(w)
 			bufferByte.Clean()
 			oldXClient = xClient
