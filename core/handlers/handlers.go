@@ -25,13 +25,13 @@ func GetHandlers() []handler {
 		{
 			p: common.DRAW_IN,
 			handler: func(p common.Package, e *CoreHandlers) error {
+				x, y := common.GetServerXYChunk(e.client.AtChunkId)
+				p.BrushPackage.X += uint16(x) * common.CHUNK_SIZE
+				p.BrushPackage.Y += uint16(y) * common.CHUNK_SIZE
 				if e.IsLastCommand(common.ADD_GENERATOR) {
 					e.world.AddGenerator(p.BrushPackage)
 					return nil
 				}
-				x, y := common.GetServerXYChunk(e.client.AtChunkId)
-				p.BrushPackage.X += uint16(x) * common.CHUNK_SIZE
-				p.BrushPackage.Y += uint16(y) * common.CHUNK_SIZE
 				err, _ := e.world.ApplyBrush(p.BrushPackage)
 				return err
 			},
