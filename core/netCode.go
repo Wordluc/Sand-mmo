@@ -159,7 +159,7 @@ func (w *NetCode) SendAllChunksTo(client *Client) (err error) {
 
 func (w *NetCode) SendChunks(chunksToSend []int) {
 	var waitG sync.WaitGroup
-	var chunks map[int][]byte = make(map[int][]byte)
+	var chunks map[int][]byte = make(map[int][]byte, len(chunksToSend))
 	for _, iC := range chunksToSend {
 		chunks[iC] = w.world.GetChunkBytesToSend(iC)
 	}

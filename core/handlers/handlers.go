@@ -51,26 +51,30 @@ func GetHandlers() []handler {
 				oldX, oldY := common.GetServerXYChunk(e.client.AtChunkId)
 				e.client.AtChunkId = int(p.Arg1)
 				newX, newY := common.GetServerXYChunk(e.client.AtChunkId)
-				chunksToSend := []int{}
+				var chunksToSend []int
 				if newX > oldX {
+					chunksToSend = make([]int, 0, common.H_CELLS_CLIENT)
 					for y := newY; y < newY+common.H_CHUNKS_CLIENT; y++ {
 						chunksToSend = append(chunksToSend, newX+common.W_CHUNKS_CLIENT+y*common.W_CHUNKS_TOTAL-1) //retrieve last column of the client's view
 					}
 				} else if newX < oldX {
+					chunksToSend = make([]int, 0, common.H_CELLS_CLIENT)
 					for y := newY; y < newY+common.H_CHUNKS_CLIENT; y++ {
 						chunksToSend = append(chunksToSend, newX+y*common.W_CHUNKS_TOTAL) //retrieve first column of the client's view
 					}
 				}
 				if newY > oldY {
+					chunksToSend = make([]int, 0, common.W_CELLS_CLIENT)
 					for x := newX; x < newX+common.W_CHUNKS_CLIENT; x++ {
 						chunksToSend = append(chunksToSend, x+(newY+common.H_CHUNKS_CLIENT-1)*common.W_CHUNKS_TOTAL) //retrieve last row of the client's view
 					}
 				} else if newY < oldY {
+					chunksToSend = make([]int, 0, common.W_CELLS_CLIENT)
 					for x := newX; x < newX+common.W_CHUNKS_CLIENT; x++ {
 						chunksToSend = append(chunksToSend, x+newY*common.W_CHUNKS_TOTAL) //retrieve first row of the client's view
 					}
 				}
-				var chunks map[int][]byte = make(map[int][]byte)
+				var chunks map[int][]byte = make(map[int][]byte, len(chunksToSend))
 				for _, iC := range chunksToSend {
 					chunks[iC] = e.world.GetChunkBytesToSend(iC)
 				}
