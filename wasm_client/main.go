@@ -279,10 +279,10 @@ func main() {
 	}))
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
 		x, y := mouse.Get()
-		if x < 0 || y < 0 {
-			return nil
-		}
 		go func() {
+			if x < 0 || y < 0 {
+				return
+			}
 			if x >= common.W_CELLS_CLIENT*common.SIZE_CELL {
 				return
 			}
@@ -316,7 +316,7 @@ func main() {
 		var toDraw = []int{}
 		if len(chunks) != 0 {
 			for _, idChunk = range chunks {
-				x, y := common.GetGlobalXYChunk(idChunk)
+				x, y := common.GetServerXYChunk(idChunk)
 				x = x - xClient
 				y = y - yClient
 				if x < 0 || x >= common.W_CHUNKS_CLIENT {
