@@ -51,7 +51,6 @@ func GetHandlers() []handler {
 				oldX, oldY := common.GetServerXYChunk(e.client.AtChunkId)
 				e.client.AtChunkId = int(p.Arg1)
 				newX, newY := common.GetServerXYChunk(e.client.AtChunkId)
-				fmt.Println(e.client.Addr, " moved at ", p.Arg1)
 				chunksToSend := []int{}
 				if newX > oldX {
 					for y := newY; y < newY+common.H_CHUNKS_CLIENT; y++ {
