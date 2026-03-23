@@ -39,7 +39,7 @@ func GetHandlers() []handler {
 		{
 			p: common.INIT,
 			handler: func(p common.Package, e *CoreHandlers) error {
-				fmt.Println("Init bidirectional connection: " + e.client.Addr)
+				fmt.Println("Init bidirectional connection: "+e.client.Addr, " at ", p.Arg1)
 				e.client.AtChunkId = int(p.Arg1)
 				e.netCode.SendAllChunksTo(e.client)
 				return nil
@@ -51,6 +51,7 @@ func GetHandlers() []handler {
 				oldX, oldY := e.world.GetGlobalXYChunk(e.client.AtChunkId)
 				e.client.AtChunkId = int(p.Arg1)
 				newX, newY := e.world.GetGlobalXYChunk(e.client.AtChunkId)
+				fmt.Println(e.client.Addr, " moved at ", p.Arg1)
 				chunksToSend := []int{}
 				if newX > oldX {
 					for y := newY; y < newY+common.H_CHUNKS_CLIENT; y++ {

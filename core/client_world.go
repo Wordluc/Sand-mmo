@@ -31,9 +31,7 @@ func (w *ClientWorld) ShiftWorld(dx, dy int) {
 	}
 	if dy > 0 {
 		copy(w.cells[:w.W*w.H-w.ChunkSize*w.W], w.cells[w.ChunkSize*w.W:])
-		clear(w.cells[w.W*w.H-w.ChunkSize*w.W:])
 	} else if dy < 0 {
 		copy(w.cells[w.ChunkSize*w.W:], w.cells[:w.W*w.H-w.ChunkSize*w.W])
-		clear(w.cells[:w.ChunkSize*w.W])
 	}
 }

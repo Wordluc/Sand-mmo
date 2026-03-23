@@ -88,7 +88,7 @@ var brushType common.BrushType = common.CIRCLE_SMALL
 var cellType cell.CellType = cell.SAND_CELL
 var addGenerator int
 var xClient int
-var yClient int = 192
+var yClient int = 0
 
 var oldXClient int
 var oldYClient int = yClient
@@ -301,16 +301,16 @@ func main() {
 		}()
 
 		if move {
+			bufferByte.Clean()
 			w.ShiftWorld(xClient-oldXClient, yClient-oldYClient)
 			send(handlers.GetMoveCommand(uint16(xClient + yClient*common.W_CHUNKS_TOTAL)))
 			move = false
 			DrawAll(w)
-			bufferByte.Clean()
 			oldXClient = xClient
 			oldYClient = yClient
 			fmt.Printf("x: %v/%v\n", xClient, common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT)
 			fmt.Printf("y: %v/%v\n", yClient, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
-			return nil
+			//return nil
 		}
 		chunks := bufferByte.GetChunks()
 		var toDraw = []int{}
@@ -319,7 +319,6 @@ func main() {
 				x, y := w.GetGlobalXYChunk(idChunk)
 				x = x - xClient
 				y = y - yClient
-
 				if x < 0 || x >= common.W_CHUNKS_CLIENT {
 					continue
 				}
