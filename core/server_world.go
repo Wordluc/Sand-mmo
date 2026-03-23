@@ -213,3 +213,52 @@ func (w *world) Get(x, y int) *cell.Cell {
 	}
 	return &w.cells[x+(y*w.W)]
 }
+
+func (w *ServerWorld) GetGeneratorsBytes() []byte {
+	var decoded []byte = make([]byte, 8*len(w.generators))
+	var mockPackage common.Package
+	for i, c := range w.generators {
+		mockPackage.BrushPackage = c
+		binary.BigEndian.PutUint64(decoded[i*8:], common.Encode(mockPackage))
+	}
+	return decoded
+}
+
+func (w *ServerWorld) GetWorldBytes() []byte {
+	var decoded []byte
+	for _, c := range w.cells {
+		decoded = binary.BigEndian.AppendUint16(decoded, cell.EncodeCell(c))
+	}
+	return decoded
+}
+
+func (w *world) GetChunkBytesToSend(idChunk int) []byte {
+	chunk := w.GetChunkBytes(idChunk)
+	var bytes []byte = make([]byte, 2+len(chunk)*2)
+	binary.BigEndian.PutUint16(bytes[0:], uint16(idChunk))
+	for i := range chunk {
+		binary.BigEndian.PutUint16(bytes[i*2+2:], chunk[i])
+	}
+	return bytes
+}
+
+func (w *world) GetChunkBytes(idChunk int) []uint16 {
+	var decoded []uint16 = make([]uint16, w.ChunkSize*w.ChunkSize)
+
+	chunkPerRow := w.W / w.ChunkSize
+
+	chunkY := idChunk / chunkPerRow
+	chunkX := idChunk % chunkPerRow
+
+	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
+	var i uint16
+	for range uint16(w.ChunkSize) {
+		for _, c := range w.cells[iCell : iCell+w.ChunkSize] {
+			decoded[i] = cell.EncodeCell(c)
+			i++
+		}
+		iCell += (w.W)
+	}
+
+	return decoded
+}

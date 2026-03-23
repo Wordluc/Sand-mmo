@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/binary"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 )
@@ -32,5 +33,25 @@ func (w *ClientWorld) ShiftWorld(dx, dy int) {
 		copy(w.cells[:w.W*w.H-w.ChunkSize*w.W], w.cells[w.ChunkSize*w.W:])
 	} else if dy < 0 {
 		copy(w.cells[w.ChunkSize*w.W:], w.cells[:w.W*w.H-w.ChunkSize*w.W])
+	}
+}
+
+func (w *ClientWorld) SetDecodedCells(bytes []byte, idChunk int) {
+	const u32Size = 2
+	var u16 uint16
+	var c cell.Cell
+	chunkPerRow := w.W / w.ChunkSize
+
+	chunkY := idChunk / chunkPerRow
+	chunkX := idChunk % chunkPerRow
+	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
+	for i := 0; i < len(bytes); i = i + u32Size {
+		u16 = binary.BigEndian.Uint16(bytes[i : i+u32Size])
+		c = cell.DecodeCell(u16)
+		w.cells[iCell] = c
+		iCell += 1
+		if iCell%w.ChunkSize == 0 {
+			iCell += (w.W - w.ChunkSize)
+		}
 	}
 }

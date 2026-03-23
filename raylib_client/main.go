@@ -132,7 +132,7 @@ func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 			continue
 		}
 		idChunk := binary.BigEndian.Uint16(bytes[0:2])
-		world.SetCellsByte(bytes[2:], int(idChunk))
+		world.SetDecodedCells(bytes[2:], int(idChunk))
 	}
 }
 

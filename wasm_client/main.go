@@ -326,7 +326,7 @@ func main() {
 					continue
 				}
 
-				w.SetCellsByte(bufferByte.GetLast(idChunk), x+y*common.W_CHUNKS_CLIENT)
+				w.SetDecodedCells(bufferByte.GetLast(idChunk), x+y*common.W_CHUNKS_CLIENT)
 				toDraw = append(toDraw, x+y*common.W_CHUNKS_CLIENT)
 			}
 		}

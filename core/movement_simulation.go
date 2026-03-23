@@ -120,16 +120,12 @@ func (w *ServerWorld) SimulateChunk(idChunk int) error {
 	})
 }
 
-// isFree returns true if the cell at pos exists and is empty.
 func (w *ServerWorld) isFree(pos common.Vec2) bool {
 	x, y := pos.Get()
 	c := w.Get(x, y)
 	return c != nil && c.IsEmpty()
 }
 
-// simulateCustomMovements is the core movement engine shared by all material
-// simulators. It tries every direction in groups at decreasing speeds until a
-// valid move is found, then delegates the actual swap to the callbacks.
 func (w *ServerWorld) simulateCustomMovements(
 	pos common.Vec2,
 	maxSpeed int,
@@ -144,12 +140,6 @@ func (w *ServerWorld) simulateCustomMovements(
 		performed_position common.Vec2
 	)
 	oldPos := pos.Copy()
-	move := func(pos common.Vec2) {
-		(*c).Touched()
-		w.SetVec(pos, *(*c))
-		*c = w.GetVec(pos)
-		callbackAfterMoving(oldPos)
-	}
 
 	for _, formal_group = range groups {
 		for currentSpeed = maxSpeed; currentSpeed > 0; currentSpeed-- {
@@ -157,7 +147,10 @@ func (w *ServerWorld) simulateCustomMovements(
 			performed_position.MultConst(currentSpeed)
 			performed_position.Add(pos)
 			if callbackBeforeMoving(performed_position) {
-				move(performed_position)
+				(*c).Touched()
+				w.SetVec(performed_position, *(*c))
+				*c = w.GetVec(performed_position)
+				callbackAfterMoving(oldPos)
 				return true
 			}
 		}
@@ -165,8 +158,6 @@ func (w *ServerWorld) simulateCustomMovements(
 	return false
 }
 
-// simulateSimpleMovements handles sand-like cells: the old position is cleared
-// after a successful move.
 func (w *ServerWorld) simulateSimpleMovements(
 	pos common.Vec2,
 	maxSpeed int,
@@ -180,8 +171,6 @@ func (w *ServerWorld) simulateSimpleMovements(
 	return w.simulateCustomMovements(pos, maxSpeed, c, w.isFree, afterMoving, groups)
 }
 
-// simulateWaterMovements handles water: reacts with lava/fire on contact,
-// otherwise behaves like a simple liquid.
 func (w *ServerWorld) simulateWaterMovements(
 	pos common.Vec2,
 	maxSpeed int,
@@ -212,8 +201,6 @@ func (w *ServerWorld) simulateWaterMovements(
 	return w.simulateCustomMovements(pos, maxSpeed, c, beforeMoving, afterMoving, groups)
 }
 
-// simulateLeafMovements handles leaves: ignites when touching lava/fire,
-// otherwise falls like sand.
 func (w *ServerWorld) simulateLeafMovements(
 	pos common.Vec2,
 	maxSpeed int,
@@ -238,8 +225,6 @@ func (w *ServerWorld) simulateLeafMovements(
 	return w.simulateCustomMovements(pos, maxSpeed, c, beforeMoving, afterMoving, groups)
 }
 
-// simulateVacuumMovements handles vacuum cells: annihilates any non-vacuum
-// neighbour it touches without physically swapping positions.
 func (w *ServerWorld) simulateVacuumMovements(
 	pos common.Vec2,
 	maxSpeed int,
@@ -260,8 +245,6 @@ func (w *ServerWorld) simulateVacuumMovements(
 	return w.simulateCustomMovements(pos, maxSpeed, c, isFreeVacuum, afterMoving, groups)
 }
 
-// simulateFireMovements handles fire: spreads into wood/leaf neighbours and
-// refreshes its life timer; the old position gets colour-shifted after a move.
 func (w *ServerWorld) simulateFireMovements(
 	idChunk int,
 	pos common.Vec2,
@@ -291,8 +274,6 @@ func (w *ServerWorld) simulateFireMovements(
 	return w.simulateCustomMovements(pos, maxSpeed, c, isFreeForFire, afterMoving, groups)
 }
 
-// simulateLavaMovements handles lava: vaporises water, ignites wood/leaf, and
-// flows like a slow liquid otherwise.
 func (w *ServerWorld) simulateLavaMovements(
 	idChunk int,
 	pos common.Vec2,
