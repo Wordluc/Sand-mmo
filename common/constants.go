@@ -25,3 +25,9 @@ func UntouchEverything() {
 
 //const W_WINDOWS = 240
 //const H_WINDOWS = 120
+
+func GetServerXYChunk(idChunk int) (x, y int) {
+	y = idChunk / W_CHUNKS_TOTAL
+	x = idChunk % W_CHUNKS_TOTAL
+	return x, y
+}

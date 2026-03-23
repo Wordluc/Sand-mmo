@@ -29,6 +29,7 @@ func newWorld(w, h, chunkSize int) world {
 func (w *world) CleanAllMap() {
 	w.cells = make([]cell.Cell, w.W*w.H)
 }
+
 func (w *world) SetCellsByte(bytes []byte, idChunk int) {
 	const u32Size = 2
 	var u16 uint16
@@ -92,12 +93,6 @@ func (w *world) GetGeneratorsBytes() []byte {
 func (w *world) GetChunkId(x, y int) int {
 	id := (y/w.ChunkSize)*common.W_CHUNKS_TOTAL + x/w.ChunkSize
 	return id
-}
-
-func (w *world) GetGlobalXYChunk(idChunk int) (x, y int) {
-	y = idChunk / common.W_CHUNKS_TOTAL
-	x = idChunk % common.W_CHUNKS_TOTAL
-	return x, y
 }
 
 func (w *world) GetNumberChucks() int {

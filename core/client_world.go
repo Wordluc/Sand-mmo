@@ -2,14 +2,15 @@ package core
 
 import (
 	"sand-mmo/cell"
+	"sand-mmo/common"
 )
 
 type ClientWorld struct {
 	world
 }
 
-func NewClientWorld(w, h, chunkSize int) (res ClientWorld) {
-	res.world = newWorld(w, h, chunkSize)
+func NewClientWorld() (res ClientWorld) {
+	res.world = newWorld(common.W_CELLS_CLIENT, common.H_CELLS_CLIENT, common.CHUNK_SIZE)
 	return res
 }
 

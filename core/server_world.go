@@ -10,8 +10,13 @@ type ServerWorld struct {
 	world
 }
 
-func NewServerWorld(w, h, chunkSize int) (res ServerWorld) {
+func newServerWorld_test(w, h, chunkSize int) (res ServerWorld) {
 	res.world = newWorld(w, h, chunkSize)
+	return res
+}
+
+func NewServerWorld() (res ServerWorld) {
+	res.world = newWorld(common.W_CELLS_TOTAL, common.H_CELLS_TOTAL, common.CHUNK_SIZE)
 	return res
 }
 

@@ -29,7 +29,7 @@ func GetHandlers() []handler {
 					e.world.AddGenerator(p.BrushPackage)
 					return nil
 				}
-				x, y := e.world.GetGlobalXYChunk(e.client.AtChunkId)
+				x, y := common.GetServerXYChunk(e.client.AtChunkId)
 				p.BrushPackage.X += uint16(x) * common.CHUNK_SIZE
 				p.BrushPackage.Y += uint16(y) * common.CHUNK_SIZE
 				err, _ := e.world.ApplyBrush(p.BrushPackage)
@@ -48,9 +48,9 @@ func GetHandlers() []handler {
 		{
 			p: common.MOVE_AT,
 			handler: func(p common.Package, e *CoreHandlers) error {
-				oldX, oldY := e.world.GetGlobalXYChunk(e.client.AtChunkId)
+				oldX, oldY := common.GetServerXYChunk(e.client.AtChunkId)
 				e.client.AtChunkId = int(p.Arg1)
-				newX, newY := e.world.GetGlobalXYChunk(e.client.AtChunkId)
+				newX, newY := common.GetServerXYChunk(e.client.AtChunkId)
 				fmt.Println(e.client.Addr, " moved at ", p.Arg1)
 				chunksToSend := []int{}
 				if newX > oldX {

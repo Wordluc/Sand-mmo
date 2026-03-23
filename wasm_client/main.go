@@ -231,7 +231,7 @@ func main() {
 	ctx = div.Call("getContext", "2d")
 	var idChunk int
 	renderButtons(buttons, &cellType, &brushType)
-	w := core.NewClientWorld(common.W_CELLS_CLIENT, common.H_CELLS_CLIENT, common.CHUNK_SIZE)
+	w := core.NewClientWorld()
 	registryMouseMovement(doc, &w)
 
 	loc := js.Global().Get("location")
@@ -316,7 +316,7 @@ func main() {
 		var toDraw = []int{}
 		if len(chunks) != 0 {
 			for _, idChunk = range chunks {
-				x, y := w.GetGlobalXYChunk(idChunk)
+				x, y := common.GetGlobalXYChunk(idChunk)
 				x = x - xClient
 				y = y - yClient
 				if x < 0 || x >= common.W_CHUNKS_CLIENT {

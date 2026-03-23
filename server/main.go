@@ -62,7 +62,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	w = new(core.NewServerWorld(common.W_CELLS_TOTAL, common.H_CELLS_TOTAL, common.CHUNK_SIZE))
+	w = new(core.NewServerWorld())
 	netCode = new(core.NewNetCode(w, redis))
 	if os.Getenv("load") == "true" {
 		netCode.LoadSnapshot()
