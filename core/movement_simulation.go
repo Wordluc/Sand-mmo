@@ -72,7 +72,7 @@ func (w *ServerWorld) SimulateChunk(idChunk int) error {
 			w.simulateSimpleMovements(pos, 2, &center, sand_movement)
 
 		case cell.LAVA_CELL:
-			w.simulateLavaMovements(idChunk, pos, 1, &center, lave_movement)
+			w.simulateLavaMovements(pos, 1, &center, lave_movement)
 
 		case cell.LEAF_CELL:
 			w.simulateLeafMovements(pos, 1, &center, leaf_movement)
@@ -253,7 +253,7 @@ func (w *ServerWorld) simulateFireMovements(
 		prev.DecreaseLife()
 		return nil
 	}
-	light_fire := func(posToCheck common.Vec2) bool {
+	light_flammable := func(posToCheck common.Vec2) bool {
 		tcell := w.GetVec(posToCheck)
 		if tcell == nil {
 			return false
@@ -264,22 +264,15 @@ func (w *ServerWorld) simulateFireMovements(
 		}
 		return false
 	}
-	return w.simulateCustomMovements(pos, maxSpeed, c, light_fire, change_color_cell_fire, groups)
+	return w.simulateCustomMovements(pos, maxSpeed, c, light_flammable, change_color_cell_fire, groups)
 }
 
 func (w *ServerWorld) simulateLavaMovements(
-	idChunk int,
 	pos common.Vec2,
 	maxSpeed int,
 	c **cell.Cell,
 	groups []common.Vec2,
 ) bool {
-	afterMoving := func(pos common.Vec2) error {
-		w.GetVec(pos).Touched()
-		w.activeChunks.SortedInsert(idChunk)
-		w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
-		return nil
-	}
 	light_flammable_create_smoke := func(posToCheck common.Vec2) bool {
 		tcell := w.GetVec(posToCheck)
 		if tcell == nil {
@@ -296,5 +289,5 @@ func (w *ServerWorld) simulateLavaMovements(
 		}
 		return w.isFree(posToCheck)
 	}
-	return w.simulateCustomMovements(pos, maxSpeed, c, light_flammable_create_smoke, afterMoving, groups)
+	return w.simulateCustomMovements(pos, maxSpeed, c, light_flammable_create_smoke, w.setEmptyCell, groups)
 }
