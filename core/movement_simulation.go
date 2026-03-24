@@ -120,17 +120,6 @@ func (w *ServerWorld) SimulateChunk(idChunk int) error {
 	})
 }
 
-func (w *ServerWorld) isFree(pos common.Vec2) bool {
-	x, y := pos.Get()
-	c := w.Get(x, y)
-	return c != nil && c.IsEmpty()
-}
-
-func (w *ServerWorld) setEmptyCell(pos common.Vec2) error {
-	w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
-	return nil
-}
-
 func (w *ServerWorld) simulateCustomMovements(
 	pos common.Vec2,
 	maxSpeed int,
@@ -184,7 +173,7 @@ func (w *ServerWorld) simulateWaterMovements(
 		if tcell == nil {
 			return false
 		}
-		if tcell.CellType == cell.LAVA_CELL || tcell.CellType == cell.FIRE_CELL {
+		if w.isFlammable(tcell) {
 			smoke, isSmoke := NewCellByChance(cell.SMOKE_CELL, 10)
 			if !isSmoke {
 				tcell.RemainingLife = 0
@@ -209,7 +198,7 @@ func (w *ServerWorld) simulateLeafMovements(
 		if tcell == nil {
 			return false
 		}
-		if tcell.CellType == cell.LAVA_CELL || tcell.CellType == cell.FIRE_CELL {
+		if w.isFlammable(tcell) {
 			w.SetVec(pos, cell.NewCell(cell.FIRE_CELL))
 			return false
 		}
@@ -258,8 +247,7 @@ func (w *ServerWorld) simulateFireMovements(
 		if tcell == nil {
 			return false
 		}
-		if (tcell.CellType == cell.WOOD_CELL || tcell.CellType == cell.LEAF_CELL) && (*c).RemainingLife != 0 {
-			(*c).RemainingLife = 3
+		if w.isFlammable(tcell) {
 			return true
 		}
 		return false
@@ -283,7 +271,7 @@ func (w *ServerWorld) simulateLavaMovements(
 			w.SetVec(posToCheck, smoke)
 			return false
 		}
-		if tcell.CellType == cell.WOOD_CELL || tcell.CellType == cell.LEAF_CELL {
+		if w.isFlammable(tcell) {
 			w.SetVec(posToCheck, cell.NewCell(cell.FIRE_CELL))
 			return false
 		}
