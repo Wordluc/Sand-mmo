@@ -12,7 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const REDIS_KEY_BYTES_BYTES = "world:bytes"
+const REDIS_KEY_WORLD_BYTES = "world:bytes"
 const REDIS_KEY_BYTES_GENERATOR = "world:generator"
 
 type NetCode struct {
@@ -41,7 +41,7 @@ func (w *NetCode) SaveSnapshot() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	worldBytes := w.world.GetWorldBytes()
-	err := w.redis.Set(ctx, REDIS_KEY_BYTES_BYTES, string(worldBytes), 0).Err()
+	err := w.redis.Set(ctx, REDIS_KEY_WORLD_BYTES, string(worldBytes), 0).Err()
 	if err != nil {
 		println(err.Error())
 		return
@@ -70,7 +70,7 @@ func (w *NetCode) LoadSnapshot() error {
 			return []byte{}, err
 		}
 	}
-	worldBytes, err := get(REDIS_KEY_BYTES_BYTES)
+	worldBytes, err := get(REDIS_KEY_WORLD_BYTES)
 	if err != nil {
 		return err
 	}
