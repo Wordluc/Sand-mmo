@@ -108,7 +108,7 @@ func loop() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	netCode.SendChunks(w.GetChunksToSend())
+	netCode.SendAllChunksToAll(w.GetChunksToSend())
 	common.UntouchEverything()
 	m.Unlock()
 
