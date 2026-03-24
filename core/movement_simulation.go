@@ -126,12 +126,17 @@ func (w *ServerWorld) isFree(pos common.Vec2) bool {
 	return c != nil && c.IsEmpty()
 }
 
+func (w *ServerWorld) setEmptyCell(pos common.Vec2) error {
+	w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
+	return nil
+}
+
 func (w *ServerWorld) simulateCustomMovements(
 	pos common.Vec2,
 	maxSpeed int,
 	c **cell.Cell,
-	callbackBeforeMoving func(common.Vec2) bool,
-	callbackAfterMoving func(common.Vec2) error,
+	callbackInNewPosition func(common.Vec2) bool,
+	callbackForOldPosition func(common.Vec2) error,
 	groups []common.Vec2,
 ) bool {
 	var (
@@ -146,11 +151,11 @@ func (w *ServerWorld) simulateCustomMovements(
 			performed_position = formal_group.Copy()
 			performed_position.MultConst(currentSpeed)
 			performed_position.Add(pos)
-			if callbackBeforeMoving(performed_position) {
+			if callbackInNewPosition(performed_position) {
 				(*c).Touched()
 				w.SetVec(performed_position, *(*c))
 				*c = w.GetVec(performed_position)
-				callbackAfterMoving(oldPos)
+				callbackForOldPosition(oldPos)
 				return true
 			}
 		}
@@ -164,11 +169,7 @@ func (w *ServerWorld) simulateSimpleMovements(
 	c **cell.Cell,
 	groups []common.Vec2,
 ) bool {
-	afterMoving := func(pos common.Vec2) error {
-		w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
-		return nil
-	}
-	return w.simulateCustomMovements(pos, maxSpeed, c, w.isFree, afterMoving, groups)
+	return w.simulateCustomMovements(pos, maxSpeed, c, w.isFree, w.setEmptyCell, groups)
 }
 
 func (w *ServerWorld) simulateWaterMovements(
@@ -177,11 +178,7 @@ func (w *ServerWorld) simulateWaterMovements(
 	c **cell.Cell,
 	groups []common.Vec2,
 ) bool {
-	afterMoving := func(pos common.Vec2) error {
-		w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
-		return nil
-	}
-	beforeMoving := func(posToCheck common.Vec2) bool {
+	put_out := func(posToCheck common.Vec2) bool {
 		x, y := posToCheck.Get()
 		tcell := w.Get(x, y)
 		if tcell == nil {
@@ -198,7 +195,7 @@ func (w *ServerWorld) simulateWaterMovements(
 		}
 		return w.isFree(posToCheck)
 	}
-	return w.simulateCustomMovements(pos, maxSpeed, c, beforeMoving, afterMoving, groups)
+	return w.simulateCustomMovements(pos, maxSpeed, c, put_out, w.setEmptyCell, groups)
 }
 
 func (w *ServerWorld) simulateLeafMovements(
@@ -207,11 +204,7 @@ func (w *ServerWorld) simulateLeafMovements(
 	c **cell.Cell,
 	groups []common.Vec2,
 ) bool {
-	afterMoving := func(pos common.Vec2) error {
-		w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
-		return nil
-	}
-	beforeMoving := func(posToCheck common.Vec2) bool {
+	move_light_leaf := func(posToCheck common.Vec2) bool {
 		tcell := w.GetVec(posToCheck)
 		if tcell == nil {
 			return false
@@ -222,7 +215,7 @@ func (w *ServerWorld) simulateLeafMovements(
 		}
 		return w.isFree(posToCheck)
 	}
-	return w.simulateCustomMovements(pos, maxSpeed, c, beforeMoving, afterMoving, groups)
+	return w.simulateCustomMovements(pos, maxSpeed, c, move_light_leaf, w.setEmptyCell, groups)
 }
 
 func (w *ServerWorld) simulateVacuumMovements(
@@ -231,8 +224,8 @@ func (w *ServerWorld) simulateVacuumMovements(
 	c **cell.Cell,
 	groups []common.Vec2,
 ) bool {
-	afterMoving := func(_ common.Vec2) error { return nil }
-	isFreeVacuum := func(posToCheck common.Vec2) bool {
+	nothing := func(_ common.Vec2) error { return nil }
+	delete_cell := func(posToCheck common.Vec2) bool {
 		tcell := w.GetVec(posToCheck)
 		if tcell == nil {
 			return false
@@ -242,7 +235,7 @@ func (w *ServerWorld) simulateVacuumMovements(
 		}
 		return false
 	}
-	return w.simulateCustomMovements(pos, maxSpeed, c, isFreeVacuum, afterMoving, groups)
+	return w.simulateCustomMovements(pos, maxSpeed, c, delete_cell, nothing, groups)
 }
 
 func (w *ServerWorld) simulateFireMovements(
@@ -252,7 +245,7 @@ func (w *ServerWorld) simulateFireMovements(
 	c **cell.Cell,
 	groups []common.Vec2,
 ) bool {
-	afterMoving := func(pos common.Vec2) error {
+	change_color_cell_fire := func(pos common.Vec2) error {
 		prev := w.GetVec(pos)
 		prev.GenerateNewColor()
 		prev.Touched()
@@ -260,7 +253,7 @@ func (w *ServerWorld) simulateFireMovements(
 		prev.DecreaseLife()
 		return nil
 	}
-	isFreeForFire := func(posToCheck common.Vec2) bool {
+	light_fire := func(posToCheck common.Vec2) bool {
 		tcell := w.GetVec(posToCheck)
 		if tcell == nil {
 			return false
@@ -271,7 +264,7 @@ func (w *ServerWorld) simulateFireMovements(
 		}
 		return false
 	}
-	return w.simulateCustomMovements(pos, maxSpeed, c, isFreeForFire, afterMoving, groups)
+	return w.simulateCustomMovements(pos, maxSpeed, c, light_fire, change_color_cell_fire, groups)
 }
 
 func (w *ServerWorld) simulateLavaMovements(
@@ -287,7 +280,7 @@ func (w *ServerWorld) simulateLavaMovements(
 		w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
 		return nil
 	}
-	isFreeForLava := func(posToCheck common.Vec2) bool {
+	light_flammable_create_smoke := func(posToCheck common.Vec2) bool {
 		tcell := w.GetVec(posToCheck)
 		if tcell == nil {
 			return false
@@ -303,5 +296,5 @@ func (w *ServerWorld) simulateLavaMovements(
 		}
 		return w.isFree(posToCheck)
 	}
-	return w.simulateCustomMovements(pos, maxSpeed, c, isFreeForLava, afterMoving, groups)
+	return w.simulateCustomMovements(pos, maxSpeed, c, light_flammable_create_smoke, afterMoving, groups)
 }
