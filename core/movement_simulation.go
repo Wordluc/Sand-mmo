@@ -173,7 +173,7 @@ func (w *ServerWorld) simulateWaterMovements(
 		if tcell == nil {
 			return false
 		}
-		if w.isFlammable(tcell) {
+		if w.isBurning(tcell) {
 			smoke, isSmoke := NewCellByChance(cell.SMOKE_CELL, 10)
 			if !isSmoke {
 				tcell.RemainingLife = 0
