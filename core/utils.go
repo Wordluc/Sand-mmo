@@ -27,6 +27,10 @@ func (w *ServerWorld) isFlammable(c *cell.Cell) bool {
 	return c.CellType == cell.WOOD_CELL || c.CellType == cell.LEAF_CELL
 }
 
+func (w *ServerWorld) isBurning(c *cell.Cell) bool {
+	return c.CellType == cell.FIRE_CELL || c.CellType == cell.LAVA_CELL
+}
+
 func (w *ServerWorld) setEmptyCell(pos common.Vec2) error {
 	w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
 	return nil

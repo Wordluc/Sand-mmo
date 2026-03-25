@@ -198,7 +198,7 @@ func (w *ServerWorld) simulateLeafMovements(
 		if tcell == nil {
 			return false
 		}
-		if w.isFlammable(tcell) {
+		if w.isBurning(tcell) {
 			w.SetVec(pos, cell.NewCell(cell.FIRE_CELL))
 			return false
 		}
