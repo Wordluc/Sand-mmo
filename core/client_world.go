@@ -15,10 +15,6 @@ func NewClientWorld() (res ClientWorld) {
 	return res
 }
 
-func (w *ClientWorld) GetCells() []cell.Cell {
-	return w.cells
-}
-
 func (w *ClientWorld) ShiftWorld(dx, dy int) {
 	if dx > 0 {
 		for i := 0; i <= w.W*w.H-w.W; i += w.W {

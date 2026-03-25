@@ -15,8 +15,11 @@ import (
 )
 
 const W_BUTTONS_SIDE = 100
-const W_GAME = common.W_CELLS_TOTAL * common.SIZE_CELL
-const H_GAME = common.H_CELLS_TOTAL * common.SIZE_CELL
+const W_GAME = common.W_CELLS_CLIENT * common.SIZE_CELL
+const H_GAME = common.H_CELLS_CLIENT * common.SIZE_CELL
+
+var clientX, clientY int
+var moved = false
 
 func main() {
 	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME+common.SIZE_CELL, "")
@@ -82,6 +85,24 @@ func main() {
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 300, Width: 50, Height: 20}, "Leaf") {
 			cellType = cell.LEAF_CELL
 		}
+
+		if rl.IsKeyPressed(rl.KeyD) {
+			clientX += 1
+			moved = true
+		}
+		if rl.IsKeyPressed(rl.KeyA) {
+			clientX -= 1
+			moved = true
+		}
+		if rl.IsKeyPressed(rl.KeyW) {
+			clientY -= 1
+			moved = true
+		}
+		if rl.IsKeyPressed(rl.KeyS) {
+			clientY += 1
+			moved = true
+		}
+
 		Draw(w)
 		vec := rl.GetMousePosition()
 		x := uint16(vec.X) / common.SIZE_CELL
@@ -101,6 +122,9 @@ func main() {
 			if err != nil {
 				fmt.Println(err.Error())
 			}
+		}
+		if moved {
+			common.SendToWebSocketPackages(conn, handlers.GetGeneratorCommand(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
 		}
 		rl.DrawText(fmt.Sprintf("x:%v\n y:%v\n c:%v", x, y, chunkId), W_GAME-30, 0, common.SIZE_CELL, rl.Black)
 		rl.EndDrawing()
@@ -124,25 +148,36 @@ func createWebSocket() (*ws.Conn, error) {
 
 func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 	for {
-		//2->16bit
-		//		var bytes []byte = make([]byte, 2*world.ChunkSize*world.ChunkSize+2)
 		_, bytes, err := webSocket.Read(context.Background())
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
+
 		idChunk := binary.BigEndian.Uint16(bytes[0:2])
-		world.SetDecodedCells(bytes[2:], int(idChunk))
+		x, y := common.GetServerXYChunk(int(idChunk))
+		x = x - clientX
+		y = y - clientY
+		if x < 0 || x >= common.W_CHUNKS_CLIENT {
+			continue
+		}
+		if y < 0 || y >= common.H_CHUNKS_CLIENT {
+			continue
+		}
+
+		world.SetDecodedCells(bytes[2:], x+y*common.W_CHUNKS_CLIENT)
+
 	}
 }
 
 func Draw(w core.ClientWorld) {
-	var i, x, y int
-	for _, c := range w.GetCells() {
-		x = i % w.W * common.SIZE_CELL
-		y = i / w.W * common.SIZE_CELL
-		rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, rl.NewColor(c.GetColor().Get()))
-		rl.DrawText(fmt.Sprint(y/common.SIZE_CELL), 0, int32(y), common.SIZE_CELL, rl.Black)
-		i++
+	for chunkId := range w.GetNumberChucks() {
+		w.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
+			x = x * common.SIZE_CELL
+			y = y * common.SIZE_CELL
+			rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, rl.NewColor(center.GetColor().Get()))
+			rl.DrawText(fmt.Sprint(y/common.SIZE_CELL), 0, int32(y), common.SIZE_CELL, rl.Black)
+			return nil
+		})
 	}
 }

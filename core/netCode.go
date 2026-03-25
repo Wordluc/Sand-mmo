@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sand-mmo/common"
 	"sync"
@@ -96,7 +95,7 @@ func (w *NetCode) AddClient(addr string, conn *ws.Conn) (c *Client) {
 }
 
 func (w *NetCode) RemoveClient(client *Client) {
-	fmt.Println("End " + client.Addr)
+	fmt.Println("Removed " + client.Addr)
 	w.clients.Delete(client.Addr)
 	client.Conn.CloseNow()
 }
@@ -107,23 +106,6 @@ func (w *NetCode) GetLenClients() (count int) {
 		return true
 	})
 	return count
-}
-
-func (w *NetCode) GetClient(addr string) (c Client, err error) {
-	v, ok := w.clients.Load(addr)
-	if !ok {
-		return c, errors.New("Client not found")
-	}
-	c = v.(Client)
-	return c, nil
-}
-func (w *NetCode) GetClients() (conns map[string]*Client) {
-	conns = map[string]*Client{}
-	w.clients.Range(func(key, value any) bool {
-		conns[key.(string)] = value.(*Client)
-		return true
-	})
-	return conns
 }
 
 func (w *NetCode) SendAllChunksTo(client *Client) (err error) {
@@ -160,7 +142,7 @@ func (w *NetCode) SendAllChunksToAll(chunksToSend []int) {
 		chunks[iC] = w.world.GetChunkBytesToSend(iC)
 	}
 	waitG.Add(w.GetLenClients())
-	for _, client := range w.GetClients() {
+	for _, client := range w.getClients() {
 		if client.Conn == nil {
 			continue
 		}
@@ -200,4 +182,13 @@ func (w *NetCode) SendChunksTo(chunksToSend map[int][]byte, client *Client) (err
 		}
 	}
 	return err
+}
+
+func (w *NetCode) getClients() (conns map[string]*Client) {
+	conns = map[string]*Client{}
+	w.clients.Range(func(key, value any) bool {
+		conns[key.(string)] = value.(*Client)
+		return true
+	})
+	return conns
 }
