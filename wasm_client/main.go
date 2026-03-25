@@ -88,7 +88,7 @@ var brushType common.BrushType = common.CIRCLE_SMALL
 var cellType cell.CellType = cell.SAND_CELL
 var addGenerator int
 var xClient int
-var yClient int = 0
+var yClient = 192
 
 var oldXClient int
 var oldYClient int = yClient
