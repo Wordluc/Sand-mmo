@@ -11,8 +11,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const REDIS_KEY_WORLD_BYTES = "world:bytes"
-const REDIS_KEY_BYTES_GENERATOR = "world:generator"
+const REDIS_KEY_WORLD = "world:bytes"
+const REDIS_KEY_GENERATOR = "world:generator"
 
 type NetCode struct {
 	clients *sync.Map
@@ -40,13 +40,13 @@ func (w *NetCode) SaveSnapshot() {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	worldBytes := w.world.GetWorldBytes()
-	err := w.redis.Set(ctx, REDIS_KEY_WORLD_BYTES, string(worldBytes), 0).Err()
+	err := w.redis.Set(ctx, REDIS_KEY_WORLD, string(worldBytes), 0).Err()
 	if err != nil {
 		println(err.Error())
 		return
 	}
 	generatorsBytes := w.world.GetGeneratorsBytes()
-	err = w.redis.Set(ctx, REDIS_KEY_BYTES_GENERATOR, string(generatorsBytes), 0).Err()
+	err = w.redis.Set(ctx, REDIS_KEY_GENERATOR, string(generatorsBytes), 0).Err()
 	if err != nil {
 		println(err.Error())
 		return
@@ -69,13 +69,13 @@ func (w *NetCode) LoadSnapshot() error {
 			return []byte{}, err
 		}
 	}
-	worldBytes, err := get(REDIS_KEY_WORLD_BYTES)
+	worldBytes, err := get(REDIS_KEY_WORLD)
 	if err != nil {
 		return err
 	}
 	w.world.ImportCells(worldBytes)
 
-	generatorBytes, err := get(REDIS_KEY_BYTES_GENERATOR)
+	generatorBytes, err := get(REDIS_KEY_GENERATOR)
 	if err != nil {
 		return err
 	}
