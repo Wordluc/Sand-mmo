@@ -88,7 +88,7 @@ var brushType common.BrushType = common.CIRCLE_SMALL
 var cellType cell.CellType = cell.SAND_CELL
 var addGenerator int
 var xClient int
-var yClient = 0
+var yClient = common.H_CHUNKS_TOTAL - common.H_CHUNKS_CLIENT
 
 var oldXClient int
 var oldYClient int = yClient
