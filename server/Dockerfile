@@ -9,7 +9,6 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 	go build -o . server/main.go
 
 EXPOSE 8000/tcp
-EXPOSE 8000/udp
 
 # Run the application
 CMD ["./main"]

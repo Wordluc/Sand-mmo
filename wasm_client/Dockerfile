@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
 	GOOS=js GOARCH=wasm go build -o main.wasm main.go
 
-EXPOSE 8080/tcp
+EXPOSE 80/tcp
 
 
-CMD ["python3", "-m", "http.server", "8080"]
+CMD ["python3", "-m", "http.server", "80"]
