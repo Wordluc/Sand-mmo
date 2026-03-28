@@ -14,7 +14,7 @@ type Scheduler struct {
 	*sync.Mutex
 }
 
-func NewTimer(time time.Duration, desc string, callback func()) Scheduler {
+func NewScheduler(time time.Duration, desc string, callback func()) Scheduler {
 	return Scheduler{
 		time:     time,
 		callback: callback,

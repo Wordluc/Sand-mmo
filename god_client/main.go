@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"sand-mmo/cell"
 	"sand-mmo/common"
@@ -42,6 +45,27 @@ func main() {
 	rl.SetTargetFPS(30)
 	var cellType cell.CellType = cell.SAND_CELL
 	var brushType common.BrushType = common.CIRCLE_SMALL
+	var currentPlayers int
+	var responseStr common.ResponseMetadati
+	var poolingMetadati common.Scheduler
+	poolingMetadati = common.NewScheduler(1000, "PollingMetadati", func() {
+		res, err := http.Get(fmt.Sprintf("http://%v:%v/metadati", addr, port))
+		if err != nil {
+			println(err.Error())
+			poolingMetadati.Stop()
+			return
+		}
+		resp, err := io.ReadAll(res.Body)
+		if err != nil {
+			println(err.Error())
+			poolingMetadati.Stop()
+			return
+		}
+		json.Unmarshal(resp, &responseStr)
+		currentPlayers = responseStr.NClients
+	})
+	poolingMetadati.Start()
+	defer poolingMetadati.Stop()
 	for {
 		if rl.WindowShouldClose() {
 			return
@@ -94,7 +118,6 @@ func main() {
 		x := uint16(vec.X) / SIZE_CELL
 		y := uint16(vec.Y) / SIZE_CELL
 		//avoid to send same package twise
-		chunkId := w.GetChunkId(int(x), int(y))
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
 			if !(vec.X > W_GAME || vec.Y > H_GAME) {
 				err := common.SendToWebSocketPackages(conn, handlers.GetDrawCommand(x, y, cellType, brushType))
@@ -112,7 +135,7 @@ func main() {
 		if moved {
 			common.SendToWebSocketPackages(conn, handlers.GetGeneratorCommand(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
 		}
-		rl.DrawText(fmt.Sprintf("x:%v\n y:%v\n c:%v", x, y, chunkId), W_GAME-30, 0, common.SIZE_CELL, rl.Black)
+		rl.DrawText(fmt.Sprintf("CurrentPlayer: %v", currentPlayers), W_GAME-40, 350, common.SIZE_CELL, rl.Black)
 		rl.EndDrawing()
 	}
 

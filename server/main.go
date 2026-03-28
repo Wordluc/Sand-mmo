@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,8 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"net/http/pprof"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var w *core.ServerWorld
@@ -68,10 +70,19 @@ func main() {
 		netCode.LoadSnapshot()
 	}
 
-	schedulerSaving = common.NewTimer(time.Minute, "TimerSaving", netCode.SaveSnapshot)
-	schedulerLoop = common.NewTimer(common.SLEEP*time.Millisecond, "TimerLoop", loop)
+	schedulerSaving = common.NewScheduler(time.Minute, "TimerSaving", netCode.SaveSnapshot)
+	schedulerLoop = common.NewScheduler(common.SLEEP*time.Millisecond, "TimerLoop", loop)
 	http.HandleFunc("/profile", pprof.Profile)
 	http.HandleFunc("/ws", handler)
+	http.HandleFunc("/metadati", func(wr http.ResponseWriter, r *http.Request) {
+		req := common.ResponseMetadati{
+			NClients: netCode.GetLenClients(),
+		}
+
+		resB, _ := json.Marshal(req)
+		wr.Header().Set("Content-Type", "application/json")
+		wr.Write(resB)
+	})
 	err = http.ListenAndServe(":8000", nil)
 	if err != nil {
 		panic(err)
