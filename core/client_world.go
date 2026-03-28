@@ -54,4 +54,11 @@ func (w *ClientWorld) SetDecodedCells(bytes []byte, idChunk int) {
 			iCell += (w.W - w.ChunkSize)
 		}
 	}
+	w.activeChunks.SortedInsert(idChunk)
+}
+
+func (w *ClientWorld) GetChunksToDraw() (res []int) {
+	res = w.activeChunks.Get()
+	w.activeChunks.Clean()
+	return res
 }
