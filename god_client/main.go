@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"os"
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	"sand-mmo/core"
@@ -24,8 +25,10 @@ var moved = false
 func main() {
 	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME+common.SIZE_CELL, "")
 	w := core.NewCustomWorld(common.W_CELLS_TOTAL, common.H_CELLS_TOTAL, common.CHUNK_SIZE)
-
-	conn, err := createWebSocket()
+	addr := os.Args[1]
+	port := os.Args[2]
+	println("Attempting connecting ", addr, ":", port)
+	conn, err := createWebSocket(addr, port)
 	if err != nil {
 		panic(err)
 	}
@@ -115,8 +118,8 @@ func main() {
 
 }
 
-func createWebSocket() (*ws.Conn, error) {
-	conn, _, err := ws.Dial(context.Background(), "ws://localhost:8000/ws", nil)
+func createWebSocket(addr, port string) (*ws.Conn, error) {
+	conn, _, err := ws.Dial(context.Background(), fmt.Sprintf("ws://%v:%v/ws", addr, port), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +147,7 @@ func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 }
 
 func Draw(w core.ClientWorld) {
-	for chunkId := range w.GetNumberChucks() {
+	for _, chunkId := range w.GetChunksToDraw() {
 		w.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
 			x = x * SIZE_CELL
 			y = y * SIZE_CELL
