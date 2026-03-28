@@ -100,6 +100,10 @@ func (w *ServerWorld) ImportCells(cells []byte) {
 	for i := 0; i < len(cells); i += 2 {
 		u16World = append(u16World, binary.BigEndian.Uint16(cells[i:i+2]))
 	}
+	if len(u16World) != len(w.cells) {
+		println("Error loading world")
+		return
+	}
 	for i := range u16World {
 		w.cells[i] = cell.DecodeCell(u16World[i])
 	}
@@ -249,7 +253,6 @@ func (w *world) GetChunkBytes(idChunk int) []uint16 {
 
 	chunkY := idChunk / chunkPerRow
 	chunkX := idChunk % chunkPerRow
-
 	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
 	var i uint16
 	for range uint16(w.ChunkSize) {

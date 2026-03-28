@@ -13,6 +13,13 @@ func GetInitCommand(chunkId int) (p common.Package) {
 		},
 	}
 }
+
+func GetInitGODCommand() (p common.Package) {
+	return common.Package{
+		Command: common.INITGOD,
+	}
+}
+
 func GetENDCommand() (p common.Package) {
 	return common.Package{
 		Command: common.END,

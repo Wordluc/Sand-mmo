@@ -15,15 +15,15 @@ import (
 )
 
 const W_BUTTONS_SIDE = 100
-const W_GAME = common.W_CELLS_CLIENT * common.SIZE_CELL
-const H_GAME = common.H_CELLS_CLIENT * common.SIZE_CELL
+const SIZE_CELL = 1
+const W_GAME = common.W_CELLS_TOTAL * SIZE_CELL
+const H_GAME = common.H_CELLS_TOTAL * SIZE_CELL
 
-var clientX, clientY int
 var moved = false
 
 func main() {
 	rl.InitWindow(W_GAME+W_BUTTONS_SIDE, H_GAME+common.SIZE_CELL, "")
-	w := core.NewClientWorld()
+	w := core.NewCustomWorld(common.W_CELLS_TOTAL, common.H_CELLS_TOTAL, common.CHUNK_SIZE)
 
 	conn, err := createWebSocket()
 	if err != nil {
@@ -86,27 +86,10 @@ func main() {
 			cellType = cell.LEAF_CELL
 		}
 
-		if rl.IsKeyPressed(rl.KeyD) {
-			clientX += 1
-			moved = true
-		}
-		if rl.IsKeyPressed(rl.KeyA) {
-			clientX -= 1
-			moved = true
-		}
-		if rl.IsKeyPressed(rl.KeyW) {
-			clientY -= 1
-			moved = true
-		}
-		if rl.IsKeyPressed(rl.KeyS) {
-			clientY += 1
-			moved = true
-		}
-
 		Draw(w)
 		vec := rl.GetMousePosition()
-		x := uint16(vec.X) / common.SIZE_CELL
-		y := uint16(vec.Y) / common.SIZE_CELL
+		x := uint16(vec.X) / SIZE_CELL
+		y := uint16(vec.Y) / SIZE_CELL
 		//avoid to send same package twise
 		chunkId := w.GetChunkId(int(x), int(y))
 		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
@@ -137,7 +120,7 @@ func createWebSocket() (*ws.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = common.SendToWebSocketPackages(conn, handlers.GetInitCommand(0))
+	err = common.SendToWebSocketPackages(conn, handlers.GetInitGODCommand())
 	if err != nil {
 		return nil, err
 	}
@@ -155,17 +138,7 @@ func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 		}
 
 		idChunk := binary.BigEndian.Uint16(bytes[0:2])
-		x, y := common.GetServerXYChunk(int(idChunk))
-		x = x - clientX
-		y = y - clientY
-		if x < 0 || x >= common.W_CHUNKS_CLIENT {
-			continue
-		}
-		if y < 0 || y >= common.H_CHUNKS_CLIENT {
-			continue
-		}
-
-		world.SetDecodedCells(bytes[2:], x+y*common.W_CHUNKS_CLIENT)
+		world.SetDecodedCells(bytes[2:], int(idChunk))
 
 	}
 }
@@ -173,10 +146,9 @@ func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 func Draw(w core.ClientWorld) {
 	for chunkId := range w.GetNumberChucks() {
 		w.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
-			x = x * common.SIZE_CELL
-			y = y * common.SIZE_CELL
-			rl.DrawRectangle(int32(x), int32(y), common.SIZE_CELL, common.SIZE_CELL, rl.NewColor(center.GetColor().Get()))
-			rl.DrawText(fmt.Sprint(y/common.SIZE_CELL), 0, int32(y), common.SIZE_CELL, rl.Black)
+			x = x * SIZE_CELL
+			y = y * SIZE_CELL
+			rl.DrawRectangle(int32(x), int32(y), SIZE_CELL, SIZE_CELL, rl.NewColor(center.GetColor().Get()))
 			return nil
 		})
 	}

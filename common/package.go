@@ -8,6 +8,7 @@ const (
 	DRAW_IN         = iota
 	GET     Command = 16 + iota
 	INIT
+	INITGOD
 	ADD_GENERATOR
 	MOVE_AT
 	END
