@@ -84,7 +84,12 @@ func GetHandlers() []handler {
 					}
 				}
 				var chunks map[int][]byte = make(map[int][]byte, len(chunksToSend))
+				maxIdChunk := e.world.GetNumberChucks()
 				for _, iC := range chunksToSend {
+					if iC > maxIdChunk {
+						println("OutOfBound world")
+						return nil
+					}
 					chunks[iC] = e.world.GetChunkBytesToSend(iC)
 				}
 				e.netCode.SendChunksTo(chunks, e.client)

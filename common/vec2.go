@@ -34,6 +34,18 @@ func (v *Vec2) Add(a Vec2) {
 	v.x += a.x
 	v.y += a.y
 }
+
+func (v *Vec2) Sub(a Vec2) {
+	v.x -= a.x
+	v.y -= a.y
+}
+
+func (v *Vec2) AddX(a int) {
+	v.x += a
+}
+func (v *Vec2) AddY(a int) {
+	v.y += a
+}
 func (v *Vec2) AddConst(a int) {
 	v.x += a
 	v.y += a
