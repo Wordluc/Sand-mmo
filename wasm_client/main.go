@@ -31,7 +31,7 @@ var buttons = []ButtonDef{
 }
 
 // Render buttons using HTML DOM
-func renderButtons(buttons []ButtonDef, state *wasm.WasmState) {
+func setDataVariableIntoJavascript() {
 
 	doc := js.Global().Get("document")
 	elemContainer := doc.Call("getElementById", "buttons-elements")
@@ -65,11 +65,11 @@ var bufferByte = utils.NewBuffer()
 
 func main() {
 	var idChunk int
-	renderButtons(buttons, state)
 	state.InitWorld()
 	state.AddMouseEventListeners()
 	state.AddKeyboardEventListeners()
 	state.InitWebSocket()
+	state.InitCarosello()
 
 	state.WebSocket.Set("onmessage", js.FuncOf(func(this js.Value, args []js.Value) any {
 		data := args[0].Get("data")

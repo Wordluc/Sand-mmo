@@ -16,9 +16,23 @@
         flex-direction: row;
         align-items: center;
       }
+      #carosello {
+		display: flex;
+		align:center;
+		flex-direction: column;
+		#carosello-border{
+			display: flex;
+			align:center;
+			flex-direction: column;
+			border-style:solid;
+			border-radius: 16px;
+		}
+		button{
+			border-radius: 16px;
+		}
+      }
       #GAME_WINDOW {
 		border-radius: 16px;
-
       }
     </style>
 
@@ -39,7 +53,15 @@
   </head>
   <body>
     <div id="layout">
-      <div id="buttons-elements"></div>
+      <div id="carosello">
+		<button id="carosello-button-up" onclick="move_carosello(-1)">Up</button>
+		<div id="carosello-border">
+			<button class="carosello-buttons" id="carosello-button-1">Prova1</button>
+			<button class="carosello-buttons" id="carosello-button-2">Prova2</button>
+			<button class="carosello-buttons" id="carosello-button-3">Prova3</button>
+		</div>
+		<button id="carosello-button-down" onclick="move_carosello(1)">Down</button>
+	  </div>
       <canvas id="GAME_WINDOW"></canvas>
 	  <div class="radio-group brush-size" onchange="window.changeBrushSize(event)">
 		  <label><input type="radio" name="brush-size" class="snes-radio" value="small"  checked>Small</label>
@@ -52,4 +74,5 @@
 
     </div>
   </body>
+  <script src="carosello.js"></script>
 </html>
