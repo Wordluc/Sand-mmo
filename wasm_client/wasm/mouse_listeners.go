@@ -18,4 +18,21 @@ func (state *WasmState) AddMouseEventListeners() {
 		state.Mouse.Pressed = false
 		return nil
 	}))
+	state.Document.Call("addEventListener", "touchmove", js.FuncOf(func(this js.Value, args []js.Value) any {
+		touch := args[0].Get("touches").Call("item", 0)
+		state.Mouse.Set(touch.Get("clientX").Int()-xStart, touch.Get("clientY").Int()-yStart)
+		return nil
+	}))
+	state.Document.Call("addEventListener", "touchstart", js.FuncOf(func(this js.Value, args []js.Value) any {
+		touch := args[0].Get("touches").Call("item", 0)
+		state.Mouse.Set(touch.Get("clientX").Int()-xStart, touch.Get("clientY").Int()-yStart)
+		state.Mouse.Pressed = true
+		return nil
+	}))
+	releaseFn := js.FuncOf(func(this js.Value, args []js.Value) any {
+		state.Mouse.Pressed = false
+		return nil
+	})
+	state.Document.Call("addEventListener", "touchend", releaseFn)
+	state.Document.Call("addEventListener", "touchcancel", releaseFn)
 }

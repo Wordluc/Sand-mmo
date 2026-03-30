@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"sand-mmo/cell"
 	"sand-mmo/common"
 	"sand-mmo/core/handlers"
 	"syscall/js"
@@ -12,64 +11,16 @@ import (
 
 var ctx js.Value
 
-// Button definitions
-type ButtonDef struct {
-	label    string
-	cellType cell.CellType
-}
-
-var buttons = []ButtonDef{
-	{label: "Vacuum Cleaner", cellType: cell.VACUUM_CELL},
-	{label: "Water", cellType: cell.WATER_CELL},
-	{label: "Sand", cellType: cell.SAND_CELL},
-	{label: "Wood", cellType: cell.WOOD_CELL},
-	{label: "Leaf", cellType: cell.LEAF_CELL},
-	{label: "Stone", cellType: cell.STONE_CELL},
-	{label: "Smoke", cellType: cell.SMOKE_CELL},
-	{label: "Fire", cellType: cell.FIRE_CELL},
-	{label: "Lava", cellType: cell.LAVA_CELL},
-}
-
-// Render buttons using HTML DOM
-func setDataVariableIntoJavascript() {
-
-	doc := js.Global().Get("document")
-	elemContainer := doc.Call("getElementById", "buttons-elements")
-
-	// Labels
-	elemLabel := doc.Call("createElement", "p")
-	elemLabel.Set("textContent", "Elements")
-	elemContainer.Call("appendChild", elemLabel)
-
-	brushLabel := doc.Call("createElement", "p")
-	brushLabel.Set("textContent", "Brush")
-
-	for _, btn := range buttons {
-		b := btn
-		el := doc.Call("createElement", "button")
-		el.Set("textContent", b.label)
-
-		cls := "snes-button"
-		el.Set("className", cls)
-		elemContainer.Call("appendChild", el)
-
-		el.Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-			state.CellType = b.cellType
-			return nil
-		}))
-	}
-}
-
 var state *wasm.WasmState = new(wasm.NewState())
 var bufferByte = utils.NewBuffer()
 
 func main() {
 	var idChunk int
+	state.InitCarosello()
 	state.InitWorld()
 	state.AddMouseEventListeners()
 	state.AddKeyboardEventListeners()
 	state.InitWebSocket()
-	state.InitCarosello()
 
 	state.WebSocket.Set("onmessage", js.FuncOf(func(this js.Value, args []js.Value) any {
 		data := args[0].Get("data")
