@@ -4,21 +4,11 @@ import (
 	"encoding/binary"
 	"sand-mmo/common"
 	"sand-mmo/core/handlers"
-	"strings"
 	"syscall/js"
 )
 
-func (state *WasmState) InitWebSocket() {
-	loc := js.Global().Get("location")
-	host, _, _ := strings.Cut(loc.Get("host").String(), ":")
-	protocol := "ws"
-	if loc.Get("protocol").String() == "https:" {
-		protocol = "wss"
-	}
-
-	wsURL := protocol + "://" + host + ":8000" + "/ws"
-	//wsURL := protocol + "://" + "www.wordluc.it" + ":8000" + "/ws"
-	ws := js.Global().Get("WebSocket").New(wsURL)
+func (state *WasmState) InitWebSocket(addr string) {
+	ws := js.Global().Get("WebSocket").New(addr)
 
 	ws.Set("binaryType", "arraybuffer")
 	state.WebSocket = ws

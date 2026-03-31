@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"sand-mmo/common"
 	"sand-mmo/core/handlers"
+	"strings"
 	"syscall/js"
 	"wasm/utils"
 	"wasm/wasm"
@@ -14,13 +15,44 @@ var ctx js.Value
 var state *wasm.WasmState = new(wasm.NewState())
 var bufferByte = utils.NewBuffer()
 
-func main() {
+func getAddr() string {
+	loc := js.Global().Get("location")
+	host, _, _ := strings.Cut(loc.Get("host").String(), ":")
+	protocol := "ws"
+	if loc.Get("protocol").String() == "https:" {
+		protocol = "wss"
+	}
+
+	//wsURL := protocol + "://" + "www.wordluc.it" + ":8000" + "/ws"
+	return protocol + "://" + host + ":8000" + "/ws"
+}
+
+func setChunksIntoWorld(chunks []int) {
+	xClient, yClient := state.Window.Pos.Get()
 	var idChunk int
+	if len(chunks) != 0 {
+		for _, idChunk = range chunks {
+			x, y := common.GetServerXYChunk(idChunk)
+			x = x - xClient
+			y = y - yClient
+			if x < 0 || x >= common.W_CHUNKS_CLIENT {
+				continue
+			}
+			if y < 0 || y >= common.H_CHUNKS_CLIENT {
+				continue
+			}
+
+			state.World.SetDecodedCells(bufferByte.GetLast(idChunk), x+y*common.W_CHUNKS_CLIENT)
+		}
+	}
+}
+
+func main() {
 	state.InitCarosello()
 	state.InitWorld()
 	state.AddMouseEventListeners()
 	state.AddKeyboardEventListeners()
-	state.InitWebSocket()
+	state.InitWebSocket(getAddr())
 
 	state.WebSocket.Set("onmessage", js.FuncOf(func(this js.Value, args []js.Value) any {
 		data := args[0].Get("data")
@@ -67,28 +99,9 @@ func main() {
 			wasm.Send(state.WebSocket, handlers.GetMoveCommand(uint16(state.Window.GetChunkId())))
 			wasm.Draw(state)
 			state.Window.OldPos = state.Window.Pos
-			//return nil
 		}
-		chunks := bufferByte.GetChunks()
-		var toDraw = []int{}
-		xClient, yClient := state.Window.Pos.Get()
+		setChunksIntoWorld(bufferByte.GetChunks())
 
-		if len(chunks) != 0 {
-			for _, idChunk = range chunks {
-				x, y := common.GetServerXYChunk(idChunk)
-				x = x - xClient
-				y = y - yClient
-				if x < 0 || x >= common.W_CHUNKS_CLIENT {
-					continue
-				}
-				if y < 0 || y >= common.H_CHUNKS_CLIENT {
-					continue
-				}
-
-				state.World.SetDecodedCells(bufferByte.GetLast(idChunk), x+y*common.W_CHUNKS_CLIENT)
-				toDraw = append(toDraw, x+y*common.W_CHUNKS_CLIENT)
-			}
-		}
 		wasm.Draw(state)
 
 		return nil
