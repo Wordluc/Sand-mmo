@@ -168,20 +168,29 @@ func (w *NetCode) SendAllChunksToAll(chunksToSend []int) {
 	for _, iC := range chunksToSend {
 		chunks[iC] = w.world.GetChunkBytesToSend(iC)
 	}
-	for _, client := range w.getClients() {
+	group := sync.WaitGroup{}
+	clients := w.getClients()
+	group.Add(len(clients))
+	for _, client := range clients {
 		if client.Conn == nil {
 			continue
 		}
-
-		go w.SendChunksTo(chunks, client)
-
+		go func() {
+			w.SendChunksTo(chunks, client)
+			group.Done()
+		}()
 	}
+	group.Wait()
 }
 
 func (w *NetCode) SendChunksTo(chunksToSend map[int][]byte, client *Client) (err error) {
 	xClient, yClient := common.GetServerXYChunk(client.AtChunkId)
 	var x, y int
-	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	var timeout time.Duration = 200
+	if client.IsGod {
+		timeout = 500
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Millisecond)
 	defer cancel()
 	defer func() {
 		if err != nil {
