@@ -56,7 +56,6 @@ func Decode(input uint64) Package {
 		return decodeCommand(input, c)
 	}
 }
-
 func Encode(c Package) uint64 {
 	output := uint64(c.Command) << 48
 	if c.Command < 16 {

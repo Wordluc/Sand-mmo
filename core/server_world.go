@@ -180,6 +180,23 @@ func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []int) {
 	return l.GetReversSort()
 }
 
+func (w *world) IsCoordinateValid(x, y int) bool {
+	if x >= w.W || x < 0 {
+		return false
+	}
+	if y >= w.H || y < 0 {
+		return false
+	}
+	return true
+}
+
+func (w *world) IsChunkIdValid(chunkId int) bool {
+	if chunkId < 0 || chunkId >= w.GetNumberChucks() {
+		return false
+	}
+	return true
+}
+
 func (w *world) SetVec(pos common.Vec2, cell cell.Cell) {
 	x, y := pos.Get()
 	w.Set(x, y, cell)

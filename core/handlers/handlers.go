@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sand-mmo/common"
@@ -26,6 +27,9 @@ func GetHandlers() []handler {
 			p: common.DRAW_IN,
 			handler: func(p common.Package, e *CoreHandlers) error {
 				x, y := common.GetServerXYChunk(e.client.AtChunkId)
+				if !e.world.IsCoordinateValid(x, y) {
+					return errors.New("Coordinate not valid")
+				}
 				p.BrushPackage.X += uint16(x) * common.CHUNK_SIZE
 				p.BrushPackage.Y += uint16(y) * common.CHUNK_SIZE
 				if e.IsLastCommand(common.ADD_GENERATOR) {
@@ -39,6 +43,9 @@ func GetHandlers() []handler {
 		{
 			p: common.INIT,
 			handler: func(p common.Package, e *CoreHandlers) error {
+				if !e.world.IsChunkIdValid(int(p.Arg1)) {
+					return errors.New("INIT: ChunkId not valid")
+				}
 				fmt.Println("Init bidirectional connection: "+e.client.Addr, " at ", p.Arg1)
 				e.client.AtChunkId = int(p.Arg1)
 				e.netCode.SendViewChunksTo(e.client)
@@ -48,7 +55,7 @@ func GetHandlers() []handler {
 		{
 			p: common.INITGOD,
 			handler: func(p common.Package, e *CoreHandlers) error {
-				fmt.Println("Init god bidirectional connection: "+e.client.Addr, " at ", p.Arg1)
+				fmt.Println("Init god bidirectional connection: " + e.client.Addr)
 				e.client.IsGod = true
 				e.netCode.SendAllChunksTo(e.client)
 				return nil
@@ -57,6 +64,9 @@ func GetHandlers() []handler {
 		{
 			p: common.MOVE_AT,
 			handler: func(p common.Package, e *CoreHandlers) error {
+				if !e.world.IsChunkIdValid(int(p.Arg1)) {
+					return errors.New("MOVE_AT: ChunkId not valid")
+				}
 				oldX, oldY := common.GetServerXYChunk(e.client.AtChunkId)
 				e.client.AtChunkId = int(p.Arg1)
 				newX, newY := common.GetServerXYChunk(e.client.AtChunkId)
