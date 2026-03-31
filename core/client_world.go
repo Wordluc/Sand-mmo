@@ -57,11 +57,6 @@ func (w *ClientWorld) SetDecodedCells(bytes []byte, idChunk int) {
 	w.activeChunks.SortedInsert(idChunk)
 }
 
-func (w *ClientWorld) GetChunksToDraw() (res []int) {
-	res = w.activeChunks.Get()
-	w.activeChunks.Clean()
-	return res
-}
 func (w *ClientWorld) PopActiveChunks() (res []int) {
 	res = w.activeChunks.Get()
 	w.activeChunks.Clean()

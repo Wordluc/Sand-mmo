@@ -170,7 +170,7 @@ func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 }
 
 func Draw(w core.ClientWorld) {
-	for _, chunkId := range w.GetChunksToDraw() {
+	for _, chunkId := range w.PopActiveChunks() {
 		w.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
 			x = x * SIZE_CELL
 			y = y * SIZE_CELL
