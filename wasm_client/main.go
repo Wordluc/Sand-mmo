@@ -29,20 +29,18 @@ func getAddr() string {
 
 func setChunksIntoWorld(chunks []int) {
 	xClient, yClient := state.Window.Pos.Get()
-	var idChunk int
+	var idChunk, fixedChunkId int
 	if len(chunks) != 0 {
 		for _, idChunk = range chunks {
 			x, y := common.GetServerXYChunk(idChunk)
 			x = x - xClient
 			y = y - yClient
-			if x < 0 || x >= common.W_CHUNKS_CLIENT {
-				continue
-			}
-			if y < 0 || y >= common.H_CHUNKS_CLIENT {
+			fixedChunkId = x + y*common.W_CHUNKS_CLIENT
+			if !state.World.IsChunkIdValid(fixedChunkId) {
 				continue
 			}
 
-			state.World.SetDecodedCells(bufferByte.GetLast(idChunk), x+y*common.W_CHUNKS_CLIENT)
+			state.World.SetDecodedCells(bufferByte.GetLast(idChunk), fixedChunkId)
 		}
 	}
 }

@@ -20,6 +20,9 @@ func NewClientWorld() (res ClientWorld) {
 }
 
 func (w *ClientWorld) ShiftWorld(dx, dy int) {
+	if dx == 0 && dy == 0 {
+		return
+	}
 	if dx > 0 {
 		for i := 0; i <= w.W*w.H-w.W; i += w.W {
 			copy(w.cells[i:i+w.W-w.ChunkSize], w.cells[i+w.ChunkSize:i+w.W])
@@ -34,6 +37,12 @@ func (w *ClientWorld) ShiftWorld(dx, dy int) {
 	} else if dy < 0 {
 		copy(w.cells[w.ChunkSize*w.W:], w.cells[:w.W*w.H-w.ChunkSize*w.W])
 	}
+	r := make([]int, w.GetNumberChucks())
+	for i := range r {
+		r[i] = i
+	}
+	w.activeChunks.SortedInsert(r...)
+
 }
 
 func (w *ClientWorld) SetDecodedCells(bytes []byte, idChunk int) {

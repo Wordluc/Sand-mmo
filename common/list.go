@@ -18,11 +18,13 @@ func NewOrderList[t cmp.Ordered]() OrderList[t] {
 	}
 }
 
-func (a *OrderList[t]) SortedInsert(newValue t) {
+func (a *OrderList[t]) SortedInsert(newValues ...t) {
 	a.Mutex.Lock()
-	i, found := slices.BinarySearch(a.list, newValue)
-	if !found {
-		a.list = slices.Insert(a.list, i, newValue)
+	for id := range newValues {
+		i, found := slices.BinarySearch(a.list, newValues[id])
+		if !found {
+			a.list = slices.Insert(a.list, i, newValues[id])
+		}
 	}
 	a.Mutex.Unlock()
 }
