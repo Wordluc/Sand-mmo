@@ -25,7 +25,7 @@ func init() {
 func Draw(state *WasmState) {
 	var dx, dy, px int
 	var color common.Color
-	for chunkId := range state.World.GetNumberChucks() {
+	for _, chunkId := range state.World.PopActiveChunks() {
 		state.World.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
 			x = x * SIZE_CELL
 			y = y * SIZE_CELL

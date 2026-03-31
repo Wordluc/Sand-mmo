@@ -145,10 +145,6 @@ func (w *ServerWorld) ApplyGenerators() error {
 	return nil
 }
 
-func (w *ServerWorld) GetChunksToSend() []int {
-	return w.activeChunks.Get()
-}
-
 func (w *ServerWorld) GetActiveChunksAndNeiboroud() (res []int) {
 	l := common.NewOrderList[int]()
 	chunks := w.activeChunks.Get()
@@ -281,4 +277,8 @@ func (w *world) GetChunkBytes(idChunk int) []uint16 {
 	}
 
 	return decoded
+}
+
+func (w *world) GetActiveChunks() []int {
+	return w.activeChunks.Get()
 }

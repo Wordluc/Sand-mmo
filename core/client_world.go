@@ -62,3 +62,8 @@ func (w *ClientWorld) GetChunksToDraw() (res []int) {
 	w.activeChunks.Clean()
 	return res
 }
+func (w *ClientWorld) PopActiveChunks() (res []int) {
+	res = w.activeChunks.Get()
+	w.activeChunks.Clean()
+	return res
+}
