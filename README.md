@@ -35,7 +35,7 @@ http://www.wordluc.it/
 | Wood | Burns when touched by fire or lava |
 | Leaf | Falls like sand, ignites easily |
 | Stone | Static, indestructible |
-| Vacuum | Destroys surrounding cells |
+| Void | Destroys surrounding cells |
 
 - **Protocol:** 64-bit packets for client→server commands (coordinate, cell type, brush type), 16-bit per cell for server→client chunk updates to minimize bandwidth.
 - **Chunk-based world simulation:** the world is divided into chunks simulated to improve performace.

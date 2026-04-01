@@ -17,7 +17,7 @@ const (
 	FIRE_CELL
 	LAVA_CELL
 	LEAF_CELL
-	VACUUM_CELL
+	VOID_CELL
 )
 
 type Cell struct {
@@ -40,7 +40,7 @@ func NewCell(celltype CellType) (res Cell) {
 		res.initialLifeSec = 30
 	case FIRE_CELL:
 		res.initialLifeSec = 10
-	case VACUUM_CELL:
+	case VOID_CELL:
 		res.initialLifeSec = 10
 	}
 	res.RemainingLife = float32(res.initialLifeSec)

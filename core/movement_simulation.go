@@ -30,7 +30,7 @@ var (
 		common.NewVec2(-1, 0),
 		common.NewVec2(1, 0),
 	}
-	vacumm_movement = []common.Vec2{
+	void_movement = []common.Vec2{
 		common.NewVec2(0, 1),
 		common.NewVec2(0, -1),
 		common.NewVec2(1, 0),
@@ -80,13 +80,13 @@ func (w *ServerWorld) SimulateChunk(idChunk int) error {
 		case cell.WATER_CELL:
 			w.simulateWaterMovements(pos, 2, &center, water_movement)
 
-		case cell.VACUUM_CELL:
+		case cell.VOID_CELL:
 			if center.RemainingLife <= 0 {
 				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
 				return nil
 			}
 			center.DecreaseLife()
-			if !w.simulateVacuumMovements(pos, 1, &center, vacumm_movement) {
+			if !w.simulateVoidMovements(pos, 1, &center, void_movement) {
 				center.Touched()
 				w.activeChunks.SortedInsert(idChunk)
 			}
@@ -207,7 +207,7 @@ func (w *ServerWorld) simulateLeafMovements(
 	return w.simulateCustomMovements(pos, maxSpeed, c, move_light_leaf, w.setEmptyCell, groups)
 }
 
-func (w *ServerWorld) simulateVacuumMovements(
+func (w *ServerWorld) simulateVoidMovements(
 	pos common.Vec2,
 	maxSpeed int,
 	c **cell.Cell,
@@ -219,7 +219,7 @@ func (w *ServerWorld) simulateVacuumMovements(
 		if tcell == nil {
 			return false
 		}
-		if !w.isFree(posToCheck) && tcell.CellType != cell.VACUUM_CELL {
+		if !w.isFree(posToCheck) && tcell.CellType != cell.VOID_CELL {
 			w.SetVec(posToCheck, cell.NewCell(cell.EMPTY_CELL))
 		}
 		return false

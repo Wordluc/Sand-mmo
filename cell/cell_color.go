@@ -54,7 +54,7 @@ var colorMap map[CellType][]common.Color = map[CellType][]common.Color{
 		common.Brown,
 		common.DarkBrown,
 	},
-	VACUUM_CELL: {
+	VOID_CELL: {
 		common.Purple,
 		common.Violet,
 		common.DarkPurple,

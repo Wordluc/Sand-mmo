@@ -96,7 +96,7 @@ func (c *Carosello[t]) move(this js.Value, args []js.Value) interface{} {
 }
 
 var buttons = []ButtonDef{
-	{text: "Void", cellType: cell.VACUUM_CELL},
+	{text: "Void", cellType: cell.VOID_CELL},
 	{text: "Water", cellType: cell.WATER_CELL},
 	{text: "Sand", cellType: cell.SAND_CELL},
 	{text: "Wood", cellType: cell.WOOD_CELL},

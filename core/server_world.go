@@ -20,7 +20,7 @@ func NewServerWorld() (res ServerWorld) {
 	return res
 }
 
-func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bool) {
+func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVoid bool) {
 	var c *cell.Cell
 	drawCircle := func(radius int) error {
 		for i_y := range radius * 2 {
@@ -41,8 +41,8 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bo
 					if c == nil {
 						continue
 					}
-					if c.CellType == cell.VACUUM_CELL {
-						metVacuum = true
+					if c.CellType == cell.VOID_CELL {
+						metVoid = true
 					}
 					w.Set(x, y, cell.NewCell(p.CellType))
 
@@ -64,8 +64,8 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bo
 				if c == nil {
 					continue
 				}
-				if c.CellType == cell.VACUUM_CELL {
-					metVacuum = true
+				if c.CellType == cell.VOID_CELL {
+					metVoid = true
 				}
 				w.Set(x, y, cell.NewCell(p.CellType))
 			}
@@ -74,15 +74,15 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVacuum bo
 	}
 	switch p.BrushType {
 	case common.CIRCLE_SMALL:
-		return drawCircle(4), metVacuum
+		return drawCircle(4), metVoid
 	case common.CIRCLE_BIG:
-		return drawCircle(6), metVacuum
+		return drawCircle(6), metVoid
 	case common.SQUARE_SMALL:
-		return drawBox(4), metVacuum
+		return drawBox(4), metVoid
 	case common.SQUARE_BIG:
-		return drawBox(6), metVacuum
+		return drawBox(6), metVoid
 	}
-	return nil, metVacuum
+	return nil, metVoid
 }
 
 func (w *ServerWorld) ImportGenerators(gen []byte) {
@@ -133,11 +133,11 @@ func (w *ServerWorld) Loop() error {
 func (w *ServerWorld) ApplyGenerators() error {
 	newGenerators := make([]common.BrushPackage, 0)
 	for i := range w.generators {
-		err, metVacuum := w.ApplyBrush(w.generators[i])
+		err, metVoid := w.ApplyBrush(w.generators[i])
 		if err != nil {
 			return err
 		}
-		if !metVacuum {
+		if !metVoid {
 			newGenerators = append(newGenerators, w.generators[i])
 		}
 	}
