@@ -75,8 +75,10 @@ func main() {
 		return nil
 	},
 	))
+	var offset common.Vec2
+	var x, y int
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
-		x, y := state.Mouse.Get()
+		x, y = state.Mouse.Get()
 		go func() {
 			x = x / wasm.SIZE_CELL
 			y = y / wasm.SIZE_CELL
@@ -88,7 +90,7 @@ func main() {
 				wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
 			}
 		}()
-		offset := state.Window.Pos.Copy()
+		offset = state.Window.Pos.Copy()
 		offset.Sub(state.Window.OldPos)
 
 		if !offset.IsZero() {
