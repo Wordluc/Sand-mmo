@@ -1,0 +1,29 @@
+.controller{
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+}
+
+#carosello {
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+	button{
+		border-radius: 16px;
+		width:180;
+		height:50px;
+		background: #fff;
+		&:hover { background: #f0f0f0; }
+		&:active { transform: scale(0.93); }
+	}
+	.carosello-arrow{
+		width: 130px;
+		height: 40;
+	}
+	#carosello-border{
+		display: flex;
+		flex-direction: column;
+		border-style:solid;
+		border-radius: 16px;
+	}
+}

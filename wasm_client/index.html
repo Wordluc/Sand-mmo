@@ -3,80 +3,16 @@
 		<meta charset="utf-8"/>
 		<link rel="stylesheet" href="https://unpkg.com/snes.css/dist/snes.css">
 		<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-
-		<style>
-.dpad {
-	display: grid;
-	grid-template-columns: 56px 56px 56px;
-	grid-template-rows: 56px 56px 56px;
-	gap: 6px;
-	width: fit-content;
-	margin: 2rem auto;
-}
-  .btn {
-	  display: flex;
-	  align-items: center;
-	  justify-content: center;
-	  background: #fff;
-	  border: 1px solid #ccc;
-	  border-radius: 8px;
-	  font-size: 20px;
-	  cursor: pointer;
-	  transition: background 0.1s, transform 0.08s;
-  }
-  .btn:hover { background: #f0f0f0; }
-  .btn:active { transform: scale(0.93); }
-  .empty { visibility: hidden; }
-  * { box-sizing: border-box; margin: 5; padding: 0; }
-
-  body {
-	  display: flex;
-	  justify-content: center;
-	  align-items: center;
-  }
-  #layout {
-	  display: flex;
-	  flex-direction: row;
-	  align-items: center;
-  }
-  #carosello {
-	  display: flex;
-	  align-items: center;
-	  flex-direction: column;
-	  .carosello-controller{
-		  width: 100px;
-		  height: 20px;
-		  display: flex;          
-		  justify-content: center;
-	  }
-	  #carosello-border{
-		  display: flex;
-		  flex-direction: column;
-		  border-style:solid;
-		  border-radius: 16px;
-		  .carosello-buttons{
-			  width:150px;
-			  height:50px
-		  }
-	  }
-	  button{
-		  border-radius: 16px;
-	  }
-  }
-  #GAME_WINDOW {
-	  touch-action: none;
-	  border-radius: 16px;
-  }
-		</style>
-
+		<link href="brush.css" rel="stylesheet">
+		<link href="dpad.css" rel="stylesheet">
+		<link href="game.css" rel="stylesheet">
 		<script src="wasm_exec.js"></script>
+		<script src="carosello.js"></script>
 		<script>
 			const go = new Go();
 			WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
 				go.run(result.instance);
 			});
-		</script>
-		<script>
 			function loop() {
 				if (window.goFrame != null) { window.goFrame(); }
 				requestAnimationFrame(loop);
@@ -85,8 +21,7 @@
 		</script>
 	</head>
 	<body>
-		<div id="layout">
-
+		<div class="game">
 			<div class="dpad">
 				<div class="empty"></div>
 				<button class="btn" id="up">▲</button>
@@ -98,29 +33,35 @@
 				<button class="btn" id="down">▼</button>
 				<div class="empty"></div>
 			</div>
+			<div class="play_zone">
+				<canvas id="game_window"></canvas>
+				<div class="brush">
+					<div class="radio-group" onchange="window.changeBrushSize(event)">
+						<label><input type="radio" name="brush-size" class="snes-radio" value="small"  checked>Small</label>
+						<label><input type="radio" name="brush-size" class="snes-radio" value="big" >Big</label>
+					</div>
+					|
+					<div class="radio-group"onchange="window.changeBrushShape(event)">
+						<label><input type="radio" name="brush-shape" class="snes-radio" value="circle"  checked>Circle</label>
+						<label><input type="radio" name="brush-shape" class="snes-radio" value="square" >Square</label>
+					</div>
 
-			<div id="carosello">
-				<button id="carosello-button-up" class="carosello-controller" onclick="move_carosello(-1)">Up</button>
-				<div id="carosello-border">
-					<button class="carosello-buttons" id="carosello-button-1">Prova1</button>
-					<button class="carosello-buttons" id="carosello-button-2">Prova2</button>
-					<button class="carosello-buttons" id="carosello-button-3">Prova3</button>
 				</div>
-				<button id="carosello-button-down" class="carosello-controller" onclick="move_carosello(1)">Down</button>
+
+			</div>
+			<div class="controller">
+				<div id="carosello">
+					<button id="carosello-button-up" class="carosello-arrow" onclick="move_carosello(-1)">Up</button>
+					<div id="carosello-border">
+						<button class="carosello-buttons" id="carosello-button-1">Prova1</button>
+						<button class="carosello-buttons" id="carosello-button-2">Prova2</button>
+						<button class="carosello-buttons" id="carosello-button-3">Prova3</button>
+					</div>
+					<button id="carosello-button-down" class="carosello-arrow" onclick="move_carosello(1)">Down</button>
+				</div>
 			</div>
 
-			<canvas id="GAME_WINDOW"></canvas>
-
-			<div class="radio-group brush-size" onchange="window.changeBrushSize(event)">
-				<label><input type="radio" name="brush-size" class="snes-radio" value="small"  checked>Small</label>
-				<label><input type="radio" name="brush-size" class="snes-radio" value="big" >Big</label>
-			</div>
-			<div class="radio-group brush-shape"onchange="window.changeBrushShape(event)">
-				<label><input type="radio" name="brush-shape" class="snes-radio" value="circle"  checked>Circle</label>
-				<label><input type="radio" name="brush-shape" class="snes-radio" value="square" >Square</label>
-			</div>
 
 		</div>
 	</body>
-	<script src="carosello.js"></script>
 </html>

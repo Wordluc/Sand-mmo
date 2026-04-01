@@ -1,0 +1,23 @@
+
+.dpad {
+	display: grid;
+	grid-template-columns: 56px 56px 56px;
+	grid-template-rows: 56px 56px 56px;
+	gap: 2px;
+	width: fit-content;
+	margin: 1rem auto;
+}
+.btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #fff;
+	border: 1px solid #ccc;
+	border-radius: 8px;
+	font-size: 20px;
+	cursor: pointer;
+	transition: background 0.1s, transform 0.08s;
+}
+.btn:hover { background: #f0f0f0; }
+.btn:active { transform: scale(0.93); }
+.empty { visibility: hidden; }
