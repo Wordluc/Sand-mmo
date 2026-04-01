@@ -40,6 +40,7 @@ func NewState() (res WasmState) {
 	res.Brush.BrushShape = "circle"
 	res.Brush.BrushSize = "small"
 	res.CellType = cell.SAND_CELL
+	res.Window.Pos.Set(0, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
 	return res
 }
 func (b Brush) GetBrushType() common.BrushType {
@@ -59,13 +60,13 @@ func (b Brush) GetBrushType() common.BrushType {
 }
 
 func (w *Window) SetX(x int) {
-	_x, _y := w.Offset.Get()
-	w.Offset.Set(_x+x, _y)
+	_, _y := w.Offset.Get()
+	w.Offset.Set(x, _y)
 }
 
 func (w *Window) SetY(y int) {
-	_x, _y := w.Offset.Get()
-	w.Offset.Set(_x, _y+y)
+	_x, _ := w.Offset.Get()
+	w.Offset.Set(_x, y)
 }
 
 func (w *Window) GetChunkId() int {

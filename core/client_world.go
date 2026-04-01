@@ -20,9 +20,6 @@ func NewClientWorld() (res ClientWorld) {
 }
 
 func (w *ClientWorld) ShiftWorld(dx, dy int) {
-	if dx == 0 && dy == 0 {
-		return
-	}
 	if dx > 0 {
 		for i := 0; i <= w.W*w.H-w.W; i += w.W {
 			copy(w.cells[i:i+w.W-w.ChunkSize], w.cells[i+w.ChunkSize:i+w.W])

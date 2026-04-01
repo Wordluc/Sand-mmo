@@ -104,22 +104,22 @@ func main() {
 		if state.Mouse.Pressed {
 			wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
 		}
-		offset = state.Window.Offset
+		setChunksIntoWorld(bufferByte.GetChunks())
+		bufferByte.Clean()
 
+		offset = state.Window.Offset
 		if !offset.IsZero() {
 
 			newPos := state.Window.Pos.Copy()
 			newPos.Add(offset)
-			if state.World.IsCoordinateValid(newPos.Get()) {
-				bufferByte.Clean()
+			x, y := newPos.Get()
+			if !(x < 0 || x+common.W_CHUNKS_CLIENT > common.W_CHUNKS_TOTAL || y < 0 || y+common.H_CHUNKS_CLIENT > common.H_CHUNKS_TOTAL) {
+				state.Window.Pos = newPos
 				state.World.ShiftWorld(offset.Get())
 				wasm.Send(state.WebSocket, handlers.GetMoveCommand(uint16(state.Window.GetChunkId())))
-				state.Window.Pos = newPos
-				state.Window.Offset.Set(0, 0)
 			}
+			state.Window.Offset.Set(0, 0)
 		}
-		setChunksIntoWorld(bufferByte.GetChunks())
-
 		wasm.Draw(state)
 
 		return nil
