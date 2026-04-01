@@ -20,7 +20,7 @@ type Brush struct {
 
 type Window struct {
 	Pos    common.Vec2
-	OldPos common.Vec2
+	Offset common.Vec2
 	Size   common.Vec2
 }
 
@@ -58,28 +58,14 @@ func (b Brush) GetBrushType() common.BrushType {
 	return common.CIRCLE_SMALL
 }
 
-func (w *Window) AddX(x int) {
-	w.Pos.AddX(x)
-	x, y := w.Pos.Get()
-	width, _ := w.Size.Get()
-	if x > width {
-		w.Pos.Set(width, y)
-	}
-	if x < 0 {
-		w.Pos.Set(0, y)
-	}
+func (w *Window) SetX(x int) {
+	_x, _y := w.Offset.Get()
+	w.Offset.Set(_x+x, _y)
 }
 
-func (w *Window) AddY(y int) {
-	w.Pos.AddY(y)
-	x, y := w.Pos.Get()
-	_, height := w.Size.Get()
-	if y > height {
-		w.Pos.Set(x, height)
-	}
-	if y < 0 {
-		w.Pos.Set(x, 0)
-	}
+func (w *Window) SetY(y int) {
+	_x, _y := w.Offset.Get()
+	w.Offset.Set(_x, _y+y)
 }
 
 func (w *Window) GetChunkId() int {

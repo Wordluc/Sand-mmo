@@ -24,13 +24,13 @@
 		<div class="game">
 			<div class="dpad">
 				<div class="empty"></div>
-				<button class="btn" id="up">▲</button>
+				<button onclick="moveView(0,-1)" class="btn" id="up">▲</button>
 				<div class="empty"></div>
-				<button class="btn" id="left">◀</button>
+				<button onclick="moveView(-1,0)" class="btn" id="left">◀</button>
 				<div class="empty"></div>
-				<button class="btn" id="right">▶</button>
+				<button onclick="moveView(1,0)" class="btn" id="right">▶</button>
 				<div class="empty"></div>
-				<button class="btn" id="down">▼</button>
+				<button onclick="moveView(0,1)" class="btn" id="down">▼</button>
 				<div class="empty"></div>
 			</div>
 			<div class="play_zone">

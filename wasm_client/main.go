@@ -84,6 +84,13 @@ func main() {
 		return nil
 	},
 	))
+	js.Global().Set("moveView", js.FuncOf(func(this js.Value, args []js.Value) any {
+		x := args[0].Int()
+		y := args[1].Int()
+		state.Window.Offset.Set(x, y)
+		return nil
+	},
+	))
 	var offset common.Vec2
 	var x, y int
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
@@ -97,15 +104,19 @@ func main() {
 		if state.Mouse.Pressed {
 			wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
 		}
-		offset = state.Window.Pos.Copy()
-		offset.Sub(state.Window.OldPos)
+		offset = state.Window.Offset
 
 		if !offset.IsZero() {
-			bufferByte.Clean()
-			state.World.ShiftWorld(offset.Get())
-			wasm.Send(state.WebSocket, handlers.GetMoveCommand(uint16(state.Window.GetChunkId())))
-			wasm.Draw(state)
-			state.Window.OldPos = state.Window.Pos
+
+			newPos := state.Window.Pos.Copy()
+			newPos.Add(offset)
+			if state.World.IsCoordinateValid(newPos.Get()) {
+				bufferByte.Clean()
+				state.World.ShiftWorld(offset.Get())
+				wasm.Send(state.WebSocket, handlers.GetMoveCommand(uint16(state.Window.GetChunkId())))
+				state.Window.Pos = newPos
+				state.Window.Offset.Set(0, 0)
+			}
 		}
 		setChunksIntoWorld(bufferByte.GetChunks())
 
