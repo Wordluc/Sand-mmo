@@ -81,11 +81,11 @@ func main() {
 			x = x / wasm.SIZE_CELL
 			y = y / wasm.SIZE_CELL
 			if state.Brush.AddGenerator == 1 {
-				wasm.Send(state.WebSocket, handlers.GetGeneratorCommand(handlers.GetDrawCommand(uint16(x), uint16(y), state.CellType, state.Brush.GetBrushType()))...)
+				wasm.Send(state.WebSocket, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))...)
 				state.Brush.AddGenerator = -1
 			}
 			if state.Mouse.Pressed {
-				wasm.Send(state.WebSocket, handlers.GetDrawCommand(uint16(x), uint16(y), state.CellType, state.Brush.GetBrushType()))
+				wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
 			}
 		}()
 		offset := state.Window.Pos.Copy()

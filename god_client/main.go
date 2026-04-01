@@ -115,10 +115,10 @@ func main() {
 
 		Draw(w)
 		vec := rl.GetMousePosition()
-		x := uint16(vec.X) / SIZE_CELL
-		y := uint16(vec.Y) / SIZE_CELL
+		x := int(vec.X) / SIZE_CELL
+		y := int(vec.Y) / SIZE_CELL
 		//avoid to send same package twise
-		if rl.IsMouseButtonDown(rl.MouseButtonLeft) {
+		if rl.IsMouseButtonDown(rl.MouseButtonLeft) && w.IsCoordinateValid(x, y) {
 			if !(vec.X > W_GAME || vec.Y > H_GAME) {
 				err := common.SendToWebSocketPackages(conn, handlers.GetDrawCommand(x, y, cellType, brushType))
 				if err != nil {
@@ -133,7 +133,7 @@ func main() {
 			}
 		}
 		if moved {
-			common.SendToWebSocketPackages(conn, handlers.GetGeneratorCommand(handlers.GetDrawCommand(uint16(x), uint16(y), cellType, brushType))...)
+			common.SendToWebSocketPackages(conn, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, cellType, brushType))...)
 		}
 		rl.DrawText(fmt.Sprintf("CurrentPlayer: %v", currentPlayers), W_GAME-40, 350, common.SIZE_CELL, rl.Black)
 		rl.EndDrawing()
