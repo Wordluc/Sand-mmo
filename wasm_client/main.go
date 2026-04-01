@@ -5,6 +5,7 @@ import (
 	"sand-mmo/common"
 	"sand-mmo/core/handlers"
 	"strings"
+	"sync"
 	"syscall/js"
 	"wasm/utils"
 	"wasm/wasm"
@@ -45,21 +46,29 @@ func setChunksIntoWorld(chunks []int) {
 	}
 }
 
+var socketMessagePool = sync.Pool{
+	New: func() any {
+		return js.Value{}
+	},
+}
+
 func main() {
 	state.InitCarosello()
 	state.InitWorld()
 	state.AddMouseEventListeners()
 	state.AddKeyboardEventListeners()
 	state.InitWebSocket(getAddr())
-
 	state.WebSocket.Set("onmessage", js.FuncOf(func(this js.Value, args []js.Value) any {
-		data := args[0].Get("data")
+		message := socketMessagePool.Get().(js.Value)
+		message = args[0].Get("data")
 
-		buf := make([]byte, data.Get("byteLength").Int())
-		js.CopyBytesToGo(buf, js.Global().Get("Uint8Array").New(data))
+		buf := make([]byte, message.Get("byteLength").Int())
+		js.CopyBytesToGo(buf, js.Global().Get("Uint8Array").New(message))
+
 		gChunkId := int(binary.BigEndian.Uint16(buf[0:2]))
-
 		bufferByte.Append(gChunkId, buf[2:])
+
+		socketMessagePool.Put(message)
 		return nil
 	}))
 
@@ -79,17 +88,15 @@ func main() {
 	var x, y int
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
 		x, y = state.Mouse.Get()
-		go func() {
-			x = x / wasm.SIZE_CELL
-			y = y / wasm.SIZE_CELL
-			if state.Brush.AddGenerator == 1 {
-				wasm.Send(state.WebSocket, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))...)
-				state.Brush.AddGenerator = -1
-			}
-			if state.Mouse.Pressed {
-				wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
-			}
-		}()
+		x = x / wasm.SIZE_CELL
+		y = y / wasm.SIZE_CELL
+		if state.Brush.AddGenerator == 1 {
+			wasm.Send(state.WebSocket, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))...)
+			state.Brush.AddGenerator = -1
+		}
+		if state.Mouse.Pressed {
+			wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
+		}
 		offset = state.Window.Pos.Copy()
 		offset.Sub(state.Window.OldPos)
 

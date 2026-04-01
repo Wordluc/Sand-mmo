@@ -34,18 +34,13 @@ func (state *WasmState) InitWebSocket(addr string) {
 	}))
 }
 
+var sendBuf = make([]byte, 8)
+var sendDst = js.Global().Get("Uint8Array").New(8)
+
 func Send(ws js.Value, ps ...common.Package) {
 	for i := range ps {
-		buf := make([]byte, 8)
-		binary.BigEndian.PutUint64(buf, common.Encode(ps[i]))
-		dst := js.Global().Get("Uint8Array").New(8)
-		js.CopyBytesToJS(dst, buf)
-		ws.Call("send", dst)
+		binary.BigEndian.PutUint64(sendBuf, common.Encode(ps[i]))
+		js.CopyBytesToJS(sendDst, sendBuf)
+		ws.Call("send", sendDst)
 	}
-}
-
-func SendRaw(ws js.Value, bytes []byte) {
-	dst := js.Global().Get("Uint8Array").New(8)
-	js.CopyBytesToJS(dst, bytes)
-	ws.Call("send", dst)
 }
