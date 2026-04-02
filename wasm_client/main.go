@@ -36,10 +36,15 @@ func setChunksIntoWorld(chunks []int) {
 			x, y := common.GetServerXYChunk(idChunk)
 			x = x - xClient
 			y = y - yClient
-			fixedChunkId = x + y*common.W_CHUNKS_CLIENT
-			if !state.World.IsChunkIdValid(fixedChunkId) {
+
+			if x < 0 || x >= common.W_CHUNKS_CLIENT {
 				continue
 			}
+			if y < 0 || y >= common.H_CHUNKS_CLIENT {
+				continue
+			}
+
+			fixedChunkId = x + y*common.W_CHUNKS_CLIENT
 
 			state.World.SetDecodedCells(bufferByte.GetLast(idChunk), fixedChunkId)
 		}
@@ -105,7 +110,6 @@ func main() {
 			wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
 		}
 		setChunksIntoWorld(bufferByte.GetChunks())
-		bufferByte.Clean()
 
 		offset = state.Window.Offset
 		if !offset.IsZero() {
