@@ -1,11 +1,10 @@
 package main
 
 import (
-	"encoding/binary"
 	"sand-mmo/common"
 	"sand-mmo/core/handlers"
+	"slices"
 	"strings"
-	"sync"
 	"syscall/js"
 	"wasm/utils"
 	"wasm/wasm"
@@ -46,29 +45,20 @@ func setChunksIntoWorld(chunks []int) {
 	}
 }
 
-var socketMessagePool = sync.Pool{
-	New: func() any {
-		return js.Value{}
-	},
-}
-
 func main() {
 	state.InitCarosello()
 	state.InitWorld()
 	state.AddMouseEventListeners()
 	state.AddKeyboardEventListeners()
 	state.InitWebSocket(getAddr())
-	state.WebSocket.Set("onmessage", js.FuncOf(func(this js.Value, args []js.Value) any {
-		message := socketMessagePool.Get().(js.Value)
-		message = args[0].Get("data")
 
-		buf := make([]byte, message.Get("byteLength").Int())
-		js.CopyBytesToGo(buf, js.Global().Get("Uint8Array").New(message))
+	var recvBuf = make([]byte, 50)
 
-		gChunkId := int(binary.BigEndian.Uint16(buf[0:2]))
-		bufferByte.Append(gChunkId, buf[2:])
+	js.Global().Set("goSocketMessage", js.FuncOf(func(this js.Value, args []js.Value) any {
 
-		socketMessagePool.Put(message)
+		js.CopyBytesToGo(recvBuf, args[1])
+
+		bufferByte.Append(args[0].Int(), slices.Clone(recvBuf))
 		return nil
 	}))
 

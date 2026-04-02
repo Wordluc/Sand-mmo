@@ -9,10 +9,9 @@ import (
 
 func (state *WasmState) InitWebSocket(addr string) {
 	ws := js.Global().Get("WebSocket").New(addr)
+	js.Global().Call("setup_websocket", ws)
 
-	ws.Set("binaryType", "arraybuffer")
 	state.WebSocket = ws
-
 	state.WebSocket.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {
 		Send(state.WebSocket, handlers.GetInitCommand(state.Window.GetChunkId()))
 		return nil
