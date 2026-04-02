@@ -36,10 +36,11 @@ func setChunksIntoWorld(chunks []int) {
 			x, y := common.GetServerXYChunk(idChunk)
 			x = x - xClient
 			y = y - yClient
-
+			//DROD chunks that arent in the view anymore
 			if x < 0 || x >= common.W_CHUNKS_CLIENT {
 				continue
 			}
+			//DROD chunks that arent in the view anymore
 			if y < 0 || y >= common.H_CHUNKS_CLIENT {
 				continue
 			}
