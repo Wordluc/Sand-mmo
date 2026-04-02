@@ -120,7 +120,10 @@ func main() {
 			x, y := newPos.Get()
 			if !(x < 0 || x+common.W_CHUNKS_CLIENT > common.W_CHUNKS_TOTAL || y < 0 || y+common.H_CHUNKS_CLIENT > common.H_CHUNKS_TOTAL) {
 				state.Window.Pos = newPos
+
+				bufferByte.Clean()
 				state.World.ShiftWorld(offset.Get())
+
 				wasm.Send(state.WebSocket, handlers.GetMoveCommand(uint16(state.Window.GetChunkId())))
 			}
 			state.Window.Offset.Set(0, 0)
