@@ -7,7 +7,6 @@
 		<link href="dpad.css" rel="stylesheet">
 		<link href="game.css" rel="stylesheet">
 		<script src="wasm_exec.js"></script>
-		<script src="carosello.js"></script>
 		<script>
 			const go = new Go();
 			WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
@@ -60,8 +59,6 @@
 					<button id="carosello-button-down" class="carosello-arrow" onclick="move_carosello(1)">Down</button>
 				</div>
 			</div>
-
-
 		</div>
 	</body>
 </html>
