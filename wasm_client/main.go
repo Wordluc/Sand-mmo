@@ -78,37 +78,39 @@ func main() {
 		return nil
 	}))
 
+	js.Global().Set("setGenerator", js.FuncOf(func(this js.Value, args []js.Value) any {
+		state.Brush.AddGenerator = 1
+		return nil
+	}))
 	js.Global().Set("changeBrushSize", js.FuncOf(func(this js.Value, args []js.Value) any {
 		size := args[0].Get("target").Get("value").String()
 		state.Brush.BrushSize = size
 		return nil
-	},
-	))
+	}))
 	js.Global().Set("changeBrushShape", js.FuncOf(func(this js.Value, args []js.Value) any {
 		shape := args[0].Get("target").Get("value").String()
 		state.Brush.BrushShape = shape
 		return nil
-	},
-	))
+	}))
 	js.Global().Set("moveView", js.FuncOf(func(this js.Value, args []js.Value) any {
 		x := args[0].Int()
 		y := args[1].Int()
 		state.Window.Offset.Set(x, y)
 		return nil
-	},
-	))
+	}))
 	var offset common.Vec2
 	var x, y int
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
 		x, y = state.Mouse.Get()
 		x = x / wasm.SIZE_CELL
 		y = y / wasm.SIZE_CELL
-		if state.Brush.AddGenerator == 1 {
-			wasm.Send(state.WebSocket, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))...)
-			state.Brush.AddGenerator = -1
-		}
 		if state.Mouse.Pressed {
-			wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
+			if state.Brush.AddGenerator == 1 {
+				wasm.Send(state.WebSocket, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))...)
+				state.Brush.AddGenerator = -1
+			} else {
+				wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
+			}
 		}
 		setChunksIntoWorld(bufferByte.GetChunks())
 

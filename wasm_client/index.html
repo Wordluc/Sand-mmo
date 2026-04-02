@@ -5,7 +5,9 @@
 		<link href="brush.css" rel="stylesheet">
 		<link href="dpad.css" rel="stylesheet">
 		<link href="game.css" rel="stylesheet">
+		<link href="modal.css" rel="stylesheet">
 		<script src="wasm_exec.js"></script>
+		<script src="modal.js"></script>
 		<script>
 			const go = new Go();
 			WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
@@ -19,13 +21,21 @@
 		</script>
 	</head>
 	<body>
+		<button onclick="toggle_modal()">?</button>
+		<div id="info-modal" class="hidden">
+			<h3>Commands:</h3>
+			<ul>
+				<li>WASD or Arrows: to move view</li>
+				<li>r or G: to place elements generator</li>
+			</ul>
+		</div>
 		<div class="game">
 			<div class="dpad">
 				<div class="empty"></div>
 				<button onclick="moveView(0,-1)" class="btn" id="up">▲</button>
 				<div class="empty"></div>
 				<button onclick="moveView(-1,0)" class="btn" id="left">◀</button>
-				<div class="empty"></div>
+				<div onclick="setGenerator()" class="btn" id="generator">G</div>
 				<button onclick="moveView(1,0)" class="btn" id="right">▶</button>
 				<div class="empty"></div>
 				<button onclick="moveView(0,1)" class="btn" id="down">▼</button>
@@ -43,7 +53,6 @@
 						<label><input type="radio" name="brush-shape" class="snes-radio" value="circle"  checked>Circle</label>
 						<label><input type="radio" name="brush-shape" class="snes-radio" value="square" >Square</label>
 					</div>
-
 				</div>
 
 			</div>
