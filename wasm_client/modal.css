@@ -11,3 +11,7 @@
   border-radius: 16px;
   padding:15;
 }
+#button-modal {
+  position: fixed;  /* or absolute */
+  z-index: 9999;    /* high enough to be above everything */
+}
