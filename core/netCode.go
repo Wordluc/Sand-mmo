@@ -13,6 +13,7 @@ import (
 
 const REDIS_KEY_WORLD = "world:bytes"
 const REDIS_KEY_GENERATOR = "world:generator"
+const REDIS_KEY_CLIENT_HISTORY = "client:history"
 
 type NetCode struct {
 	clients *sync.Map
@@ -92,6 +93,15 @@ func (w *NetCode) AddClient(addr string, conn *ws.Conn) (c *Client) {
 		AtChunkId: 0,
 	}
 	w.clients.Store(addr, c)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	err := w.redis.SAdd(ctx, REDIS_KEY_CLIENT_HISTORY, struct {
+		n_clients int
+		time      time.Time
+	}{n_clients: w.GetLenClients(), time: time.Now()}, 0).Err()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	return c
 }
 
@@ -99,6 +109,15 @@ func (w *NetCode) RemoveClient(client *Client) {
 	fmt.Println("Removed " + client.Addr)
 	w.clients.Delete(client.Addr)
 	client.Conn.CloseNow()
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	err := w.redis.SAdd(ctx, REDIS_KEY_CLIENT_HISTORY, struct {
+		n_clients int
+		time      time.Time
+	}{n_clients: w.GetLenClients(), time: time.Now()}, 0).Err()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 }
 
 func (w *NetCode) GetLenClients() (count int) {
