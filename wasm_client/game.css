@@ -1,9 +1,15 @@
 
-* {  margin: 5;
-	 padding: 0;
+* { margin: 5;
+	padding: 0;
+	touch-action: none;
+}
+button {
+	background: #fff;
+	user-select: none;
+	-moz-user-select: none;
+    -ms-user-select: none;
 }
 body {
-  touch-action: none;
   overflow: hidden;
 }
 .game {

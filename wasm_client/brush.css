@@ -12,7 +12,6 @@
 		border-radius: 16px;
 		width:180;
 		height:50px;
-		background: #fff;
 		&:hover { background: #f0f0f0; }
 		&:active { transform: scale(0.93); }
 	}

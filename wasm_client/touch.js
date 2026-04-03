@@ -1,14 +1,13 @@
 // multitouch.js
 document.addEventListener("DOMContentLoaded", () => {
-	const buttons = document.querySelectorAll("button, .btn");
-
+	const buttons = document.querySelectorAll(".touchButton");
 	buttons.forEach(btn => {
 		btn.addEventListener("touchstart", (e) => {
-			e.preventDefault(); // prevents delay and double-firing with onclick
+			btn.classList.add("onTouch")
 			btn.click();
 		}, { passive: false });
 
-		// For held buttons (like dpad), fire repeatedly while held
+		// For held buttons
 		let interval = null;
 		btn.addEventListener("touchstart", (e) => {
 			if (interval) return;
@@ -16,11 +15,13 @@ document.addEventListener("DOMContentLoaded", () => {
 		}, { passive: false });
 
 		btn.addEventListener("touchend", () => {
+			btn.classList.remove("onTouch")
 			clearInterval(interval);
 			interval = null;
 		});
 
 		btn.addEventListener("touchcancel", () => {
+			btn.classList.remove("onTouch")
 			clearInterval(interval);
 			interval = null;
 		});
