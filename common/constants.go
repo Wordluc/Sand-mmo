@@ -5,8 +5,8 @@ const FPS = 30
 const SIZE_CELL = 5
 const CHUNK_SIZE = 5
 
-const W_CELLS_TOTAL = 750
-const H_CELLS_TOTAL = 1200
+const W_CELLS_TOTAL = 1200
+const H_CELLS_TOTAL = 750
 
 const W_CELLS_CLIENT = 240
 const H_CELLS_CLIENT = 120
