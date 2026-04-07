@@ -35,10 +35,16 @@ func setChunksIntoWorld(chunks []int) {
 			x, y := common.GetServerXYChunk(idChunk)
 			x = x - xClient
 			y = y - yClient
-			fixedChunkId = x + y*common.W_CHUNKS_CLIENT
-			if !state.World.IsChunkIdValid(fixedChunkId) {
+			//DROD chunks that arent in the view anymore
+			if x < 0 || x >= common.W_CHUNKS_CLIENT {
 				continue
 			}
+			//DROD chunks that arent in the view anymore
+			if y < 0 || y >= common.H_CHUNKS_CLIENT {
+				continue
+			}
+
+			fixedChunkId = x + y*common.W_CHUNKS_CLIENT
 
 			state.World.SetDecodedCells(bufferByte.GetLast(idChunk), fixedChunkId)
 		}
@@ -62,40 +68,41 @@ func main() {
 		return nil
 	}))
 
+	js.Global().Set("setGenerator", js.FuncOf(func(this js.Value, args []js.Value) any {
+		state.Brush.AddGenerator = 1
+		return nil
+	}))
 	js.Global().Set("changeBrushSize", js.FuncOf(func(this js.Value, args []js.Value) any {
 		size := args[0].Get("target").Get("value").String()
 		state.Brush.BrushSize = size
 		return nil
-	},
-	))
+	}))
 	js.Global().Set("changeBrushShape", js.FuncOf(func(this js.Value, args []js.Value) any {
 		shape := args[0].Get("target").Get("value").String()
 		state.Brush.BrushShape = shape
 		return nil
-	},
-	))
+	}))
 	js.Global().Set("moveView", js.FuncOf(func(this js.Value, args []js.Value) any {
 		x := args[0].Int()
 		y := args[1].Int()
 		state.Window.Offset.Set(x, y)
 		return nil
-	},
-	))
+	}))
 	var offset common.Vec2
 	var x, y int
 	js.Global().Set("goFrame", js.FuncOf(func(this js.Value, args []js.Value) any {
 		x, y = state.Mouse.Get()
 		x = x / wasm.SIZE_CELL
 		y = y / wasm.SIZE_CELL
-		if state.Brush.AddGenerator == 1 {
-			wasm.Send(state.WebSocket, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))...)
-			state.Brush.AddGenerator = -1
-		}
 		if state.Mouse.Pressed {
-			wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
+			if state.Brush.AddGenerator == 1 {
+				wasm.Send(state.WebSocket, handlers.GetGeneratorCommand(handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))...)
+				state.Brush.AddGenerator = -1
+			} else {
+				wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
+			}
 		}
 		setChunksIntoWorld(bufferByte.GetChunks())
-		bufferByte.Clean()
 
 		offset = state.Window.Offset
 		if !offset.IsZero() {
@@ -105,7 +112,10 @@ func main() {
 			x, y := newPos.Get()
 			if !(x < 0 || x+common.W_CHUNKS_CLIENT > common.W_CHUNKS_TOTAL || y < 0 || y+common.H_CHUNKS_CLIENT > common.H_CHUNKS_TOTAL) {
 				state.Window.Pos = newPos
+
+				bufferByte.Clean()
 				state.World.ShiftWorld(offset.Get())
+
 				wasm.Send(state.WebSocket, handlers.GetMoveCommand(uint16(state.Window.GetChunkId())))
 			}
 			state.Window.Offset.Set(0, 0)

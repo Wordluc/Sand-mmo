@@ -1,0 +1,17 @@
+#info-modal {
+  display: none;
+  position: fixed;  /* or absolute */
+  z-index: 9999;    /* high enough to be above everything */
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40%;
+  height: 40%;
+  background-color:gray;
+  border-radius: 16px;
+  padding:15;
+}
+#button-modal {
+  position: fixed;  /* or absolute */
+  z-index: 9999;    /* high enough to be above everything */
+}
