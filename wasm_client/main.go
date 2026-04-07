@@ -1,19 +1,17 @@
 package main
 
 import (
+	"encoding/binary"
 	"sand-mmo/common"
 	"sand-mmo/core/handlers"
-	"slices"
 	"strings"
 	"syscall/js"
-	"wasm/utils"
 	"wasm/wasm"
 )
 
 var ctx js.Value
 
 var state *wasm.WasmState = new(wasm.NewState())
-var bufferByte = utils.NewBuffer()
 
 func getAddr() string {
 	loc := js.Global().Get("location")
@@ -27,27 +25,36 @@ func getAddr() string {
 	return protocol + "://" + host + ":8000" + "/ws"
 }
 
-func setChunksIntoWorld(chunks []int) {
+func loadChunksIntoWorld() {
 	xClient, yClient := state.Window.Pos.Get()
-	var idChunk, fixedChunkId int
-	if len(chunks) != 0 {
-		for _, idChunk = range chunks {
-			x, y := common.GetServerXYChunk(idChunk)
-			x = x - xClient
-			y = y - yClient
-			//DROD chunks that arent in the view anymore
-			if x < 0 || x >= common.W_CHUNKS_CLIENT {
-				continue
-			}
-			//DROD chunks that arent in the view anymore
-			if y < 0 || y >= common.H_CHUNKS_CLIENT {
-				continue
-			}
 
-			fixedChunkId = x + y*common.W_CHUNKS_CLIENT
+	jsBuffer := js.Global().Call("get_all_chunks_binary")
+	length := jsBuffer.Get("byteLength").Int()
+	if length == 0 {
+		return
+	}
 
-			state.World.SetDecodedCells(bufferByte.GetLast(idChunk), fixedChunkId)
+	raw := make([]byte, length)
+	js.CopyBytesToGo(raw, jsBuffer)
+
+	chunkSize := 2 + common.CHUNK_SIZE*common.CHUNK_SIZE*2
+	var idChunk uint16
+	for offset := 0; offset < len(raw); offset += chunkSize {
+		idChunk = binary.BigEndian.Uint16(raw[offset : offset+2])
+		cellData := raw[offset+2 : offset+chunkSize]
+
+		x, y := common.GetServerXYChunk(int(idChunk))
+		x -= xClient
+		y -= yClient
+
+		if x < 0 || x >= common.W_CHUNKS_CLIENT {
+			continue
 		}
+		if y < 0 || y >= common.H_CHUNKS_CLIENT {
+			continue
+		}
+
+		state.World.SetDecodedCells(cellData, x+y*common.W_CHUNKS_CLIENT)
 	}
 }
 
@@ -58,20 +65,11 @@ func main() {
 	state.AddKeyboardEventListeners()
 	state.InitWebSocket(getAddr())
 
-	var recvBuf = make([]byte, 50)
-
-	js.Global().Set("goSocketMessage", js.FuncOf(func(this js.Value, args []js.Value) any {
-
-		js.CopyBytesToGo(recvBuf, args[1])
-
-		bufferByte.Append(args[0].Int(), slices.Clone(recvBuf))
-		return nil
-	}))
-
 	js.Global().Set("setGenerator", js.FuncOf(func(this js.Value, args []js.Value) any {
 		state.Brush.AddGenerator = 1
 		return nil
 	}))
+
 	js.Global().Set("changeBrushSize", js.FuncOf(func(this js.Value, args []js.Value) any {
 		size := args[0].Get("target").Get("value").String()
 		state.Brush.BrushSize = size
@@ -102,7 +100,7 @@ func main() {
 				wasm.Send(state.WebSocket, handlers.GetDrawCommand(x, y, state.CellType, state.Brush.GetBrushType()))
 			}
 		}
-		setChunksIntoWorld(bufferByte.GetChunks())
+		loadChunksIntoWorld()
 
 		offset = state.Window.Offset
 		if !offset.IsZero() {
@@ -112,8 +110,7 @@ func main() {
 			x, y := newPos.Get()
 			if !(x < 0 || x+common.W_CHUNKS_CLIENT > common.W_CHUNKS_TOTAL || y < 0 || y+common.H_CHUNKS_CLIENT > common.H_CHUNKS_TOTAL) {
 				state.Window.Pos = newPos
-
-				bufferByte.Clean()
+				js.Global().Call("clear_all_queued_chunks")
 				state.World.ShiftWorld(offset.Get())
 
 				wasm.Send(state.WebSocket, handlers.GetMoveCommand(uint16(state.Window.GetChunkId())))

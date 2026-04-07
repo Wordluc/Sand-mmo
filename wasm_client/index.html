@@ -9,27 +9,17 @@
 		<script src="wasm_exec.js"></script>
 		<script src="modal.js"></script>
 		<script src="touch.js"></script>
+		<script src="webSocket.js"></script>
 		<script>
 			const go = new Go();
 			WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
 				go.run(result.instance);
 			});
-			function setup_websocket(ws){
-				ws.binaryType="arraybuffer"
-				ws.onmessage = (e)=>{
-					const view = new DataView(e.data);
-					const chunkId = view.getUint16(0, false);
-					const payload = new Uint8Array(e.data, 2);
-					window.goSocketMessage(chunkId,payload)
-				}
-			}
 			function loop() {
 				if (window.goFrame != null) { window.goFrame(); }
 				requestAnimationFrame(loop);
 			}
 			requestAnimationFrame(loop);
-		</script>
-		<script>
 		</script>
 	</head>
 	<body>
