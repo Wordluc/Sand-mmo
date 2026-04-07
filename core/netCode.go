@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sand-mmo/common"
 	"sync"
@@ -55,6 +54,16 @@ func (w *NetCode) SaveSnapshot() {
 		return
 	}
 	println("World Saved")
+	ctx, cancel = context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	err = w.redis.ZAdd(ctx, REDIS_KEY_CLIENT_HISTORY, redis.Z{
+		Score:  float64(time.Now().Unix()), // unix timestamp as score
+		Member: fmt.Sprint(w.GetLenClients(), ";", time.Now().Format(time.DateTime)),
+	}).Err()
+	if err != nil {
+		fmt.Println(err)
+	}
+	println("Save Clients Number")
 }
 
 func (w *NetCode) LoadSnapshot() error {
@@ -94,19 +103,6 @@ func (w *NetCode) AddClient(addr string, conn *ws.Conn) (c *Client) {
 		AtChunkId: 0,
 	}
 	w.clients.Store(addr, c)
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-	entry, _ := json.Marshal(map[string]interface{}{
-		"n_clients": w.GetLenClients(),
-		"time":      time.Now().String(),
-	})
-	err := w.redis.ZAdd(ctx, REDIS_KEY_CLIENT_HISTORY, redis.Z{
-		Score:  float64(time.Now().Unix()), // unix timestamp as score
-		Member: entry,
-	}).Err()
-	if err != nil {
-		fmt.Println(err)
-	}
 	return c
 }
 
@@ -114,19 +110,6 @@ func (w *NetCode) RemoveClient(client *Client) {
 	fmt.Println("Removed " + client.Addr)
 	w.clients.Delete(client.Addr)
 	client.Conn.CloseNow()
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-	entry, _ := json.Marshal(map[string]interface{}{
-		"n_clients": w.GetLenClients(),
-		"time":      time.Now().String(),
-	})
-	err := w.redis.ZAdd(ctx, REDIS_KEY_CLIENT_HISTORY, redis.Z{
-		Score:  float64(time.Now().Unix()), // unix timestamp as score
-		Member: entry,
-	}).Err()
-	if err != nil {
-		fmt.Println(err)
-	}
 }
 
 func (w *NetCode) GetLenClients() (count int) {
