@@ -4,14 +4,12 @@ import (
 	"sand-mmo/cell"
 	"sand-mmo/common"
 	"syscall/js"
-	"wasm/utils"
 )
 
 var frameBuf []byte
 var jsDst js.Value
 var jsImageData js.Value
 var canvasW, canvasH int
-var bufferByte utils.Buffer = utils.NewBuffer()
 
 func initDrawMemory(state *WasmState) {
 	size := int(state.World.W) * int(state.World.H) * int(SIZE_CELL) * int(SIZE_CELL) * 4
