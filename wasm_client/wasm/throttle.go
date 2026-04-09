@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func throttle(t time.Duration, fn func()) func() {
+func Throttle(t time.Duration, fn func()) func() {
 	var mu sync.Mutex
 	var running bool
 
