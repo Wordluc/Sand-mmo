@@ -1,14 +1,22 @@
 var queue_chunks = new Map()
 
 
-function setup_websocket(ws) {
+function setup_websocket(ws, chunk_size) {
 	ws.binaryType = "arraybuffer"
 	ws.onmessage = (e) => {
-		const view = new DataView(e.data);
-		const chunkId = view.getUint16(0, false);
-		const payload = new Uint8Array(e.data, 0);
-		queue_chunks.set(chunkId, payload)
-	}
+		const buffer = new Uint8Array(e.data);
+		let offset = 0;
+		while (offset < buffer.length) {
+			const chunkId =
+				(buffer[offset] << 8) | buffer[offset + 1];
+
+			const chunk = buffer.slice(offset, offset + chunk_size);
+
+			queue_chunks.set(chunkId, chunk);
+
+			offset += chunk_size;
+		}
+	};
 }
 
 function get_all_chunks_binary() {

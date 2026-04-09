@@ -2,6 +2,7 @@ package wasm
 
 import (
 	"encoding/binary"
+	"math"
 	"sand-mmo/common"
 	"sand-mmo/core/handlers"
 	"syscall/js"
@@ -9,7 +10,7 @@ import (
 
 func (state *WasmState) InitWebSocket(addr string) {
 	ws := js.Global().Get("WebSocket").New(addr)
-	js.Global().Call("setup_websocket", ws)
+	js.Global().Call("setup_websocket", ws, math.Pow(common.CHUNK_SIZE, 2)*2+2)
 
 	state.WebSocket = ws
 	state.WebSocket.Set("onopen", js.FuncOf(func(this js.Value, args []js.Value) any {

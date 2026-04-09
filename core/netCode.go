@@ -205,7 +205,7 @@ func (w *NetCode) SendChunksTo(chunksToSend map[int][]byte, client *Client) (err
 			w.RemoveClient(client)
 		}
 	}()
-
+	chunks_batched := []byte{}
 	for idChunk, chunk := range chunksToSend {
 		if !client.IsGod {
 			x, y = common.GetServerXYChunk(idChunk)
@@ -216,10 +216,11 @@ func (w *NetCode) SendChunksTo(chunksToSend map[int][]byte, client *Client) (err
 				continue
 			}
 		}
-		err = client.Conn.Write(ctx, ws.MessageBinary, chunk)
-		if err != nil {
-			return
-		}
+		chunks_batched = append(chunks_batched, chunk...)
+	}
+	err = client.Conn.Write(ctx, ws.MessageBinary, chunks_batched)
+	if err != nil {
+		return
 	}
 	return err
 }
