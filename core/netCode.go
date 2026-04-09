@@ -179,19 +179,15 @@ func (w *NetCode) SendAllChunksToAll(chunksToSend []int) {
 	for _, iC := range chunksToSend {
 		chunks[iC] = w.world.GetChunkBytesToSend(iC)
 	}
-	group := sync.WaitGroup{}
 	clients := w.getClients()
-	group.Add(len(clients))
 	for _, client := range clients {
 		if client.Conn == nil {
 			continue
 		}
 		go func() {
 			w.SendChunksTo(chunks, client)
-			group.Done()
 		}()
 	}
-	group.Wait()
 }
 
 func (w *NetCode) SendChunksTo(chunksToSend map[int][]byte, client *Client) (err error) {
