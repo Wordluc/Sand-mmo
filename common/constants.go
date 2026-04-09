@@ -3,7 +3,7 @@ package common
 const SLEEP = 50
 const FPS = 30
 const SIZE_CELL = 5
-const CHUNK_SIZE = 5
+const CHUNK_SIZE = 15
 
 const W_CELLS_TOTAL = 1200
 const H_CELLS_TOTAL = 750
