@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"sand-mmo/cell"
 	"sand-mmo/common"
 	"sand-mmo/core"
 	"sand-mmo/core/handlers"
@@ -43,7 +42,7 @@ func main() {
 
 	//Insert fps target
 	rl.SetTargetFPS(30)
-	var cellType cell.CellType = cell.SAND_CELL
+	var cellType core.CellType = core.SAND_CELL
 	var brushType common.BrushType = common.CIRCLE_SMALL
 	var currentPlayers int
 	var responseStr common.ResponseMetadati
@@ -74,13 +73,13 @@ func main() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.SkyBlue)
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 0, Width: 50, Height: 20}, "Water") {
-			cellType = cell.WATER_CELL
+			cellType = core.WATER_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 25, Width: 50, Height: 20}, "Sand") {
-			cellType = cell.SAND_CELL
+			cellType = core.SAND_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 50, Width: 50, Height: 20}, "Smoke") {
-			cellType = cell.SMOKE_CELL
+			cellType = core.SMOKE_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 75, Width: 50, Height: 20}, "Small Circle") {
 			brushType = common.CIRCLE_SMALL
@@ -95,22 +94,22 @@ func main() {
 			brushType = common.SQUARE_BIG
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 175, Width: 50, Height: 20}, "Void") {
-			cellType = cell.VOID_CELL
+			cellType = core.VOID_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 200, Width: 50, Height: 20}, "Stone") {
-			cellType = cell.STONE_CELL
+			cellType = core.STONE_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 225, Width: 50, Height: 20}, "Fire") {
-			cellType = cell.FIRE_CELL
+			cellType = core.FIRE_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 250, Width: 50, Height: 20}, "Wood") {
-			cellType = cell.WOOD_CELL
+			cellType = core.WOOD_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 275, Width: 50, Height: 20}, "Lava") {
-			cellType = cell.LAVA_CELL
+			cellType = core.LAVA_CELL
 		}
 		if ru.Button(rl.Rectangle{X: W_GAME + 5, Y: 300, Width: 50, Height: 20}, "Leaf") {
-			cellType = cell.LEAF_CELL
+			cellType = core.LEAF_CELL
 		}
 
 		Draw(w)
@@ -171,7 +170,7 @@ func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 
 func Draw(w core.ClientWorld) {
 	for _, chunkId := range w.PopActiveChunks() {
-		w.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
+		w.ForEachCell(chunkId, func(x, y int, center *core.Cell) error {
 			x = x * SIZE_CELL
 			y = y * SIZE_CELL
 			rl.DrawRectangle(int32(x), int32(y), SIZE_CELL, SIZE_CELL, rl.NewColor(center.GetColor().Get()))

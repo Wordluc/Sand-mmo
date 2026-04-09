@@ -1,13 +1,13 @@
 package wasm
 
 import (
-	"sand-mmo/cell"
+	"sand-mmo/core"
 	"syscall/js"
 )
 
 type ButtonDef struct {
 	text     string
-	cellType cell.CellType
+	cellType core.CellType
 }
 
 func (b ButtonDef) label() string {
@@ -96,15 +96,15 @@ func (c *Carosello[t]) move(this js.Value, args []js.Value) interface{} {
 }
 
 var buttons = []ButtonDef{
-	{text: "Void", cellType: cell.VOID_CELL},
-	{text: "Water", cellType: cell.WATER_CELL},
-	{text: "Sand", cellType: cell.SAND_CELL},
-	{text: "Wood", cellType: cell.WOOD_CELL},
-	{text: "Leaf", cellType: cell.LEAF_CELL},
-	{text: "Stone", cellType: cell.STONE_CELL},
-	{text: "Smoke", cellType: cell.SMOKE_CELL},
-	{text: "Fire", cellType: cell.FIRE_CELL},
-	{text: "Lava", cellType: cell.LAVA_CELL},
+	{text: "Void", cellType: core.VOID_CELL},
+	{text: "Water", cellType: core.WATER_CELL},
+	{text: "Sand", cellType: core.SAND_CELL},
+	{text: "Wood", cellType: core.WOOD_CELL},
+	{text: "Leaf", cellType: core.LEAF_CELL},
+	{text: "Stone", cellType: core.STONE_CELL},
+	{text: "Smoke", cellType: core.SMOKE_CELL},
+	{text: "Fire", cellType: core.FIRE_CELL},
+	{text: "Lava", cellType: core.LAVA_CELL},
 }
 
 func (state *WasmState) InitCarosello() {

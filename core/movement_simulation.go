@@ -1,7 +1,6 @@
 package core
 
 import (
-	"sand-mmo/cell"
 	"sand-mmo/common"
 )
 
@@ -53,7 +52,7 @@ var (
 
 func (w *ServerWorld) SimulateChunk(idChunk int) error {
 	var pos common.Vec2
-	return w.ForEachCell(idChunk, func(x, y int, center *cell.Cell) error {
+	return w.ForEachCell(idChunk, func(x, y int, center *Cell) error {
 		if center == nil {
 			return nil
 		}
@@ -68,21 +67,21 @@ func (w *ServerWorld) SimulateChunk(idChunk int) error {
 
 		switch center.CellType {
 
-		case cell.SAND_CELL:
+		case SAND_CELL:
 			w.simulateSimpleMovements(pos, 2, &center, sand_movement)
 
-		case cell.LAVA_CELL:
+		case LAVA_CELL:
 			w.simulateLavaMovements(pos, 1, &center, lave_movement)
 
-		case cell.LEAF_CELL:
+		case LEAF_CELL:
 			w.simulateLeafMovements(pos, 1, &center, leaf_movement)
 
-		case cell.WATER_CELL:
+		case WATER_CELL:
 			w.simulateWaterMovements(pos, 2, &center, water_movement)
 
-		case cell.VOID_CELL:
+		case VOID_CELL:
 			if center.RemainingLife <= 0 {
-				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
+				w.SetVec(pos, NewCell(EMPTY_CELL))
 				return nil
 			}
 			center.DecreaseLife()
@@ -91,9 +90,9 @@ func (w *ServerWorld) SimulateChunk(idChunk int) error {
 				w.activeChunks.SortedInsert(idChunk)
 			}
 
-		case cell.SMOKE_CELL:
+		case SMOKE_CELL:
 			if center.RemainingLife <= 0 {
-				w.SetVec(pos, cell.NewCell(cell.EMPTY_CELL))
+				w.SetVec(pos, NewCell(EMPTY_CELL))
 				return nil
 			}
 			center.DecreaseLife()
@@ -102,10 +101,10 @@ func (w *ServerWorld) SimulateChunk(idChunk int) error {
 				w.activeChunks.SortedInsert(idChunk)
 			}
 
-		case cell.FIRE_CELL:
+		case FIRE_CELL:
 			moved := w.simulateFireMovements(idChunk, pos, 2, &center, fire_movement)
 			if center.RemainingLife <= 0 {
-				smoke, _ := NewCellByChance(cell.SMOKE_CELL, 20)
+				smoke, _ := NewCellByChance(SMOKE_CELL, 20)
 				w.SetVec(pos, smoke)
 				return nil
 			}
@@ -123,7 +122,7 @@ func (w *ServerWorld) SimulateChunk(idChunk int) error {
 func (w *ServerWorld) simulateCustomMovements(
 	pos common.Vec2,
 	maxSpeed int,
-	c **cell.Cell,
+	c **Cell,
 	callbackInNewPosition func(common.Vec2) bool,
 	callbackForOldPosition func(common.Vec2) error,
 	groups []common.Vec2,
@@ -155,7 +154,7 @@ func (w *ServerWorld) simulateCustomMovements(
 func (w *ServerWorld) simulateSimpleMovements(
 	pos common.Vec2,
 	maxSpeed int,
-	c **cell.Cell,
+	c **Cell,
 	groups []common.Vec2,
 ) bool {
 	return w.simulateCustomMovements(pos, maxSpeed, c, w.isFree, w.setEmptyCell, groups)
@@ -164,7 +163,7 @@ func (w *ServerWorld) simulateSimpleMovements(
 func (w *ServerWorld) simulateWaterMovements(
 	pos common.Vec2,
 	maxSpeed int,
-	c **cell.Cell,
+	c **Cell,
 	groups []common.Vec2,
 ) bool {
 	put_out := func(posToCheck common.Vec2) bool {
@@ -174,7 +173,7 @@ func (w *ServerWorld) simulateWaterMovements(
 			return false
 		}
 		if w.isBurning(tcell) {
-			smoke, isSmoke := NewCellByChance(cell.SMOKE_CELL, 10)
+			smoke, isSmoke := NewCellByChance(SMOKE_CELL, 10)
 			if !isSmoke {
 				tcell.RemainingLife = 0
 				return false
@@ -190,7 +189,7 @@ func (w *ServerWorld) simulateWaterMovements(
 func (w *ServerWorld) simulateLeafMovements(
 	pos common.Vec2,
 	maxSpeed int,
-	c **cell.Cell,
+	c **Cell,
 	groups []common.Vec2,
 ) bool {
 	move_light_leaf := func(posToCheck common.Vec2) bool {
@@ -199,7 +198,7 @@ func (w *ServerWorld) simulateLeafMovements(
 			return false
 		}
 		if w.isBurning(tcell) {
-			w.SetVec(pos, cell.NewCell(cell.FIRE_CELL))
+			w.SetVec(pos, NewCell(FIRE_CELL))
 			return false
 		}
 		return w.isFree(posToCheck)
@@ -210,7 +209,7 @@ func (w *ServerWorld) simulateLeafMovements(
 func (w *ServerWorld) simulateVoidMovements(
 	pos common.Vec2,
 	maxSpeed int,
-	c **cell.Cell,
+	c **Cell,
 	groups []common.Vec2,
 ) bool {
 	nothing := func(_ common.Vec2) error { return nil }
@@ -219,8 +218,8 @@ func (w *ServerWorld) simulateVoidMovements(
 		if tcell == nil {
 			return false
 		}
-		if !w.isFree(posToCheck) && tcell.CellType != cell.VOID_CELL {
-			w.SetVec(posToCheck, cell.NewCell(cell.EMPTY_CELL))
+		if !w.isFree(posToCheck) && tcell.CellType != VOID_CELL {
+			w.SetVec(posToCheck, NewCell(EMPTY_CELL))
 		}
 		return false
 	}
@@ -231,7 +230,7 @@ func (w *ServerWorld) simulateFireMovements(
 	idChunk int,
 	pos common.Vec2,
 	maxSpeed int,
-	c **cell.Cell,
+	c **Cell,
 	groups []common.Vec2,
 ) bool {
 	change_color_cell_fire := func(pos common.Vec2) error {
@@ -258,7 +257,7 @@ func (w *ServerWorld) simulateFireMovements(
 func (w *ServerWorld) simulateLavaMovements(
 	pos common.Vec2,
 	maxSpeed int,
-	c **cell.Cell,
+	c **Cell,
 	groups []common.Vec2,
 ) bool {
 	light_flammable_create_smoke := func(posToCheck common.Vec2) bool {
@@ -266,13 +265,13 @@ func (w *ServerWorld) simulateLavaMovements(
 		if tcell == nil {
 			return false
 		}
-		if tcell.CellType == cell.WATER_CELL {
-			smoke, _ := NewCellByChance(cell.SMOKE_CELL, 10)
+		if tcell.CellType == WATER_CELL {
+			smoke, _ := NewCellByChance(SMOKE_CELL, 10)
 			w.SetVec(posToCheck, smoke)
 			return false
 		}
 		if w.isFlammable(tcell) {
-			w.SetVec(posToCheck, cell.NewCell(cell.FIRE_CELL))
+			w.SetVec(posToCheck, NewCell(FIRE_CELL))
 			return false
 		}
 		return w.isFree(posToCheck)

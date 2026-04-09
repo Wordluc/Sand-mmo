@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"sand-mmo/cell"
 	"sand-mmo/common"
+	"sand-mmo/core"
 )
 
 func GetInitCommand(chunkId int) (p common.Package) {
@@ -51,7 +51,7 @@ func GetChunkCommand(chunkId uint16) (p common.Package) {
 		},
 	}
 }
-func GetDrawCommand(x, y int, cellType cell.CellType, brushType common.BrushType) (p common.Package) {
+func GetDrawCommand(x, y int, cellType core.CellType, brushType common.BrushType) (p common.Package) {
 	return common.Package{
 		Command: common.DRAW_IN,
 		BrushPackage: common.BrushPackage{

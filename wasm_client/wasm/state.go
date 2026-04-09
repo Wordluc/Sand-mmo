@@ -1,7 +1,6 @@
 package wasm
 
 import (
-	"sand-mmo/cell"
 	"sand-mmo/common"
 	"sand-mmo/core"
 	"syscall/js"
@@ -28,7 +27,7 @@ type WasmState struct {
 	Mouse     Mouse
 	Window    Window
 	Brush     Brush
-	CellType  cell.CellType
+	CellType  core.CellType
 	World     *core.ClientWorld
 	WebSocket js.Value
 	Document  js.Value
@@ -39,7 +38,7 @@ func NewState() (res WasmState) {
 	res.Window.Size = common.NewVec2(common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
 	res.Brush.BrushShape = "circle"
 	res.Brush.BrushSize = "small"
-	res.CellType = cell.SAND_CELL
+	res.CellType = core.SAND_CELL
 	res.Window.Pos.Set(0, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
 	return res
 }

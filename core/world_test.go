@@ -2,18 +2,17 @@ package core
 
 import (
 	"encoding/binary"
-	"sand-mmo/cell"
 	"slices"
 	"testing"
 )
 
-func newCell_for_test(a, b int) cell.Cell {
-	return cell.NewCell(0)
+func newCell_for_test(a, b int) Cell {
+	return NewCell(0)
 
 }
 func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
-	worldCells := []cell.Cell{
+	worldCells := []Cell{
 		newCell_for_test(1, 10), newCell_for_test(2, 20), newCell_for_test(3, 30), newCell_for_test(4, 40), newCell_for_test(5, 50), newCell_for_test(6, 60), newCell_for_test(7, 70), newCell_for_test(8, 80),
 		newCell_for_test(9, 90), newCell_for_test(10, 100), newCell_for_test(11, 110), newCell_for_test(12, 120), newCell_for_test(13, 130), newCell_for_test(14, 140), newCell_for_test(15, 150), newCell_for_test(16, 160),
 
@@ -23,7 +22,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
 	var encoded []byte
 	for _, c := range worldCells {
-		encoded = binary.BigEndian.AppendUint16(encoded, cell.EncodeCell(c))
+		encoded = binary.BigEndian.AppendUint16(encoded, EncodeCell(c))
 	}
 
 	// 8x4 world
@@ -32,32 +31,32 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 
 	caseTest := []struct {
 		idChunk int
-		cell    []cell.Cell
+		cell    []Cell
 	}{
 		{
 			idChunk: 1,
-			cell: []cell.Cell{
+			cell: []Cell{
 				worldCells[2], worldCells[3],
 				worldCells[10], worldCells[11],
 			},
 		},
 		{
 			idChunk: 3,
-			cell: []cell.Cell{
+			cell: []Cell{
 				worldCells[6], worldCells[7],
 				worldCells[14], worldCells[15],
 			},
 		},
 		{
 			idChunk: 5,
-			cell: []cell.Cell{
+			cell: []Cell{
 				worldCells[18], worldCells[19],
 				worldCells[26], worldCells[27],
 			},
 		},
 		{
 			idChunk: 6,
-			cell: []cell.Cell{
+			cell: []Cell{
 				worldCells[20], worldCells[21],
 				worldCells[28], worldCells[29],
 			},
@@ -68,7 +67,7 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 		var want []uint16
 		for i := range c.cell {
 
-			want = append(want, cell.EncodeCell(c.cell[i]))
+			want = append(want, EncodeCell(c.cell[i]))
 		}
 		got := w.GetChunkBytes(c.idChunk)
 
@@ -77,8 +76,8 @@ func TestWorld_GetChunk_FirstChunk(t *testing.T) {
 		}
 
 		for i, v := range got {
-			if cell.DecodeCell(v) != c.cell[i] {
-				t.Fatalf("decode mismatch %+v != %+v", cell.DecodeCell(v), c.cell[i])
+			if DecodeCell(v) != c.cell[i] {
+				t.Fatalf("decode mismatch %+v != %+v", DecodeCell(v), c.cell[i])
 			}
 		}
 	}

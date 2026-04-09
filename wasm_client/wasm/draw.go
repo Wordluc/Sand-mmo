@@ -1,8 +1,8 @@
 package wasm
 
 import (
-	"sand-mmo/cell"
 	"sand-mmo/common"
+	"sand-mmo/core"
 	"syscall/js"
 )
 
@@ -24,7 +24,7 @@ func Draw(state *WasmState) {
 	var dx, dy, px int
 	var color common.Color
 	for _, chunkId := range state.World.PopActiveChunks() {
-		state.World.ForEachCell(chunkId, func(x, y int, center *cell.Cell) error {
+		state.World.ForEachCell(chunkId, func(x, y int, center *core.Cell) error {
 			x = x * SIZE_CELL
 			y = y * SIZE_CELL
 			color = center.GetColor()

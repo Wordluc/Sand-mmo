@@ -2,7 +2,6 @@ package core
 
 import (
 	"encoding/binary"
-	"sand-mmo/cell"
 	"sand-mmo/common"
 )
 
@@ -21,7 +20,7 @@ func NewServerWorld() (res ServerWorld) {
 }
 
 func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVoid bool) {
-	var c *cell.Cell
+	var c *Cell
 	drawCircle := func(radius int) error {
 		for i_y := range radius * 2 {
 			for ix := range radius * 2 {
@@ -41,10 +40,10 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVoid bool
 					if c == nil {
 						continue
 					}
-					if c.CellType == cell.VOID_CELL {
+					if c.CellType == VOID_CELL {
 						metVoid = true
 					}
-					w.Set(x, y, cell.NewCell(p.CellType))
+					w.Set(x, y, NewCell(p.CellType))
 
 				}
 			}
@@ -64,10 +63,10 @@ func (w *ServerWorld) ApplyBrush(p common.BrushPackage) (err error, metVoid bool
 				if c == nil {
 					continue
 				}
-				if c.CellType == cell.VOID_CELL {
+				if c.CellType == VOID_CELL {
 					metVoid = true
 				}
-				w.Set(x, y, cell.NewCell(p.CellType))
+				w.Set(x, y, NewCell(p.CellType))
 			}
 		}
 		return nil
@@ -105,7 +104,7 @@ func (w *ServerWorld) ImportCells(cells []byte) {
 		return
 	}
 	for i := range u16World {
-		w.cells[i] = cell.DecodeCell(u16World[i])
+		w.cells[i] = DecodeCell(u16World[i])
 	}
 
 	for i := range w.GetNumberChucks() {
@@ -193,12 +192,12 @@ func (w *world) IsChunkIdValid(chunkId int) bool {
 	return true
 }
 
-func (w *world) SetVec(pos common.Vec2, cell cell.Cell) {
+func (w *world) SetVec(pos common.Vec2, cell Cell) {
 	x, y := pos.Get()
 	w.Set(x, y, cell)
 }
 
-func (w *world) Set(x, y int, cell cell.Cell) {
+func (w *world) Set(x, y int, cell Cell) {
 	if x >= w.W {
 		return
 	}
@@ -210,12 +209,12 @@ func (w *world) Set(x, y int, cell cell.Cell) {
 	w.cells[indexCell] = cell
 }
 
-func (w *world) GetVec(pos common.Vec2) *cell.Cell {
+func (w *world) GetVec(pos common.Vec2) *Cell {
 	x, y := pos.Get()
 	return w.Get(x, y)
 }
 
-func (w *world) Get(x, y int) *cell.Cell {
+func (w *world) Get(x, y int) *Cell {
 	if x < 0 {
 		return nil
 	}
@@ -244,7 +243,7 @@ func (w *ServerWorld) GetGeneratorsBytes() []byte {
 func (w *ServerWorld) GetWorldBytes() []byte {
 	var decoded []byte
 	for _, c := range w.cells {
-		decoded = binary.BigEndian.AppendUint16(decoded, cell.EncodeCell(c))
+		decoded = binary.BigEndian.AppendUint16(decoded, EncodeCell(c))
 	}
 	return decoded
 }
@@ -270,7 +269,7 @@ func (w *world) GetChunkBytes(idChunk int) []uint16 {
 	var i uint16
 	for range uint16(w.ChunkSize) {
 		for _, c := range w.cells[iCell : iCell+w.ChunkSize] {
-			decoded[i] = cell.EncodeCell(c)
+			decoded[i] = EncodeCell(c)
 			i++
 		}
 		iCell += (w.W)

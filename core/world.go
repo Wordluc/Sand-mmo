@@ -2,7 +2,6 @@ package core
 
 import (
 	"math"
-	"sand-mmo/cell"
 	"sand-mmo/common"
 )
 
@@ -10,14 +9,14 @@ type world struct {
 	W            int
 	H            int
 	ChunkSize    int
-	cells        []cell.Cell
+	cells        []Cell
 	activeChunks common.OrderList[int]
 	generators   []common.BrushPackage
 }
 
 func newWorld(w, h, chunkSize int) world {
 	world := world{}
-	world.cells = make([]cell.Cell, w*h)
+	world.cells = make([]Cell, w*h)
 	world.H = h
 	world.W = w
 	world.ChunkSize = chunkSize
@@ -25,7 +24,7 @@ func newWorld(w, h, chunkSize int) world {
 	return world
 }
 
-func (w *world) ForEachCell(idChunk int, f func(x, y int, center *cell.Cell) error) (err error) {
+func (w *world) ForEachCell(idChunk int, f func(x, y int, center *Cell) error) (err error) {
 
 	chunkPerRow := w.W / w.ChunkSize
 	chunkY := idChunk / chunkPerRow
