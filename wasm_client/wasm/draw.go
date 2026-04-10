@@ -21,13 +21,35 @@ func initDrawMemory(state *WasmState) {
 }
 
 func Draw(state *WasmState) {
-	var dx, dy, px int
+	var dx, dy, px, xW, yW int
 	var color common.Color
 	for _, chunkId := range state.World.PopActiveChunks() {
 		state.World.ForEachCell(chunkId, func(x, y int, center *core.Cell) error {
 			x = x * SIZE_CELL
 			y = y * SIZE_CELL
+			xW, yW = state.Window.Pos.Get()
 			color = center.GetColor()
+			if yW != 0 {
+				if chunkId < common.W_CHUNKS_CLIENT {
+					color = common.Red
+				}
+			}
+			if yW != common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT {
+				if chunkId > common.W_CHUNKS_CLIENT*common.H_CHUNKS_CLIENT-common.W_CHUNKS_CLIENT {
+					color = common.Red
+				}
+			}
+			if xW != 0 {
+				if chunkId%common.W_CHUNKS_CLIENT == 0 {
+					color = common.Red
+				}
+			}
+			if xW != common.W_CHUNKS_TOTAL-common.W_CHUNKS_CLIENT {
+				if chunkId%common.W_CHUNKS_CLIENT == common.W_CHUNKS_CLIENT-1 {
+					color = common.Red
+				}
+			}
+
 			for dy = range SIZE_CELL {
 				for dx = range SIZE_CELL {
 					px = ((y+dy)*state.World.W*SIZE_CELL + (x + dx)) * 4
