@@ -1,5 +1,6 @@
 
-* { margin: 5;
+* { 
+	margin: 5;
 	padding: 0;
 	touch-action: none;
 }
@@ -33,4 +34,12 @@ body {
 			flex-direction: row;
 		}
 	}
+} 
+
+.links{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size:30px;
+  margin-top: 0.5in;
 }

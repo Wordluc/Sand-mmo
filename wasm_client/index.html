@@ -6,6 +6,7 @@
 		<link href="dpad.css" rel="stylesheet">
 		<link href="game.css" rel="stylesheet">
 		<link href="modal.css" rel="stylesheet">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 		<script src="wasm_exec.js"></script>
 		<script src="modal.js"></script>
 		<script src="touch.js"></script>
@@ -32,16 +33,26 @@
 			</ul>
 		</div>
 		<div class="game">
-			<div class="dpad">
-				<div class="empty"></div>
-				<button onclick="moveView(0,-1)" class="btn touchButton" id="up">▲</button>
-				<div class="empty"></div>
-				<button onclick="moveView(-1,0)" class="btn touchButton" id="left">◀</button>
-				<button onclick="setGenerator()" class="btn" id="generator">G</button>
-				<button onclick="moveView(1,0)" class="btn touchButton" id="right">▶</button>
-				<div class="empty"></div>
-				<button onclick="moveView(0,1)" class="btn touchButton" id="down">▼</button>
-				<div class="empty"></div>
+			<div>
+				<div class="dpad">
+					<div class="empty"></div>
+					<button onclick="moveView(0,-1)" class="btn touchButton" id="up">▲</button>
+					<div class="empty"></div>
+					<button onclick="moveView(-1,0)" class="btn touchButton" id="left">◀</button>
+					<button onclick="setGenerator()" class="btn" id="generator">G</button>
+					<button onclick="moveView(1,0)" class="btn touchButton" id="right">▶</button>
+					<div class="empty"></div>
+					<button onclick="moveView(0,1)" class="btn touchButton" id="down">▼</button>
+					<div class="empty"></div>
+				</div>
+				<div class="links">
+					<a href="https://www.linkedin.com/in/luca-frangiamore-9404a3165/" target="_blank">
+						<i class="fa fa-linkedin-square"></i>
+					</a>
+					<a href="https://github.com/Wordluc" target="_blank">
+						<i class="fa fa-github"></i>
+					</a>
+				</div>
 			</div>
 			<div class="play_zone">
 				<canvas id="game_window"></canvas>
@@ -70,5 +81,8 @@
 				</div>
 			</div>
 		</div>
+
+
+
 	</body>
 </html>
