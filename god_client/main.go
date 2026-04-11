@@ -11,6 +11,7 @@ import (
 	"sand-mmo/common"
 	"sand-mmo/core"
 	"sand-mmo/core/handlers"
+	"time"
 
 	ws "github.com/coder/websocket"
 	ru "github.com/gen2brain/raylib-go/raygui"
@@ -158,12 +159,13 @@ func createWebSocket(addr, port string) (*ws.Conn, error) {
 func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 	var offset = 0
 	var idChunk uint16
+
 	for {
-		_, bytes, err := webSocket.Read(context.Background())
+		ctx, _ := context.WithTimeout(context.Background(), 500*time.Second)
+		_, bytes, err := webSocket.Read(ctx)
 		offset = 0
 		if err != nil {
 			fmt.Println(err)
-			panic(err)
 			continue
 		}
 		for offset < len(bytes) {
