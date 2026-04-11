@@ -75,5 +75,9 @@ func (cell *Cell) GenerateNewColor() (color common.Color, spriteType uint8) {
 }
 
 func (cell *Cell) GetColor() (color common.Color) {
-	return colorMap[cell.CellType][cell.SpirteType]
+	cellColor := colorMap[cell.CellType]
+	if len(cellColor) > int(cell.SpirteType) {
+		return cellColor[cell.SpirteType]
+	}
+	return common.Blue
 }
