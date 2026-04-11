@@ -149,21 +149,28 @@ func createWebSocket(addr, port string) (*ws.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	conn.SetReadLimit(int64(common.CHUNK_BYTES_SIZE) * common.W_CHUNKS_TOTAL * common.H_CHUNKS_TOTAL)
 	println("WebSocket connected ")
 
 	return conn, nil
 }
 
 func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
+	var offset = 0
+	var idChunk uint16
 	for {
 		_, bytes, err := webSocket.Read(context.Background())
+		offset = 0
 		if err != nil {
 			fmt.Println(err)
+			panic(err)
 			continue
 		}
-
-		idChunk := binary.BigEndian.Uint16(bytes[0:2])
-		world.SetDecodedCells(bytes[2:], int(idChunk))
+		for offset < len(bytes) {
+			idChunk = binary.BigEndian.Uint16(bytes[offset : offset+2])
+			world.SetDecodedCells(bytes[offset+2:offset+common.CHUNK_BYTES_SIZE], int(idChunk))
+			offset += common.CHUNK_BYTES_SIZE
+		}
 
 	}
 }

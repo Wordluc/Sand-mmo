@@ -37,11 +37,10 @@ func loadChunksIntoWorld() {
 	raw := make([]byte, length)
 	js.CopyBytesToGo(raw, jsBuffer)
 
-	chunkSize := 2 + common.CHUNK_SIZE*common.CHUNK_SIZE*2
 	var idChunk uint16
-	for offset := 0; offset < len(raw); offset += chunkSize {
+	for offset := 0; offset < len(raw); offset += common.CHUNK_BYTES_SIZE {
 		idChunk = binary.BigEndian.Uint16(raw[offset : offset+2])
-		cellData := raw[offset+2 : offset+chunkSize]
+		cellData := raw[offset+2 : offset+common.CHUNK_BYTES_SIZE]
 
 		x, y := common.GetServerXYChunk(int(idChunk))
 		x -= xClient
