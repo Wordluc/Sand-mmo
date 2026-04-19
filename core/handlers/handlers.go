@@ -57,7 +57,7 @@ func GetHandlers() []handler {
 			handler: func(p common.Package, e *CoreHandlers) error {
 				fmt.Println("Init god bidirectional connection: " + e.client.Addr)
 				e.client.IsGod = true
-				e.netCode.SendInitialChunks(e.client)
+				e.netCode.SendInitialChunksForGod(e.client)
 				return nil
 			},
 		},
