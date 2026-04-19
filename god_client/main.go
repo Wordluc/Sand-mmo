@@ -159,6 +159,7 @@ func createWebSocket(addr, port string) (*ws.Conn, error) {
 func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 	var offset = 0
 	var idChunk uint16
+	var x, y int
 
 	for {
 		ctx, _ := context.WithTimeout(context.Background(), 500*time.Second)
@@ -170,7 +171,8 @@ func UpdateWorld(world *core.ClientWorld, webSocket *ws.Conn) {
 		}
 		for offset < len(bytes) {
 			idChunk = binary.BigEndian.Uint16(bytes[offset : offset+2])
-			world.SetDecodedCells(bytes[offset+2:offset+common.CHUNK_BYTES_SIZE], int(idChunk))
+			x, y = common.GetServerXYChunk(int(idChunk))
+			world.SetDecodedCells(bytes[offset+2:offset+common.CHUNK_BYTES_SIZE], x, y)
 			offset += common.CHUNK_BYTES_SIZE
 		}
 

@@ -120,7 +120,7 @@ func (w *NetCode) GetLenClients() (count int) {
 	return count
 }
 
-func (w *NetCode) SendViewChunksTo(client *Client) (err error) {
+func (w *NetCode) SendInitialChunks(client *Client) (err error) {
 	defer func() {
 		if err != nil {
 			fmt.Println("Removing for :", err.Error())
@@ -147,34 +147,7 @@ func (w *NetCode) SendViewChunksTo(client *Client) (err error) {
 	return w.SendChunksTo(chunks, client)
 }
 
-func (w *NetCode) SendAllChunksTo(client *Client) (err error) {
-	defer func() {
-		if err != nil {
-			fmt.Println("Removing for :", err.Error())
-			w.RemoveClient(client)
-			return
-		}
-	}()
-	xClient, yClient := common.GetServerXYChunk(client.AtChunkId)
-	x, y := xClient, yClient
-	idChunk := client.AtChunkId
-	var chunks map[int][]byte = make(map[int][]byte, common.W_CHUNKS_CLIENT*common.H_CHUNKS_CLIENT)
-	for {
-		chunks[idChunk] = w.world.GetChunkBytesToSend(idChunk)
-		x++
-		if x >= xClient+common.W_CHUNKS_TOTAL {
-			y++
-			x = xClient
-		}
-		if y >= yClient+common.H_CHUNKS_TOTAL {
-			break
-		}
-		idChunk = x + y*common.W_CHUNKS_TOTAL
-	}
-	return w.SendChunksTo(chunks, client)
-}
-
-func (w *NetCode) SendAllChunksToAll(chunksToSend []int) {
+func (w *NetCode) SendVisibleChunksToAll(chunksToSend []int) {
 	var chunks map[int][]byte = make(map[int][]byte, len(chunksToSend))
 	for _, iC := range chunksToSend {
 		chunks[iC] = w.world.GetChunkBytesToSend(iC)
@@ -206,13 +179,16 @@ func (w *NetCode) SendChunksTo(chunksToSend map[int][]byte, client *Client) (err
 		}
 	}()
 	chunks_batched := []byte{}
+	if len(chunksToSend) == 0 {
+		return nil
+	}
 	for idChunk, chunk := range chunksToSend {
 		if !client.IsGod {
 			x, y = common.GetServerXYChunk(idChunk)
-			if x < xClient || x >= xClient+common.W_CHUNKS_CLIENT {
+			if x < xClient-1 || x > xClient+common.W_CHUNKS_CLIENT {
 				continue
 			}
-			if y < yClient || y >= yClient+common.H_CHUNKS_CLIENT {
+			if y < yClient-1 || y > yClient+common.H_CHUNKS_CLIENT {
 				continue
 			}
 		}

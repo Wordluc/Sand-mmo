@@ -7,31 +7,59 @@ import (
 
 type ClientWorld struct {
 	world
+	left_chunks  []Cell
+	right_chunks []Cell
+	up_chunks    []Cell
+	down_chunks  []Cell
 }
 
 func NewCustomWorld(w, h, chunkSize int) (res ClientWorld) {
 	res.world = newWorld(w, h, chunkSize)
-	return res
-}
-func NewClientWorld() (res ClientWorld) {
-	res.world = newWorld(common.W_CELLS_CLIENT, common.H_CELLS_CLIENT, common.CHUNK_SIZE)
+	res.left_chunks = make([]Cell, h*chunkSize*chunkSize)
+	res.right_chunks = make([]Cell, h*chunkSize*chunkSize)
+	res.up_chunks = make([]Cell, w*chunkSize*chunkSize)
+	res.down_chunks = make([]Cell, w*chunkSize*chunkSize)
 	return res
 }
 
+func NewClientWorld() (res ClientWorld) {
+	return NewCustomWorld(common.W_CELLS_CLIENT, common.H_CELLS_CLIENT, common.CHUNK_SIZE)
+}
+
 func (w *ClientWorld) ShiftWorld(dx, dy int) {
+
 	if dx > 0 {
-		for i := 0; i <= w.W*w.H-w.W; i += w.W {
-			copy(w.cells[i:i+w.W-w.ChunkSize], w.cells[i+w.ChunkSize:i+w.W])
+		for row := 0; row < w.H; row++ {
+			base := row * w.W
+			copy(w.cells[base:base+w.W-w.ChunkSize], w.cells[base+w.ChunkSize:base+w.W])
+			copy(w.cells[base+w.W-w.ChunkSize:base+w.W], w.right_chunks[row*w.ChunkSize:(row+1)*w.ChunkSize])
 		}
 	} else if dx < 0 {
-		for i := 0; i <= w.W*w.H-w.W; i += w.W {
-			copy(w.cells[i+w.ChunkSize:i+w.W], w.cells[i:i+w.W-w.ChunkSize])
+		for row := 0; row < w.H; row++ {
+			base := row * w.W
+			copy(w.cells[base+w.ChunkSize:base+w.W], w.cells[base:base+w.W-w.ChunkSize])
+			copy(w.cells[base:base+w.ChunkSize], w.left_chunks[row*w.ChunkSize:(row+1)*w.ChunkSize])
 		}
 	}
+
 	if dy > 0 {
 		copy(w.cells[:w.W*w.H-w.ChunkSize*w.W], w.cells[w.ChunkSize*w.W:])
+		for col := 0; col < w.W/w.ChunkSize; col++ {
+			src := col * w.ChunkSize * w.ChunkSize
+			for row := 0; row < w.ChunkSize; row++ {
+				base := (w.H-w.ChunkSize+row)*w.W + col*w.ChunkSize
+				copy(w.cells[base:base+w.ChunkSize], w.down_chunks[src+row*w.ChunkSize:src+(row+1)*w.ChunkSize])
+			}
+		}
 	} else if dy < 0 {
 		copy(w.cells[w.ChunkSize*w.W:], w.cells[:w.W*w.H-w.ChunkSize*w.W])
+		for col := 0; col < w.W/w.ChunkSize; col++ {
+			src := col * w.ChunkSize * w.ChunkSize
+			for row := 0; row < w.ChunkSize; row++ {
+				base := row*w.W + col*w.ChunkSize
+				copy(w.cells[base:base+w.ChunkSize], w.up_chunks[src+row*w.ChunkSize:src+(row+1)*w.ChunkSize])
+			}
+		}
 	}
 	r := make([]int, w.GetNumberChucks())
 	for i := range r {
@@ -40,26 +68,63 @@ func (w *ClientWorld) ShiftWorld(dx, dy int) {
 	w.activeChunks.SortedInsert(r...)
 
 }
-
-func (w *ClientWorld) SetDecodedCells(bytes []byte, idChunk int) {
+func (w *ClientWorld) SetDecodedCells(bytes []byte, xChunk, yChunk int) {
 	const u32Size = 2
 	var u16 uint16
 	var c Cell
-	chunkPerRow := w.W / w.ChunkSize
 
-	chunkY := idChunk / chunkPerRow
-	chunkX := idChunk % chunkPerRow
-	iCell := chunkY*(w.W*w.ChunkSize) + chunkX*w.ChunkSize
+	iCell := yChunk*(w.W*w.ChunkSize) + xChunk*w.ChunkSize
+	iBorder := 0
+	isXOut := func(xChunk int) bool {
+		return xChunk < 0 || xChunk >= common.W_CHUNKS_CLIENT
+	}
+	isYOut := func(yChunk int) bool {
+		return yChunk < 0 || yChunk >= common.H_CHUNKS_CLIENT
+	}
 	for i := 0; i < len(bytes); i = i + u32Size {
 		u16 = binary.BigEndian.Uint16(bytes[i : i+u32Size])
 		c = DecodeCell(u16)
+		if xChunk == -1 {
+			if !isYOut(yChunk) {
+				w.left_chunks[yChunk*w.ChunkSize*w.ChunkSize+iBorder] = c
+				iBorder++
+			}
+			continue
+		}
+		if xChunk == common.W_CHUNKS_CLIENT {
+			if !isYOut(yChunk) {
+				w.right_chunks[yChunk*w.ChunkSize*w.ChunkSize+iBorder] = c
+				iBorder++
+			}
+			continue
+		}
+		if yChunk == -1 {
+			if !isXOut(xChunk) {
+				w.up_chunks[xChunk*w.ChunkSize*w.ChunkSize+iBorder] = c
+				iBorder++
+			}
+			continue
+		}
+		if yChunk == common.H_CHUNKS_CLIENT {
+			if !isXOut(xChunk) {
+				w.down_chunks[xChunk*w.ChunkSize*w.ChunkSize+iBorder] = c
+				iBorder++
+			}
+			continue
+		}
+		if isXOut(xChunk) {
+			return
+		}
+		if isYOut(yChunk) {
+			return
+		}
 		w.cells[iCell] = c
 		iCell += 1
 		if iCell%w.ChunkSize == 0 {
 			iCell += (w.W - w.ChunkSize)
 		}
 	}
-	w.activeChunks.SortedInsert(idChunk)
+	w.activeChunks.SortedInsert(xChunk + yChunk*common.W_CHUNKS_CLIENT)
 }
 
 func (w *ClientWorld) PopActiveChunks() (res []int) {

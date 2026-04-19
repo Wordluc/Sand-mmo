@@ -48,7 +48,7 @@ func GetHandlers() []handler {
 				}
 				fmt.Println("Init bidirectional connection: "+e.client.Addr, " at ", p.Arg1)
 				e.client.AtChunkId = int(p.Arg1)
-				e.netCode.SendViewChunksTo(e.client)
+				e.netCode.SendInitialChunks(e.client)
 				return nil
 			},
 		},
@@ -57,7 +57,7 @@ func GetHandlers() []handler {
 			handler: func(p common.Package, e *CoreHandlers) error {
 				fmt.Println("Init god bidirectional connection: " + e.client.Addr)
 				e.client.IsGod = true
-				e.netCode.SendAllChunksTo(e.client)
+				e.netCode.SendInitialChunks(e.client)
 				return nil
 			},
 		},
@@ -93,12 +93,41 @@ func GetHandlers() []handler {
 						chunksToSend = append(chunksToSend, x+newY*common.W_CHUNKS_TOTAL) //retrieve first row of the client's view
 					}
 				}
+				//left border
+				for y := newY; y < newY+common.H_CHUNKS_CLIENT; y++ {
+					if (newX - 1) < 0 {
+						break
+					}
+					chunksToSend = append(chunksToSend, (newX-1)+y*common.W_CHUNKS_TOTAL)
+				}
+				//right border
+				for y := newY; y < newY+common.H_CHUNKS_CLIENT; y++ {
+					if (newX + common.W_CHUNKS_CLIENT) > common.W_CHUNKS_TOTAL {
+						break
+					}
+					chunksToSend = append(chunksToSend, (newX+common.W_CHUNKS_CLIENT)+y*common.W_CHUNKS_TOTAL)
+				}
+				//up border
+				for x := newX; x < newX+common.W_CHUNKS_CLIENT; x++ {
+					if (newY - 1) < 0 {
+						break
+					}
+					chunksToSend = append(chunksToSend, x+(newY-1)*common.W_CHUNKS_TOTAL)
+				}
+				//down border
+				for x := newX; x < newX+common.W_CHUNKS_CLIENT; x++ {
+					if (newY + common.H_CHUNKS_CLIENT) > common.H_CHUNKS_TOTAL {
+						break
+					}
+					chunksToSend = append(chunksToSend, x+(newY+common.H_CHUNKS_CLIENT)*common.W_CHUNKS_TOTAL)
+				}
+
 				var chunks map[int][]byte = make(map[int][]byte, len(chunksToSend))
 				maxIdChunk := e.world.GetNumberChucks()
 				for _, iC := range chunksToSend {
-					if iC > maxIdChunk {
+					if iC >= maxIdChunk {
 						println("OutOfBound world")
-						return nil
+						continue
 					}
 					chunks[iC] = e.world.GetChunkBytesToSend(iC)
 				}

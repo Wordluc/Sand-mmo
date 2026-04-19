@@ -46,14 +46,7 @@ func loadChunksIntoWorld() {
 		x -= xClient
 		y -= yClient
 
-		if x < 0 || x >= common.W_CHUNKS_CLIENT {
-			continue
-		}
-		if y < 0 || y >= common.H_CHUNKS_CLIENT {
-			continue
-		}
-
-		state.World.SetDecodedCells(cellData, x+y*common.W_CHUNKS_CLIENT)
+		state.World.SetDecodedCells(cellData, x, y)
 	}
 }
 

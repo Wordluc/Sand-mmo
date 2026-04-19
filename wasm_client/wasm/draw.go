@@ -25,6 +25,9 @@ func Draw(state *WasmState) {
 	var color common.Color
 	for _, chunkId := range state.World.PopActiveChunks() {
 		state.World.ForEachCell(chunkId, func(x, y int, center *core.Cell) error {
+			if center == nil {
+				return nil
+			}
 			x = x * SIZE_CELL
 			y = y * SIZE_CELL
 			color = center.GetColor()

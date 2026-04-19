@@ -119,7 +119,7 @@ func loop() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	netCode.SendAllChunksToAll(w.GetActiveChunks())
+	netCode.SendVisibleChunksToAll(w.GetActiveChunks())
 	common.UntouchEverything()
 	m.Unlock()
 
