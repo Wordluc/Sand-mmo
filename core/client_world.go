@@ -73,7 +73,7 @@ func (w *ClientWorld) SetDecodedCells(bytes []byte, xChunk, yChunk int) {
 	var u16 uint16
 	var c Cell
 
-	iCell := yChunk*(w.W*w.ChunkSize) + xChunk*w.ChunkSize
+	iCell := 0
 	iBorder := 0
 	isXOut := func(xChunk int) bool {
 		return xChunk < 0 || xChunk >= common.W_CHUNKS_CLIENT
@@ -118,7 +118,7 @@ func (w *ClientWorld) SetDecodedCells(bytes []byte, xChunk, yChunk int) {
 		if isYOut(yChunk) {
 			return
 		}
-		w.cells[iCell] = c
+		w.cells[iCell+yChunk*(w.W*w.ChunkSize)+xChunk*w.ChunkSize] = c
 		iCell += 1
 		if iCell%w.ChunkSize == 0 {
 			iCell += (w.W - w.ChunkSize)
