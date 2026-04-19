@@ -39,8 +39,7 @@ func NewState() (res WasmState) {
 	res.Brush.BrushShape = "circle"
 	res.Brush.BrushSize = "small"
 	res.CellType = core.SAND_CELL
-	//res.Window.Pos.Set(0, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
-	res.Window.Pos.Set(0, 0)
+	res.Window.Pos.Set(0, common.H_CHUNKS_TOTAL-common.H_CHUNKS_CLIENT)
 	return res
 }
 func (b Brush) GetBrushType() common.BrushType {
